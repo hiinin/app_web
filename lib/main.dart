@@ -13,8 +13,21 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final supabase;
+
+  @override
+  void initState() {
+    super.initState();
+    supabase = Supabase.instance.client;
+  }
 
   @override
   Widget build(BuildContext context) {

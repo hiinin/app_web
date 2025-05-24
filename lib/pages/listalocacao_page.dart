@@ -26,7 +26,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
       final responseAlocacoes = await supabase
           .from('alocacoes')
           .select(
-            'id, sala:salas(numero_sala, qtd_cadeiras, cor), curso:cursos(curso, periodo, semestre)',
+            'id, sala:salas(id, numero_sala, qtd_cadeiras, cor), curso:cursos(curso, periodo, semestre)',
           );
       setState(() {
         alocacoes = List<Map<String, dynamic>>.from(responseAlocacoes);
@@ -66,8 +66,11 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     // Buscar cursos
     final responseCursos = await supabase.from('cursos').select();
 
+    // Ordena os cursos por nome (campo 'curso')
+    responseCursos.sort((a, b) => (a['curso'] as String).compareTo(b['curso'] as String));
+
     String? novaSala = salaAtual;
-    String? novoCurso = alocacao['curso']?['curso'];
+    int? cursoSelecionadoId = alocacao['curso']?['id'];
 
     await showDialog(
       context: context,
@@ -80,32 +83,43 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
               DropdownButtonFormField<String>(
                 value: novaSala,
                 decoration: const InputDecoration(labelText: 'Sala'),
-                items:
-                    salasDisponiveis
-                        .map(
-                          (s) => DropdownMenuItem<String>(
-                            value: s['numero_sala'] as String,
-                            child: Text(
-                              '${s['numero_sala']} (${s['qtd_cadeiras'] ?? '0'} cadeiras)',
-                            ),
-                          ),
-                        )
-                        .toList(),
+                items: salasDisponiveis
+                    .map<DropdownMenuItem<String>>(
+                      (s) => DropdownMenuItem<String>(
+                        value: s['numero_sala'] as String,
+                        child: Text(
+                          '${s['numero_sala']} (${s['qtd_cadeiras'] ?? '0'} cadeiras)',
+                        ),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (value) => novaSala = value,
               ),
-              DropdownButtonFormField<String>(
-                value: novoCurso,
+              DropdownButtonFormField<int>(
+                value: cursoSelecionadoId, // int? id do curso selecionado
                 decoration: const InputDecoration(labelText: 'Curso'),
-                items:
-                    responseCursos
-                        .map(
-                          (c) => DropdownMenuItem<String>(
-                            value: c['curso'] as String,
-                            child: Text(c['curso'].toString()),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (value) => novoCurso = value,
+                items: responseCursos.map<DropdownMenuItem<int>>(
+                  (curso) {
+                    // Converte o período numérico para texto
+                    String periodo = '-';
+                    if (curso['periodo'] == 1) periodo = 'Matutino';
+                    else if (curso['periodo'] == 2) periodo = 'Vespertino';
+                    else if (curso['periodo'] == 3) periodo = 'Noturno';
+
+                    return DropdownMenuItem<int>(
+                      value: curso['id'],
+                      child: Text(
+                        '${curso['curso']} - $periodo - ${curso['semestre'] ?? "-"}º semestre',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  },
+                ).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    cursoSelecionadoId = value;
+                  });
+                },
               ),
             ],
           ),
@@ -121,7 +135,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                   (s) => s['numero_sala'] == novaSala,
                 );
                 final cursoSelecionado = responseCursos.firstWhere(
-                  (c) => c['curso'] == novoCurso,
+                  (c) => c['id'] == cursoSelecionadoId,
                 );
 
                 await supabase
@@ -228,6 +242,14 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Início'),
+              onTap: () {
+                Navigator.pop(context); // Fecha o Drawer
+                Navigator.pushReplacementNamed(context, '/home'); // Vai para a Home Page
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.add_business),
               title: const Text('Nova Alocação'),
               onTap: () {
@@ -246,6 +268,14 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
               onTap: () {
                 Navigator.pop(context);
                 // Você já está na lista, pode apenas fechar o drawer ou navegar se quiser recarregar
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.meeting_room, color: Colors.black87),
+              title: const Text('Nova Sala', style: TextStyle(color: Colors.black87)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarsala');
               },
             ),
             const Spacer(),
@@ -488,9 +518,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
                                           // Converte o período numérico para texto
                                           String periodo = '-';
-                                          if (periodoNum == 1)
+                                          if (periodoNum == 1) {
                                             periodo = 'Matutino';
-                                          else if (periodoNum == 2)
+                                          } else if (periodoNum == 2)
                                             periodo = 'Vespertino';
                                           else if (periodoNum == 3)
                                             periodo = 'Noturno';
@@ -754,14 +784,60 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                     color: Color(0xFF1976D2),
                                                   ),
                                                   tooltip: 'Editar alocação',
-                                                  onPressed:
-                                                      () =>
-                                                          _editarAlocacao(aloc),
+                                                  onPressed: () => _editarAlocacao(aloc),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.delete,
+                                                    color: Colors.red,
+                                                  ),
+                                                  tooltip: 'Excluir alocação',
+                                                  onPressed: () async {
+                                                    final confirm = await showDialog<bool>(
+                                                      context: context,
+                                                      builder: (context) => AlertDialog(
+                                                        title: const Text('Confirmar exclusão'),
+                                                        content: const Text('Tem certeza que deseja excluir esta alocação?'),
+                                                        actions: [
+                                                          TextButton(
+                                                            child: const Text('Cancelar'),
+                                                            onPressed: () => Navigator.of(context).pop(false),
+                                                          ),
+                                                          ElevatedButton(
+                                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                            child: const Text('Excluir'),
+                                                            onPressed: () => Navigator.of(context).pop(true),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                    if (confirm == true) {
+                                                      // 1. Torna a sala disponível novamente
+                                                      final salaId = aloc['sala']?['id'];
+                                                      if (salaId != null) {
+                                                        await supabase
+                                                            .from('salas')
+                                                            .update({'disponivel': true})
+                                                            .eq('id', salaId);
+                                                      }
+
+                                                      // 2. Exclui a alocação
+                                                      await supabase
+                                                          .from('alocacoes')
+                                                          .delete()
+                                                          .eq('id', aloc['id']);
+
+                                                      await carregarAlocacoes();
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(content: Text('Alocação excluída com sucesso')),
+                                                      );
+                                                    }
+                                                  },
                                                 ),
                                               ],
                                             ),
                                           );
-                                        }).toList(),
+                                        }),
                                       ],
                                     ),
                                   );

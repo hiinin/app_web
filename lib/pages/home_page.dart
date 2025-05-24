@@ -228,7 +228,7 @@ class _HomePageState extends State<HomePage> {
               const Icon(
                 Icons.admin_panel_settings,
                 size: 64,
-                color: Color(0xFF1976D2),
+                color: Colors.black, // ÍCONE PRETO
               ),
               const SizedBox(height: 24),
               const Text(
@@ -236,14 +236,14 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1976D2),
+                  color: Colors.black, // TEXTO PRETO
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               const Text(
                 'O que deseja fazer?',
-                style: TextStyle(fontSize: 18, color: Colors.black87),
+                style: TextStyle(fontSize: 18, color: Colors.black),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -253,23 +253,22 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(
                     height: 38,
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.add_business, size: 18),
+                      icon: const Icon(Icons.add_business, size: 18, color: Colors.black),
                       label: const Text(
                         'Criar Nova Alocação',
-                        style: TextStyle(fontSize: 14),
+                        style: TextStyle(fontSize: 14, color: Colors.black),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1976D2),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black, width: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         textStyle: const TextStyle(fontSize: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         minimumSize: const Size(0, 38),
+                        elevation: 2,
                       ),
                       onPressed: () {
                         Navigator.push(
@@ -284,33 +283,30 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 16),
                   SizedBox(
                     height: 38,
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       icon: const Icon(
                         Icons.list_alt,
-                        color: Color(0xFF1976D2),
+                        color: Colors.black,
                         size: 18,
                       ),
                       label: const Text(
                         'Ver Lista de Alocações',
                         style: TextStyle(
-                          color: Color(0xFF1976D2),
+                          color: Colors.black,
                           fontSize: 14,
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                          color: Color(0xFF1976D2),
-                          width: 2,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black, width: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         textStyle: const TextStyle(fontSize: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                         minimumSize: const Size(0, 38),
+                        elevation: 2,
                       ),
                       onPressed: () {
                         Navigator.push(
@@ -319,6 +315,32 @@ class _HomePageState extends State<HomePage> {
                             builder: (context) => const ListaLocacaoPage(),
                           ),
                         );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    height: 38,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.meeting_room, color: Colors.black, size: 18),
+                      label: const Text(
+                        'Criar Nova Sala',
+                        style: TextStyle(fontSize: 14, color: Colors.black),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black, width: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        minimumSize: const Size(0, 38),
+                        elevation: 2,
+                      ),
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/criarsala');
                       },
                     ),
                   ),
