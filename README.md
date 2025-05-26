@@ -1,16 +1,74 @@
-# app_web
+# 🎓 Sistema de Gestão de Salas e Cursos
 
-A new Flutter project.
+Este é um projeto web feito em **Flutter e Dart** com backend no **Supabase**, que permite a criação, edição e visualização de **salas** e **cursos**, vinculado a um sistema onde **alunos** podem se cadastrar, selecionar seu curso, período e semestre, e visualizar a **sala correta** onde devem estar.
 
-## Getting Started
+## 📌 Funcionalidades
 
-This project is a starting point for a Flutter application.
+### 🔐 Área do Administrador (via Web)
+- Login com credenciais (login e senha)
+- CRUD de **salas**
+- CRUD de **cursos**
+- Associação de **salas aos cursos** por período e semestre
 
-A few resources to get you started if this is your first Flutter project:
+### 📱 Aplicativo Mobile para Alunos
+- Cadastro de conta
+- Escolha do **curso**, **período** e **semestre**
+- Visualização da **sala correspondente**
+- Experiência simples e direta
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🧱 Tecnologias Utilizadas
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Flutter + Dart** (Web & Mobile)
+- **Supabase** (Banco de dados PostgreSQL + autenticação)
+- **Supabase Auth** (para alunos)
+- **Supabase Tables** (para gerenciamento de cursos e salas)
+- **bcrypt** (criptografia de senhas de admin)
+- **RLS (Row Level Security)** para segurança no Supabase
+
+## 📂 Estrutura do Banco de Dados
+
+### Tabela `admins`
+| Campo      | Tipo     | Detalhes               |
+|------------|----------|------------------------|
+| id         | UUID     | Chave primária         |
+| login      | TEXT     | Único                  |
+| password   | TEXT     | Senha criptografada    |
+| created_at | TIMESTAMP| Criado automaticamente |
+
+### Tabela `cursos`
+| Campo      | Tipo     | Detalhes          |
+|------------|----------|-------------------|
+| id         | UUID     | Chave primária    |
+| nome       | TEXT     | Nome do curso     |
+| created_at | TIMESTAMP| Data de criação   |
+
+### Tabela `salas`
+| Campo      | Tipo     | Detalhes               |
+|------------|----------|------------------------|
+| id         | UUID     | Chave primária         |
+| nome       | TEXT     | Identificação da sala  |
+| created_at | TIMESTAMP| Data de criação        |
+
+### Tabela `curso_salas`
+| Campo        | Tipo     | Detalhes                          |
+|--------------|----------|-----------------------------------|
+| id           | UUID     | Chave primária                    |
+| curso_id     | UUID     | FK para `cursos`                  |
+| sala_id      | UUID     | FK para `salas`                   |
+| periodo      | TEXT     | Ex: "Matutino", "Noturno"         |
+| semestre     | INT      | Semestre (ex: 1, 2, 3, etc.)       |
+| created_at   | TIMESTAMP| Data de criação                   |
+
+## 🚀 Como Executar
+
+### Requisitos
+- Flutter SDK
+- Conta no Supabase
+- `.env` com a URL e chave do Supabase
+
+### Passos
+
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/seu-usuario/nome-do-repo.git
+   cd nome-do-repo
