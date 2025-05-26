@@ -119,11 +119,12 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
+        toolbarHeight: 80, // Aumente o valor conforme desejar (padrão é 56)
         iconTheme: const IconThemeData(
           color: Colors.white,
-        ), // Drawer icon branco
+        ),
         title: const Text(
-          'Painel de Alocação de Salas',
+          'Homepage Administrador',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -206,6 +207,28 @@ class _HomePageState extends State<HomePage> {
                     builder: (context) => const ListaLocacaoPage(),
                   ),
                 );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.meeting_room, color: Colors.black87),
+              title: const Text(
+                'Nova Sala',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarsala');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.school, color: Colors.black87),
+              title: const Text(
+                'Novo Curso',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarcurso');
               },
             ),
             const Spacer(),

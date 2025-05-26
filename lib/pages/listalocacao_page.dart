@@ -773,8 +773,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                             FontWeight.bold,
                                                         fontSize: 16,
                                                       ),
-                                                      textAlign:
-                                                          TextAlign.center,
+                                                      textAlign: TextAlign.center,
                                                     ),
                                                   ),
                                                 ),

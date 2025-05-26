@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -9,16 +10,45 @@ class AdminLoginPage extends StatefulWidget {
 
 class _AdminLoginPageState extends State<AdminLoginPage> {
   final _passwordController = TextEditingController();
-  final _adminPassword = "admin"; // Senha fixa para fins de teste
+  final _loginController = TextEditingController();
+  bool _obscurePassword = true;
 
-  void _tryLogin() {
-    final input = _passwordController.text.trim();
-    if (input == _adminPassword) {
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Senha incorreta')));
+  Future<void> _tryLogin() async {
+    final loginInput = _loginController.text.trim();
+    final passwordInput = _passwordController.text.trim();
+
+    if (loginInput.isEmpty || passwordInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha login e senha')),
+      );
+      return;
+    }
+
+    try {
+      final response = await Supabase.instance.client
+          .from('admin')
+          .select()
+          .eq('login', loginInput)
+          .maybeSingle();
+
+      if (response == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Usuário não encontrado')),
+        );
+        return;
+      }
+
+      if (response['password'] == passwordInput) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Senha incorreta')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao fazer login: $e')),
+      );
     }
   }
 
@@ -31,7 +61,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420), // aumente aqui a largura
+              constraints: const BoxConstraints(maxWidth: 520),
               child: Card(
                 color: Colors.grey[900],
                 elevation: 8,
@@ -39,7 +69,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 56), // aumente aqui a altura
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 28, vertical: 56),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -60,8 +91,34 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       ),
                       const SizedBox(height: 28),
                       TextField(
+                        controller: _loginController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'Login',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          filled: true,
+                          fillColor: Colors.grey[850],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                                color: Color(0xFF1976D2), width: 2),
+                          ),
+                          prefixIcon:
+                              const Icon(Icons.person_outline, color: Colors.white70),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      TextField(
                         controller: _passwordController,
-                        obscureText: true,
+                        obscureText: _obscurePassword,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Senha',
@@ -81,8 +138,18 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                             borderSide: const BorderSide(
                                 color: Color(0xFF1976D2), width: 2),
                           ),
-                          prefixIcon:
-                              const Icon(Icons.lock_outline, color: Colors.white70),
+                          prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.white70,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
                         ),
                         onSubmitted: (_) => _tryLogin(),
                       ),
