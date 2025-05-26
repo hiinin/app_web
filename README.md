@@ -72,3 +72,12 @@ Este é um projeto web feito em **Flutter e Dart** com backend no **Supabase**, 
    ```bash
    git clone https://github.com/seu-usuario/nome-do-repo.git
    cd nome-do-repo
+   
+2. Instale as dependências:
+   flutter pub get
+
+3.Configure o Supabase e adicione as chaves ao seu arquivo .env.
+
+4.Rode o projeto web:
+   flutter run -d chrome
+
