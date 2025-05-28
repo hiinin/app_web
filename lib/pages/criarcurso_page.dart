@@ -25,11 +25,16 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
   void initState() {
     super.initState();
     _buscarCursos();
-    _searchController.addListener(_filtrarCursos);
+    _searchController.addListener(
+      _filtrarCursos,
+    ); // Adiciona o listener de volta
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(
+      _filtrarCursos,
+    ); // Remove o listener ao destruir
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -40,15 +45,28 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
     try {
       final data = await Supabase.instance.client
           .from('cursos')
-          .select('id, curso, semestre, periodo') // Inclua o id aqui!
+          .select('id, curso, semestre, periodo')
           .order('curso');
+      final cursos = List<Map<String, dynamic>>.from(data);
+      final query = _searchController.text.trim().toLowerCase();
+      final cursosFiltrados =
+          query.isEmpty
+              ? cursos
+              : cursos.where((curso) {
+                final nome = (curso['curso'] ?? '').toString().toLowerCase();
+                final semestre =
+                    (curso['semestre'] ?? '').toString().toLowerCase();
+                final periodo = periodoToString(curso['periodo']).toLowerCase();
+                return nome.contains(query) ||
+                    semestre.contains(query) ||
+                    periodo.contains(query);
+              }).toList();
       setState(() {
-        _cursos = List<Map<String, dynamic>>.from(data);
-        _filtrarCursos();
+        _cursos = cursos;
+        _cursosFiltrados = cursosFiltrados;
+        _loadingCursos = false;
       });
     } catch (e) {
-      // Opcional: mostrar erro
-    } finally {
       setState(() => _loadingCursos = false);
     }
   }
@@ -59,14 +77,16 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
       if (query.isEmpty) {
         _cursosFiltrados = _cursos;
       } else {
-        _cursosFiltrados = _cursos.where((curso) {
-          final nome = (curso['curso'] ?? '').toString().toLowerCase();
-          final semestre = (curso['semestre'] ?? '').toString().toLowerCase();
-          final periodo = periodoToString(curso['periodo']).toLowerCase();
-          return nome.contains(query) ||
-              semestre.contains(query) ||
-              periodo.contains(query);
-        }).toList();
+        _cursosFiltrados =
+            _cursos.where((curso) {
+              final nome = (curso['curso'] ?? '').toString().toLowerCase();
+              final semestre =
+                  (curso['semestre'] ?? '').toString().toLowerCase();
+              final periodo = periodoToString(curso['periodo']).toLowerCase();
+              return nome.contains(query) ||
+                  semestre.contains(query) ||
+                  periodo.contains(query);
+            }).toList();
       }
     });
   }
@@ -91,13 +111,14 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
 
     try {
       // Verifica duplicidade
-      final existing = await Supabase.instance.client
-          .from('cursos')
-          .select()
-          .eq('curso', _cursoController.text.trim())
-          .eq('semestre', _semestreController.text.trim())
-          .eq('periodo', _periodo)
-          .maybeSingle();
+      final existing =
+          await Supabase.instance.client
+              .from('cursos')
+              .select()
+              .eq('curso', _cursoController.text.trim())
+              .eq('semestre', _semestreController.text.trim())
+              .eq('periodo', _periodo)
+              .maybeSingle();
 
       if (existing != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -122,107 +143,145 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
       setState(() => _periodo = null);
 
       await _buscarCursos();
-
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao criar curso: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao criar curso: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _editarCursoDialog(Map<String, dynamic> curso) async {
-    final TextEditingController nomeController = TextEditingController(text: curso['curso']);
-    final TextEditingController semestreController = TextEditingController(text: curso['semestre'].toString());
+    final nomeController = TextEditingController(text: curso['curso'] ?? '');
+    final semestreController = TextEditingController(
+      text: curso['semestre']?.toString() ?? '',
+    );
     int? periodoEdit = curso['periodo'];
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Curso'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nomeController,
-              decoration: const InputDecoration(labelText: 'Nome do Curso'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Editar Curso'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nomeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nome do Curso',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: semestreController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Semestre'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    value: periodoEdit,
+                    decoration: const InputDecoration(labelText: 'Período'),
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('Matutino')),
+                      DropdownMenuItem(value: 2, child: Text('Vespertino')),
+                      DropdownMenuItem(value: 3, child: Text('Noturno')),
+                    ],
+                    onChanged: (v) => periodoEdit = v,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: semestreController,
-              decoration: const InputDecoration(labelText: 'Semestre'),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
-              value: periodoEdit,
-              decoration: const InputDecoration(labelText: 'Período'),
-              items: const [
-                DropdownMenuItem(value: 1, child: Text('Matutino')),
-                DropdownMenuItem(value: 2, child: Text('Vespertino')),
-                DropdownMenuItem(value: 3, child: Text('Noturno')),
-              ],
-              onChanged: (v) => periodoEdit = v,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Salvar'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
     );
 
     if (result == true) {
-      final int id = curso['id'];
-      await Supabase.instance.client
-          .from('cursos')
-          .update({
-            'curso': nomeController.text.trim(),
-            'semestre': semestreController.text.trim(),
-            'periodo': periodoEdit,
-          })
-          .match({'id': id});
-      await _buscarCursos();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Curso atualizado com sucesso!')),
-      );
+      final id = curso['id'];
+      if (id == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro: id do curso é nulo!')),
+        );
+        return;
+      }
+      try {
+        await Supabase.instance.client
+            .from('cursos')
+            .update({
+              'curso': nomeController.text.trim(),
+              'semestre': semestreController.text.trim(),
+              'periodo': periodoEdit,
+            })
+            .eq('id', id is int ? id : int.parse(id.toString()));
+        await _buscarCursos();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Curso atualizado com sucesso!')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao atualizar curso: $e')));
+      }
     }
   }
 
   Future<void> _excluirCurso(Map<String, dynamic> curso) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir curso'),
-        content: const Text('Tem certeza que deseja excluir este curso?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Excluir curso'),
+            content: const Text('Tem certeza que deseja excluir este curso?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  'Excluir',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
     if (confirm == true) {
-      await Supabase.instance.client
-          .from('cursos')
-          .delete()
-          .match({'id': curso['id']});
-      await _buscarCursos();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Curso excluído com sucesso!')),
-      );
+      final id = curso['id'];
+      if (id == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro: id do curso é nulo!')),
+        );
+        return;
+      }
+      try {
+        await Supabase.instance.client
+            .from('cursos')
+            .delete()
+            .eq('id', id is int ? id : int.parse(id.toString()));
+        await _buscarCursos();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Curso excluído com sucesso!')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erro ao excluir curso: $e')));
+      }
     }
   }
 
@@ -230,10 +289,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Criar Curso',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Criar Curso', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -244,7 +300,11 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
               decoration: const BoxDecoration(color: Colors.black),
               child: Row(
                 children: [
-                  const Icon(Icons.account_circle, color: Colors.white, size: 48),
+                  const Icon(
+                    Icons.account_circle,
+                    color: Colors.white,
+                    size: 48,
+                  ),
                   const SizedBox(width: 16),
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -269,7 +329,10 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
             ),
             ListTile(
               leading: const Icon(Icons.list_alt, color: Colors.black87),
-              title: const Text('Lista de Alocações', style: TextStyle(color: Colors.black87)),
+              title: const Text(
+                'Lista de Alocações',
+                style: TextStyle(color: Colors.black87),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/listalocacao');
@@ -277,7 +340,10 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
             ),
             ListTile(
               leading: const Icon(Icons.meeting_room, color: Colors.black87),
-              title: const Text('Nova Sala', style: TextStyle(color: Colors.black87)),
+              title: const Text(
+                'Nova Sala',
+                style: TextStyle(color: Colors.black87),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/criarsala');
@@ -285,7 +351,10 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
             ),
             ListTile(
               leading: const Icon(Icons.add_business, color: Colors.black87),
-              title: const Text('Nova Alocação', style: TextStyle(color: Colors.black87)),
+              title: const Text(
+                'Nova Alocação',
+                style: TextStyle(color: Colors.black87),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/criarlocacao');
@@ -293,7 +362,10 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
             ),
             ListTile(
               leading: const Icon(Icons.school, color: Colors.black87),
-              title: const Text('Novo Curso', style: TextStyle(color: Colors.black87)),
+              title: const Text(
+                'Novo Curso',
+                style: TextStyle(color: Colors.black87),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 // Já está na tela de criar curso
@@ -333,7 +405,10 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           borderRadius: BorderRadius.circular(18),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 36,
+                          ),
                           child: Form(
                             key: _formKey,
                             child: Column(
@@ -356,17 +431,25 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                   style: const TextStyle(color: Colors.white),
                                   decoration: InputDecoration(
                                     labelText: 'Nome do Curso',
-                                    labelStyle: const TextStyle(color: Colors.white70),
+                                    labelStyle: const TextStyle(
+                                      color: Colors.white70,
+                                    ),
                                     filled: true,
                                     fillColor: Colors.grey[800],
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10),
                                       borderSide: BorderSide.none,
                                     ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                      horizontal: 16,
+                                    ),
                                   ),
-                                  validator: (v) =>
-                                      v == null || v.trim().isEmpty ? 'Informe o nome do curso' : null,
+                                  validator:
+                                      (v) =>
+                                          v == null || v.trim().isEmpty
+                                              ? 'Informe o nome do curso'
+                                              : null,
                                 ),
                                 const SizedBox(height: 18),
                                 TextFormField(
@@ -374,61 +457,91 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                   style: const TextStyle(color: Colors.white),
                                   decoration: InputDecoration(
                                     labelText: 'Semestre',
-                                    labelStyle: const TextStyle(color: Colors.white70),
+                                    labelStyle: const TextStyle(
+                                      color: Colors.white70,
+                                    ),
                                     filled: true,
                                     fillColor: Colors.grey[800],
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10),
                                       borderSide: BorderSide.none,
                                     ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                      horizontal: 16,
+                                    ),
                                   ),
-                                  validator: (v) =>
-                                      v == null || v.trim().isEmpty ? 'Informe o semestre' : null,
+                                  validator:
+                                      (v) =>
+                                          v == null || v.trim().isEmpty
+                                              ? 'Informe o semestre'
+                                              : null,
                                 ),
                                 const SizedBox(height: 18),
                                 DropdownButtonFormField<int>(
                                   value: _periodo,
                                   decoration: InputDecoration(
                                     labelText: 'Período',
-                                    labelStyle: const TextStyle(color: Colors.white70),
+                                    labelStyle: const TextStyle(
+                                      color: Colors.white70,
+                                    ),
                                     filled: true,
                                     fillColor: Colors.grey[800],
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(10),
                                       borderSide: BorderSide.none,
                                     ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 4,
+                                      horizontal: 16,
+                                    ),
                                   ),
                                   dropdownColor: Colors.grey[900],
                                   style: const TextStyle(color: Colors.white),
                                   items: const [
-                                    DropdownMenuItem(value: 1, child: Text('Matutino')),
-                                    DropdownMenuItem(value: 2, child: Text('Vespertino')),
-                                    DropdownMenuItem(value: 3, child: Text('Noturno')),
+                                    DropdownMenuItem(
+                                      value: 1,
+                                      child: Text('Matutino'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 2,
+                                      child: Text('Vespertino'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 3,
+                                      child: Text('Noturno'),
+                                    ),
                                   ],
-                                  onChanged: (v) => setState(() => _periodo = v),
-                                  validator: (v) => v == null ? 'Selecione o período' : null,
+                                  onChanged:
+                                      (v) => setState(() => _periodo = v),
+                                  validator:
+                                      (v) =>
+                                          v == null
+                                              ? 'Selecione o período'
+                                              : null,
                                 ),
                                 const SizedBox(height: 32),
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
-                                    icon: _isLoading
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Icon(Icons.save),
+                                    icon:
+                                        _isLoading
+                                            ? const SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                            : const Icon(Icons.save),
                                     label: const Text('Salvar Curso'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.black,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 18),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 18,
+                                      ),
                                       textStyle: const TextStyle(fontSize: 16),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -465,17 +578,25 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                 controller: _searchController,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
-                                  hintText: 'Pesquisar curso, semestre ou período...',
+                                  hintText:
+                                      'Pesquisar curso, semestre ou período...',
                                   hintStyle: TextStyle(color: Colors.white54),
-                                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    color: Colors.white54,
+                                  ),
                                   filled: true,
                                   fillColor: Colors.grey[800],
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: BorderSide.none,
                                   ),
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 0,
+                                    horizontal: 12,
+                                  ),
                                 ),
+                                onChanged: (_) => _filtrarCursos(),
                               ),
                               const SizedBox(height: 18),
                               const Text(
@@ -487,149 +608,176 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              // Cabeçalho da tabela
-                              Row(
-                                children: const [
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      'Curso',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[900],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Expanded(
+                                      flex: 3,
+                                      child: Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
+                                        child: Text(
+                                          'Curso',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      'Semestre',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Semestre',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      'Período',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Período',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      'Ações',
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Ações',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                        textAlign: TextAlign.end,
                                       ),
-                                      textAlign: TextAlign.end,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                              const Divider(color: Colors.white24, thickness: 1, height: 20),
+                              const Divider(
+                                color: Colors.white24,
+                                thickness: 1,
+                                height: 20,
+                              ),
                               Expanded(
-                                child: _loadingCursos
-                                    ? const Center(child: CircularProgressIndicator())
-                                    : _cursosFiltrados.isEmpty
-                                        ? const Text(
+                                child:
+                                    _loadingCursos
+                                        ? const Center(
+                                          child: CircularProgressIndicator(),
+                                        )
+                                        : _cursosFiltrados.isEmpty
+                                        ? const Center(
+                                          child: Text(
                                             'Nenhum curso cadastrado.',
-                                            style: TextStyle(color: Colors.white70),
-                                          )
-                                        : Scrollbar(
-                                            thumbVisibility: true,
-                                            controller: _scrollController,
-                                            child: ListView.builder(
-                                              controller: _scrollController,
-                                              itemCount: _cursosFiltrados.length,
-                                              itemBuilder: (context, index) {
-                                                final curso = _cursosFiltrados[index];
-                                                return Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 6.0),
-                                                  child: Row(
-                                                    children: [
-                                                      Expanded(
-                                                        flex: 3,
-                                                        child: Text(
-                                                          curso['curso'] ?? '',
-                                                          style: const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 15,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      Expanded(
-                                                        flex: 2,
-                                                        child: Row(
-                                                          children: [
-                                                            Container(
-                                                              width: 10,
-                                                              height: 10,
-                                                              margin: const EdgeInsets.only(right: 6),
-                                                              decoration: const BoxDecoration(
-                                                                color: Colors.blue,
-                                                                shape: BoxShape.circle,
-                                                              ),
-                                                            ),
-                                                            Text(
-                                                              '${curso['semestre'] ?? ''}',
-                                                              style: const TextStyle(
-                                                                color: Colors.white70,
-                                                                fontSize: 15,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      Expanded(
-                                                        flex: 2,
-                                                        child: Text(
-                                                          periodoToString(curso['periodo']),
-                                                          style: const TextStyle(
-                                                            color: Colors.white70,
-                                                            fontSize: 15,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      // Botões de ação
-                                                      Expanded(
-                                                        flex: 2,
-                                                        child: Row(
-                                                          mainAxisAlignment: MainAxisAlignment.end,
-                                                          children: [
-                                                            IconButton(
-                                                              icon: const Icon(Icons.edit, color: Colors.amber, size: 22),
-                                                              tooltip: 'Editar',
-                                                              onPressed: () {
-                                                                _editarCursoDialog(curso);
-                                                              },
-                                                            ),
-                                                            IconButton(
-                                                              icon: const Icon(Icons.delete, color: Colors.red, size: 22),
-                                                              tooltip: 'Excluir',
-                                                              onPressed: () {
-                                                                _excluirCurso(curso);
-                                                              },
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              },
+                                            style: TextStyle(
+                                              color: Colors.white70,
                                             ),
                                           ),
+                                        )
+                                        : ListView.separated(
+                                          controller: _scrollController,
+                                          itemCount: _cursosFiltrados.length,
+                                          separatorBuilder:
+                                              (_, __) => const Divider(
+                                                color: Colors.white12,
+                                                height: 1,
+                                              ),
+                                          itemBuilder: (context, index) {
+                                            final curso =
+                                                _cursosFiltrados[index];
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 4.0,
+                                                  ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    flex: 3,
+                                                    child: Text(
+                                                      curso['curso'] ?? '',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 15,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: Text(
+                                                      '${curso['semestre'] ?? ''}',
+                                                      style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 15,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: Text(
+                                                      periodoToString(
+                                                        curso['periodo'],
+                                                      ),
+                                                      style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 15,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.end,
+                                                      children: [
+                                                        IconButton(
+                                                          icon: const Icon(
+                                                            Icons.edit,
+                                                            color: Colors.amber,
+                                                            size: 22,
+                                                          ),
+                                                          tooltip: 'Editar',
+                                                          onPressed: () async {
+                                                            await _editarCursoDialog(
+                                                              curso,
+                                                            );
+                                                          },
+                                                        ),
+                                                        IconButton(
+                                                          icon: const Icon(
+                                                            Icons.delete,
+                                                            color: Colors.red,
+                                                            size: 22,
+                                                          ),
+                                                          tooltip: 'Excluir',
+                                                          onPressed: () async {
+                                                            await _excluirCurso(
+                                                              curso,
+                                                            );
+                                                          },
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
                               ),
                             ],
                           ),
