@@ -120,9 +120,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.black,
         elevation: 0,
         toolbarHeight: 80, // Aumente o valor conforme desejar (padrão é 56)
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'Homepage Administrador',
           style: TextStyle(
@@ -243,7 +241,12 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: Center(
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+    image: DecorationImage(
+      image: AssetImage('assets/images/imagemfundologin.jpg'),
+      fit: BoxFit.cover,
+    ),),
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -276,7 +279,11 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(
                     height: 38,
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.add_business, size: 18, color: Colors.black),
+                      icon: const Icon(
+                        Icons.add_business,
+                        size: 18,
+                        color: Colors.black,
+                      ),
                       label: const Text(
                         'Criar Nova Alocação',
                         style: TextStyle(fontSize: 14, color: Colors.black),
@@ -285,7 +292,10 @@ class _HomePageState extends State<HomePage> {
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         side: const BorderSide(color: Colors.black, width: 2),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         textStyle: const TextStyle(fontSize: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -314,16 +324,16 @@ class _HomePageState extends State<HomePage> {
                       ),
                       label: const Text(
                         'Ver Lista de Alocações',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.black, fontSize: 14),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         side: const BorderSide(color: Colors.black, width: 2),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         textStyle: const TextStyle(fontSize: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -345,7 +355,11 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(
                     height: 38,
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.meeting_room, color: Colors.black, size: 18),
+                      icon: const Icon(
+                        Icons.meeting_room,
+                        color: Colors.black,
+                        size: 18,
+                      ),
                       label: const Text(
                         'Criar Nova Sala',
                         style: TextStyle(fontSize: 14, color: Colors.black),
@@ -354,7 +368,10 @@ class _HomePageState extends State<HomePage> {
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
                         side: const BorderSide(color: Colors.black, width: 2),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         textStyle: const TextStyle(fontSize: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),

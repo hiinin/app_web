@@ -328,16 +328,13 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.list_alt, color: Colors.black87),
-              title: const Text(
-                'Lista de Alocações',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/listalocacao');
-              },
-            ),
+                    leading: const Icon(Icons.home, color: Colors.black87),
+                    title: const Text('Início', style: TextStyle(color: Colors.black87)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, '/home');
+                    },
+                  ),
             ListTile(
               leading: const Icon(Icons.meeting_room, color: Colors.black87),
               title: const Text(
@@ -360,15 +357,15 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                 Navigator.pushNamed(context, '/criarlocacao');
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.school, color: Colors.black87),
+             ListTile(
+              leading: const Icon(Icons.list_alt, color: Colors.black87),
               title: const Text(
-                'Novo Curso',
+                'Lista de Alocações',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () {
                 Navigator.pop(context);
-                // Já está na tela de criar curso
+                Navigator.pushNamed(context, '/listalocacao');
               },
             ),
             const Spacer(),

@@ -173,12 +173,39 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               ),
             ),
             Expanded(
-              child: ListView(
+              child: 
+              
+              ListView(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.add_business, color: Colors.black87),
-                    title: const Text('Nova Alocação', style: TextStyle(color: Colors.black87)),
-                    onTap: () => Navigator.pop(context),
+                    leading: const Icon(Icons.home, color: Colors.black87),
+                    title: const Text('Início', style: TextStyle(color: Colors.black87)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, '/home');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.school, color: Colors.black87),
+                    title: const Text(
+                      'Criar Curso',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarcurso');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.meeting_room, color: Colors.black87),
+                    title: const Text(
+                      'Criar Sala',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarsala');
+                    },
                   ),
                   ListTile(
                     leading: const Icon(Icons.list_alt, color: Colors.black87),
@@ -187,15 +214,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/listalocacao');
                     },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.meeting_room, color: Colors.black87),
-                    title: const Text('Nova Sala', style: TextStyle(color: Colors.black87)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarsala');
-                    },
-                  ),
+                  ),                  
                 ],
               ),
             ),
