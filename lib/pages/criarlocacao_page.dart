@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../models/sala.dart' as sala_model;
 import '../models/curso.dart' as curso_model;
 
@@ -28,11 +29,11 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   TimeOfDay? horaInicio;
   TimeOfDay? horaFim;
 
-String formatHora(TimeOfDay hora) {
-  final horaFormatada = hora.hour.toString().padLeft(2, '0');
-  final minutoFormatado = hora.minute.toString().padLeft(2, '0');
-  return '$horaFormatada:$minutoFormatado';
-}
+  String formatHora(TimeOfDay hora) {
+    final horaFormatada = hora.hour.toString().padLeft(2, '0');
+    final minutoFormatado = hora.minute.toString().padLeft(2, '0');
+    return '$horaFormatada:$minutoFormatado';
+  }
 
   final List<String> periodosAula = ['Matutino', 'Vespertino', 'Noturno'];
 
@@ -45,10 +46,7 @@ String formatHora(TimeOfDay hora) {
   Future<void> carregarDados() async {
     setState(() => isLoading = true);
     try {
-      final responseSalas = await supabase
-          .from('salas')
-          .select()
-          .eq('disponivel', true);
+      final responseSalas = await supabase.from('salas').select();
 
       final responseCursos = await supabase.from('cursos').select();
 
@@ -90,17 +88,40 @@ String formatHora(TimeOfDay hora) {
   Future<void> salvarLocacao() async {
     if (dia == null ||
         salaSelecionada == null ||
-        cursoSelecionado == null ) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preencha todos os campos')),
-      );
+        cursoSelecionado == null ||
+        periodoAulaSelecionado == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Preencha todos os campos')));
       return;
     }
 
-
     setState(() => isLoading = true);
 
-   try {
+    // Verifica se já existe um agendamento com a mesma sala, dia e período
+    final agendamentosExistentes = await supabase
+        .from('agendamento')
+        .select()
+        .eq('sala_id', salaSelecionada!.id)
+        .eq(
+          'dia',
+          '${dia!.year.toString().padLeft(4, '0')}-${dia!.month.toString().padLeft(2, '0')}-${dia!.day.toString().padLeft(2, '0')}',
+        )
+        .eq('aula_periodo', periodoAulaSelecionado!);
+
+    if (agendamentosExistentes.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Essa sala já está alocada nesse período. Escolha outro.',
+          ),
+        ),
+      );
+      setState(() => isLoading = false);
+      return;
+    }
+
+    try {
       // 1. Inserir na tabela 'alocacoes'
       await supabase.from('alocacoes').insert({
         'sala_id': salaSelecionada!.id,
@@ -112,18 +133,9 @@ String formatHora(TimeOfDay hora) {
         'aula_periodo': periodoAulaSelecionado!,
         'sala_id': salaSelecionada!.id,
         'curso_id': cursoSelecionado!.id,
-        'dia': '${dia!.year.toString().padLeft(4,'0')}-${dia!.month.toString().padLeft(2,'0')}-${dia!.day.toString().padLeft(2,'0')}',
-
+        'dia':
+            '${dia!.year.toString().padLeft(4, '0')}-${dia!.month.toString().padLeft(2, '0')}-${dia!.day.toString().padLeft(2, '0')}',
       });
-
-      // 3. Atualizar sala como indisponível
-      await supabase
-          .from('salas')
-          .update({'disponivel': false})
-          .eq('id', salaSelecionada!.id);
-
-      if (!mounted) return;
-
       // 4. Resetar campos
       setState(() {
         salaSelecionada = null;
@@ -134,22 +146,21 @@ String formatHora(TimeOfDay hora) {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alocação e agendamento salvos com sucesso')),
+        const SnackBar(
+          content: Text('Alocação e agendamento salvos com sucesso'),
+        ),
       );
 
       carregarDados(); // Recarrega as opções
-
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao salvar alocação: $e')),
-        );
-      } finally {
-        setState(() => isLoading = false);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao salvar alocação: $e')));
+    } finally {
+      setState(() => isLoading = false);
     }
   }
-
-
 
   String periodoToString(int? periodo) {
     switch (periodo) {
@@ -337,20 +348,29 @@ String formatHora(TimeOfDay hora) {
                                 value: periodoAulaSelecionado,
                                 decoration: InputDecoration(
                                   labelText: 'Selecione a Aula (Período)',
-                                  labelStyle: const TextStyle(color: Colors.white70),
+                                  labelStyle: const TextStyle(
+                                    color: Colors.white70,
+                                  ),
                                   filled: true,
                                   fillColor: Colors.grey[900],
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: Colors.white24),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: Colors.white24),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF1976D2),
+                                      width: 2,
+                                    ),
                                   ),
                                 ),
                                 dropdownColor: Colors.grey[900],
@@ -359,16 +379,25 @@ String formatHora(TimeOfDay hora) {
                                 items: const [
                                   DropdownMenuItem(
                                     value: 'Primeira Aula',
-                                    child: Text('Primeira Aula', style: TextStyle(color: Colors.white)),
+                                    child: Text(
+                                      'Primeira Aula',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                                   ),
                                   DropdownMenuItem(
                                     value: 'Segunda Aula',
-                                    child: Text('Segunda Aula', style: TextStyle(color: Colors.white)),
+                                    child: Text(
+                                      'Segunda Aula',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                                   ),
                                 ],
-                                onChanged: (value) => setState(() => periodoAulaSelecionado = value),
+                                onChanged:
+                                    (value) => setState(
+                                      () => periodoAulaSelecionado = value,
+                                    ),
                               ),
-                              
+
                               const SizedBox(height: 18),
                               DropdownButtonFormField<sala_model.Sala>(
                                 value: salaSelecionada,
@@ -425,6 +454,8 @@ String formatHora(TimeOfDay hora) {
                                             ? 'Selecione uma sala'
                                             : null,
                               ),
+
+
                               const SizedBox(height: 18),
                               DropdownButtonFormField<curso_model.Curso>(
                                 value: cursoSelecionado,
@@ -486,6 +517,8 @@ String formatHora(TimeOfDay hora) {
                                             ? 'Selecione um curso'
                                             : null,
                               ),
+
+                              
                               if (cursoSelecionado != null) ...[
                                 Container(
                                   padding: const EdgeInsets.all(12),
