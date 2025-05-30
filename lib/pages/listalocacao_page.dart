@@ -102,8 +102,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                   (curso) {
                     // Converte o período numérico para texto
                     String periodo = '-';
-                    if (curso['periodo'] == 1) periodo = 'Matutino';
-                    else if (curso['periodo'] == 2) periodo = 'Vespertino';
+                    if (curso['periodo'] == 1) {
+                      periodo = 'Matutino';
+                    } else if (curso['periodo'] == 2) periodo = 'Vespertino';
                     else if (curso['periodo'] == 3) periodo = 'Noturno';
 
                     return DropdownMenuItem<int>(
@@ -249,28 +250,6 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                 Navigator.pushReplacementNamed(context, '/home'); // Vai para a Home Page
               },
             ),
-             ListTile(
-              leading: const Icon(Icons.school, color: Colors.black87),
-              title: const Text(
-                'Criar Curso',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/criarcurso');
-              },
-            ),
-            ListTile(
-                    leading: const Icon(Icons.meeting_room, color: Colors.black87),
-                    title: const Text(
-                      'Criar Sala',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarsala');
-                    },
-                  ),
             ListTile(
               leading: const Icon(Icons.add_business),
               title: const Text('Nova Alocação'),
@@ -282,6 +261,22 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     builder: (context) => const CriarLocacaoPage(),
                   ),
                 );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt),
+              title: const Text('Lista de Alocações'),
+              onTap: () {
+                Navigator.pop(context);
+                // Você já está na lista, pode apenas fechar o drawer ou navegar se quiser recarregar
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.meeting_room, color: Colors.black87),
+              title: const Text('Nova Sala', style: TextStyle(color: Colors.black87)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarsala');
               },
             ),
             const Spacer(),

@@ -21,9 +21,18 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
   bool isLoading = false;
 
-  DateTime? diaSelecionado;
+  DateTime? dia;
   TimeOfDay? horaSelecionada;
   String? periodoAulaSelecionado;
+
+  TimeOfDay? horaInicio;
+  TimeOfDay? horaFim;
+
+String formatHora(TimeOfDay hora) {
+  final horaFormatada = hora.hour.toString().padLeft(2, '0');
+  final minutoFormatado = hora.minute.toString().padLeft(2, '0');
+  return '$horaFormatada:$minutoFormatado';
+}
 
   final List<String> periodosAula = ['Matutino', 'Vespertino', 'Noturno'];
 
@@ -74,64 +83,73 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       lastDate: DateTime(2030),
     );
     if (picked != null) {
-      setState(() => diaSelecionado = picked);
-    }
-  }
-
-  Future<void> selecionarHora() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() => horaSelecionada = picked);
+      setState(() => dia = picked);
     }
   }
 
   Future<void> salvarLocacao() async {
-    if (salaSelecionada == null ||
-        cursoSelecionado == null ||
-        diaSelecionado == null ||
-        horaSelecionada == null ||
-        periodoAulaSelecionado == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Preencha todos os campos')));
+    if (dia == null ||
+        salaSelecionada == null ||
+        cursoSelecionado == null ) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preencha todos os campos')),
+      );
       return;
     }
 
+
     setState(() => isLoading = true);
 
-    try {
+   try {
+      // 1. Inserir na tabela 'alocacoes'
       await supabase.from('alocacoes').insert({
         'sala_id': salaSelecionada!.id,
         'curso_id': cursoSelecionado!.id,
       });
 
+      // 2. Inserir na tabela 'agendamento'
+      await supabase.from('agendamento').insert({
+        'aula_periodo': periodoAulaSelecionado!,
+        'sala_id': salaSelecionada!.id,
+        'curso_id': cursoSelecionado!.id,
+        'dia': '${dia!.year.toString().padLeft(4,'0')}-${dia!.month.toString().padLeft(2,'0')}-${dia!.day.toString().padLeft(2,'0')}',
+
+      });
+
+      // 3. Atualizar sala como indisponível
       await supabase
           .from('salas')
           .update({'disponivel': false})
           .eq('id', salaSelecionada!.id);
 
       if (!mounted) return;
+
+      // 4. Resetar campos
       setState(() {
         salaSelecionada = null;
         cursoSelecionado = null;
+        periodoAulaSelecionado = null;
+        horaInicio = null;
+        horaFim = null;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alocação salva com sucesso')),
+        const SnackBar(content: Text('Alocação e agendamento salvos com sucesso')),
       );
-      carregarDados(); // Atualiza as opções após salvar
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar alocação: $e')));
-    } finally {
-      setState(() => isLoading = false);
+
+      carregarDados(); // Recarrega as opções
+
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao salvar alocação: $e')),
+        );
+      } finally {
+        setState(() => isLoading = false);
     }
   }
+
+
 
   String periodoToString(int? periodo) {
     switch (periodo) {
@@ -280,7 +298,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                       constraints: BoxConstraints(
                         maxWidth:
                             MediaQuery.of(context).size.width *
-                            0.8, // 80% da tela
+                            0.45, // 80% da tela
                       ),
                       child: Card(
                         color: Colors.grey[850],
@@ -304,48 +322,54 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                 textAlign: TextAlign.center,
                               ),
 
+                              const SizedBox(height: 18),
                               ElevatedButton.icon(
                                 onPressed: selecionarDia,
                                 icon: const Icon(Icons.calendar_today),
                                 label: Text(
-                                  diaSelecionado == null
+                                  dia == null
                                       ? 'Selecionar Dia'
-                                      : 'Dia: ${diaSelecionado!.day}/${diaSelecionado!.month}/${diaSelecionado!.year}',
+                                      : 'Dia: ${dia!.day}/${dia!.month}/${dia!.year}',
                                 ),
                               ),
-                              const SizedBox(height: 16),
-
-                              ElevatedButton.icon(
-                                onPressed: selecionarHora,
-                                icon: const Icon(Icons.access_time),
-                                label: Text(
-                                  horaSelecionada == null
-                                      ? 'Selecionar Hora'
-                                      : 'Hora: ${horaSelecionada!.hour.toString().padLeft(2, '0')}:${horaSelecionada!.minute.toString().padLeft(2, '0')}',
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
+                              const SizedBox(height: 18),
                               DropdownButtonFormField<String>(
                                 value: periodoAulaSelecionado,
-                                items:
-                                    periodosAula
-                                        .map(
-                                          (p) => DropdownMenuItem(
-                                            value: p,
-                                            child: Text(p),
-                                          ),
-                                        )
-                                        .toList(),
-                                onChanged:
-                                    (value) => setState(
-                                      () => periodoAulaSelecionado = value,
-                                    ),
-                                decoration: const InputDecoration(
-                                  labelText: 'Período da Aula',
+                                decoration: InputDecoration(
+                                  labelText: 'Selecione a Aula (Período)',
+                                  labelStyle: const TextStyle(color: Colors.white70),
+                                  filled: true,
+                                  fillColor: Colors.grey[900],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(color: Colors.white24),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(color: Colors.white24),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
+                                  ),
                                 ),
+                                dropdownColor: Colors.grey[900],
+                                iconEnabledColor: Colors.white,
+                                style: const TextStyle(color: Colors.white),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'Primeira Aula',
+                                    child: Text('Primeira Aula', style: TextStyle(color: Colors.white)),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Segunda Aula',
+                                    child: Text('Segunda Aula', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                                onChanged: (value) => setState(() => periodoAulaSelecionado = value),
                               ),
-                              const SizedBox(height: 24),
+                              
+                              const SizedBox(height: 18),
                               DropdownButtonFormField<sala_model.Sala>(
                                 value: salaSelecionada,
                                 decoration: InputDecoration(
@@ -401,7 +425,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             ? 'Selecione uma sala'
                                             : null,
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 18),
                               DropdownButtonFormField<curso_model.Curso>(
                                 value: cursoSelecionado,
                                 decoration: InputDecoration(
