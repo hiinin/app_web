@@ -21,6 +21,12 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
   bool isLoading = false;
 
+  DateTime? diaSelecionado;
+  TimeOfDay? horaSelecionada;
+  String? periodoAulaSelecionado;
+
+  final List<String> periodosAula = ['Matutino', 'Vespertino', 'Noturno'];
+
   @override
   void initState() {
     super.initState();
@@ -46,7 +52,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
             (responseCursos as List)
                 .map((e) => curso_model.Curso.fromMap(e))
                 .toList();
-        cursos.sort((a, b) => a.curso.toLowerCase().compareTo(b.curso.toLowerCase())); // Ordena alfabeticamente
+        cursos.sort(
+          (a, b) => a.curso.toLowerCase().compareTo(b.curso.toLowerCase()),
+        ); // Ordena alfabeticamente
       });
     } catch (e) {
       if (!mounted) return;
@@ -58,11 +66,37 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     }
   }
 
+  Future<void> selecionarDia() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() => diaSelecionado = picked);
+    }
+  }
+
+  Future<void> selecionarHora() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() => horaSelecionada = picked);
+    }
+  }
+
   Future<void> salvarLocacao() async {
-    if (salaSelecionada == null || cursoSelecionado == null) {
+    if (salaSelecionada == null ||
+        cursoSelecionado == null ||
+        diaSelecionado == null ||
+        horaSelecionada == null ||
+        periodoAulaSelecionado == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Selecione sala e curso')));
+      ).showSnackBar(const SnackBar(content: Text('Preencha todos os campos')));
       return;
     }
 
@@ -173,13 +207,14 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               ),
             ),
             Expanded(
-              child: 
-              
-              ListView(
+              child: ListView(
                 children: [
                   ListTile(
                     leading: const Icon(Icons.home, color: Colors.black87),
-                    title: const Text('Início', style: TextStyle(color: Colors.black87)),
+                    title: const Text(
+                      'Início',
+                      style: TextStyle(color: Colors.black87),
+                    ),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(context, '/home');
@@ -197,7 +232,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.meeting_room, color: Colors.black87),
+                    leading: const Icon(
+                      Icons.meeting_room,
+                      color: Colors.black87,
+                    ),
                     title: const Text(
                       'Criar Sala',
                       style: TextStyle(color: Colors.black87),
@@ -209,12 +247,15 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.list_alt, color: Colors.black87),
-                    title: const Text('Lista de Alocações', style: TextStyle(color: Colors.black87)),
+                    title: const Text(
+                      'Lista de Alocações',
+                      style: TextStyle(color: Colors.black87),
+                    ),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/listalocacao');
                     },
-                  ),                  
+                  ),
                 ],
               ),
             ),
@@ -228,189 +269,285 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           ],
         ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.8, // 80% da tela
-                    ),
-                    child: Card(
-                      color: Colors.grey[850],
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth:
+                            MediaQuery.of(context).size.width *
+                            0.8, // 80% da tela
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Text(
-                              'Preencha os dados para alocar uma sala',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 1.1,
+                      child: Card(
+                        color: Colors.grey[850],
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(28),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Preencha os dados para alocar uma sala',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 1.1,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 24),
-                            DropdownButtonFormField<sala_model.Sala>(
-                              value: salaSelecionada,
-                              decoration: InputDecoration(
-                                labelText: 'Selecione a Sala',
-                                labelStyle: const TextStyle(color: Colors.white70),
-                                filled: true,
-                                fillColor: Colors.grey[900],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.white24),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.white24),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
+
+                              ElevatedButton.icon(
+                                onPressed: selecionarDia,
+                                icon: const Icon(Icons.calendar_today),
+                                label: Text(
+                                  diaSelecionado == null
+                                      ? 'Selecionar Dia'
+                                      : 'Dia: ${diaSelecionado!.day}/${diaSelecionado!.month}/${diaSelecionado!.year}',
                                 ),
                               ),
-                              dropdownColor: Colors.grey[900],
-                              iconEnabledColor: Colors.white,
-                              style: const TextStyle(color: Colors.white),
-                              items: salas
-                                  .map(
-                                    (s) => DropdownMenuItem(
-                                      value: s,
-                                      child: Text(
-                                        '${s.numeroSala} - ${s.qtdCadeiras} cadeiras',
-                                        style: const TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() => salaSelecionada = value);
-                              },
-                              validator: (value) =>
-                                  value == null ? 'Selecione uma sala' : null,
-                            ),
-                            const SizedBox(height: 20),
-                            DropdownButtonFormField<curso_model.Curso>(
-                              value: cursoSelecionado,
-                              decoration: InputDecoration(
-                                labelText: 'Selecione o Curso',
-                                labelStyle: const TextStyle(color: Colors.white70),
-                                filled: true,
-                                fillColor: Colors.grey[900],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.white24),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.white24),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
+                              const SizedBox(height: 16),
+
+                              ElevatedButton.icon(
+                                onPressed: selecionarHora,
+                                icon: const Icon(Icons.access_time),
+                                label: Text(
+                                  horaSelecionada == null
+                                      ? 'Selecionar Hora'
+                                      : 'Hora: ${horaSelecionada!.hour.toString().padLeft(2, '0')}:${horaSelecionada!.minute.toString().padLeft(2, '0')}',
                                 ),
                               ),
-                              dropdownColor: Colors.grey[900],
-                              iconEnabledColor: Colors.white,
-                              style: const TextStyle(color: Colors.white),
-                              items: cursos
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c,
-                                      child: Text(
-                                        '${c.curso} - ${c.semestre ?? "Semestre?"} - ${c.periodo != null ? periodoToString(c.periodo) : "Período?"}',
-                                        style: const TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  cursoSelecionado = value;
-                                });
-                                print('Selecionado: ${cursoSelecionado?.curso}, ${cursoSelecionado?.semestre}, ${cursoSelecionado?.periodo}');
-                              },
-                              validator: (value) => value == null ? 'Selecione um curso' : null,
-                            ),
-                            if (cursoSelecionado != null) ...[
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                margin: const EdgeInsets.only(bottom: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[900],
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.white24),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Curso: ${cursoSelecionado!.curso}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 15),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 12,
-                                          height: 12,
-                                          margin: const EdgeInsets.only(right: 8),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.blue, // Cor da bolinha
-                                            shape: BoxShape.circle,
+                              const SizedBox(height: 16),
+
+                              DropdownButtonFormField<String>(
+                                value: periodoAulaSelecionado,
+                                items:
+                                    periodosAula
+                                        .map(
+                                          (p) => DropdownMenuItem(
+                                            value: p,
+                                            child: Text(p),
                                           ),
-                                        ),
-                                        Text(
-                                          'Semestre: ${cursoSelecionado!.semestre ?? "Não informado"}',
-                                          style: const TextStyle(color: Colors.white70, fontSize: 14),
-                                        ),
-                                      ],
+                                        )
+                                        .toList(),
+                                onChanged:
+                                    (value) => setState(
+                                      () => periodoAulaSelecionado = value,
                                     ),
-                                    Text(
-                                      'Período: ${periodoToString(cursoSelecionado!.periodo)}',
-                                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                decoration: const InputDecoration(
+                                  labelText: 'Período da Aula',
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              DropdownButtonFormField<sala_model.Sala>(
+                                value: salaSelecionada,
+                                decoration: InputDecoration(
+                                  labelText: 'Selecione a Sala',
+                                  labelStyle: const TextStyle(
+                                    color: Colors.white70,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[900],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
                                     ),
-                                  ],
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF1976D2),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                dropdownColor: Colors.grey[900],
+                                iconEnabledColor: Colors.white,
+                                style: const TextStyle(color: Colors.white),
+                                items:
+                                    salas
+                                        .map(
+                                          (s) => DropdownMenuItem(
+                                            value: s,
+                                            child: Text(
+                                              '${s.numeroSala} - ${s.qtdCadeiras} cadeiras',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                onChanged: (value) {
+                                  setState(() => salaSelecionada = value);
+                                },
+                                validator:
+                                    (value) =>
+                                        value == null
+                                            ? 'Selecione uma sala'
+                                            : null,
+                              ),
+                              const SizedBox(height: 20),
+                              DropdownButtonFormField<curso_model.Curso>(
+                                value: cursoSelecionado,
+                                decoration: InputDecoration(
+                                  labelText: 'Selecione o Curso',
+                                  labelStyle: const TextStyle(
+                                    color: Colors.white70,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[900],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF1976D2),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                dropdownColor: Colors.grey[900],
+                                iconEnabledColor: Colors.white,
+                                style: const TextStyle(color: Colors.white),
+                                items:
+                                    cursos
+                                        .map(
+                                          (c) => DropdownMenuItem(
+                                            value: c,
+                                            child: Text(
+                                              '${c.curso} - ${c.semestre ?? "Semestre?"} - ${c.periodo != null ? periodoToString(c.periodo) : "Período?"}',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    cursoSelecionado = value;
+                                  });
+                                  print(
+                                    'Selecionado: ${cursoSelecionado?.curso}, ${cursoSelecionado?.semestre}, ${cursoSelecionado?.periodo}',
+                                  );
+                                },
+                                validator:
+                                    (value) =>
+                                        value == null
+                                            ? 'Selecione um curso'
+                                            : null,
+                              ),
+                              if (cursoSelecionado != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[900],
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.white24),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Curso: ${cursoSelecionado!.curso}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 12,
+                                            height: 12,
+                                            margin: const EdgeInsets.only(
+                                              right: 8,
+                                            ),
+                                            decoration: const BoxDecoration(
+                                              color:
+                                                  Colors.blue, // Cor da bolinha
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Semestre: ${cursoSelecionado!.semestre ?? "Não informado"}',
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        'Período: ${periodoToString(cursoSelecionado!.periodo)}',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 28),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
+                                    textStyle: const TextStyle(fontSize: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                  onPressed: salvarLocacao,
+                                  label: const Text('Alocar Sala'),
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 28),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.add, color: Colors.white),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.black,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  textStyle: const TextStyle(fontSize: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                onPressed: salvarLocacao,
-                                label: const Text('Alocar Sala'),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
     );
   }
 }
