@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:dropdown_search/dropdown_search.dart';
 import '../models/sala.dart' as sala_model;
 import '../models/curso.dart' as curso_model;
 
