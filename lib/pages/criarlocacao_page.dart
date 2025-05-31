@@ -73,16 +73,21 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   }
 
   Future<void> selecionarDia() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) {
-      setState(() => dia = picked);
-    }
+  final DateTime hoje = DateTime.now();
+  final DateTime dataInicial = DateTime(hoje.year, hoje.month, hoje.day);
+
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: dia ?? dataInicial,
+    firstDate: dataInicial,
+    lastDate: DateTime(2030),
+  );
+
+  if (picked != null) {
+    setState(() => dia = picked);
   }
+}
+
 
   Future<void> salvarLocacao() async {
     if (dia == null ||
@@ -454,7 +459,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             : null,
                               ),
 
-
                               const SizedBox(height: 18),
                               DropdownButtonFormField<curso_model.Curso>(
                                 value: cursoSelecionado,
@@ -517,7 +521,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             : null,
                               ),
 
-                              
                               if (cursoSelecionado != null) ...[
                                 Container(
                                   padding: const EdgeInsets.all(12),

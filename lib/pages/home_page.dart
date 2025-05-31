@@ -158,7 +158,7 @@ class _HomePageState extends State<HomePage> {
                   overlayColor: Colors.black.withOpacity(1.0),
                 ),
                 child: const Text(
-                  'Nova Alocação',
+                  'Novo Agendamento',
                   style: TextStyle(color: Colors.white, fontSize: 15),
                 ),
               ),
@@ -170,31 +170,7 @@ class _HomePageState extends State<HomePage> {
                   overlayColor: Colors.black.withOpacity(1.0),
                 ),
                 child: const Text(
-                  'Lista Alocações',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/criarsala'),
-                style: TextButton.styleFrom(
-                  overlayColor: Colors.black.withOpacity(1.0),
-                ),
-                child: const Text(
-                  'Nova Sala',
-                  style: TextStyle(color: Colors.white, fontSize: 15),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/criarcurso'),
-                style: TextButton.styleFrom(
-                  overlayColor: Colors.black.withOpacity(1.0),
-                ),
-                child: const Text(
-                  'Novo Curso',
+                  'Lista de Agendamento',
                   style: TextStyle(color: Colors.white, fontSize: 15),
                 ),
               ),
