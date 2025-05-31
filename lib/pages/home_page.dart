@@ -158,7 +158,7 @@ class _HomePageState extends State<HomePage> {
                   overlayColor: Colors.black.withOpacity(1.0),
                 ),
                 child: const Text(
-                  'Nova Alocação',
+                  'Novo Agendamento',
                   style: TextStyle(color: Colors.white, fontSize: 15),
                 ),
               ),
@@ -170,7 +170,7 @@ class _HomePageState extends State<HomePage> {
                   overlayColor: Colors.black.withOpacity(1.0),
                 ),
                 child: const Text(
-                  'Lista Alocações',
+                  'Lista de Agendamento',
                   style: TextStyle(color: Colors.white, fontSize: 15),
                 ),
               ),
