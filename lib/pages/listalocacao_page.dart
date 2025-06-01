@@ -16,6 +16,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
   DateTime diaSelecionado = DateTime.now();
 
+  List<Map<String, dynamic>> cursos = [];
+  int? cursoSelecionadoId;
+
   @override
   void initState() {
     super.initState();
@@ -35,24 +38,28 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     }
   }
 
-  Future<void> carregarAgendamentos() async {
+  Future<void> carregarAgendamentos({int? cursoId}) async {
     setState(() => isLoading = true);
     try {
       final diaStr =
           '${diaSelecionado.year.toString().padLeft(4, '0')}-${diaSelecionado.month.toString().padLeft(2, '0')}-${diaSelecionado.day.toString().padLeft(2, '0')}';
 
-      final response = await supabase
-          .from('agendamento')
+      var query = supabase.from('agendamento').eq('dia', diaStr);
+
+      if (cursoId != null) {
+        query = query.eq('curso_id', cursoId);
+      }
+
+      final response = await query
           .select('''
-            id,
-            dia,
-            aula_periodo,
-            hora_inicio,
-            hora_fim,
-            cursos(id, curso, semestre, periodo),
-            salas(id, numero_sala)
-          ''')
-          .eq('dia', diaStr)
+          id,
+          dia,
+          aula_periodo,
+          hora_inicio,
+          hora_fim,
+          cursos(id, curso, semestre, periodo),
+          salas(id, numero_sala)
+        ''')
           .order('dia');
 
       setState(() => agendamentos = response);
@@ -62,6 +69,27 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
       );
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> buscarPorCurso() async {
+    if (cursoSelecionadoId == null) {
+      print('Nenhum curso selecionado');
+      return;
+    }
+
+    final response =
+        await supabase
+            .from('agendamento')
+            .select()
+            .eq('curso_id', cursoSelecionadoId)
+            .execute();
+
+    if (response.status == 200) {
+      final dados = response.data as List<dynamic>;
+      // Atualize a lista com os dados obtidos
+    } else {
+      print('Erro na busca: ${response.status}');
     }
   }
 
@@ -81,7 +109,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   Future<void> editarAgendamento(Map agendamento) async {
     final cursoAtual = agendamento['cursos'];
     final salaAtual = agendamento['salas'];
-  
+
     final novoCursoController = TextEditingController(
       text: cursoAtual['curso'],
     );
@@ -96,12 +124,12 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     );
 
     final hoje = DateTime.now();
-    final dataMinima = DateTime(hoje.year, hoje.month, hoje.day); // Zera a hora
+    final dataMinima = DateTime(hoje.year, hoje.month, hoje.day);
 
     final novaData = await showDatePicker(
       context: context,
       initialDate: DateTime.parse(agendamento['dia']),
-      firstDate: dataMinima, // impede datas anteriores
+      firstDate: dataMinima,
       lastDate: DateTime(2030),
     );
 
@@ -208,141 +236,184 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final String textoDia =
-        '${diaSelecionado.day.toString().padLeft(2, '0')}/${diaSelecionado.month.toString().padLeft(2, '0')}/${diaSelecionado.year}';
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Lista de Alocações'),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-      ),
-
-
+      appBar: AppBar(title: const Text('Lista de Alocações')),
       drawer: Drawer(
-            child: Column(
-              children: [
-                DrawerHeader(
-                  decoration: const BoxDecoration(
-                    color: Color.fromARGB(255, 238, 236, 236),
+        child: Column(
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: Color.fromARGB(255, 238, 236, 236),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.account_circle,
+                    color: Colors.white,
+                    size: 48,
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.account_circle,
-                        color: Colors.white,
-                        size: 48,
+                  const SizedBox(width: 16),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'RH Painel',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'RH Painel',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Bem-vindo!',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Bem-vindo!',
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_business, color: Colors.black87),
+              title: const Text(
+                'Nova Alocação',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CriarLocacaoPage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt, color: Colors.black87),
+              title: const Text(
+                'Lista de Alocações',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ListaLocacaoPage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.meeting_room, color: Colors.black87),
+              title: const Text(
+                'Nova Sala',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarsala');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.school, color: Colors.black87),
+              title: const Text(
+                'Novo Curso',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarcurso');
+              },
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                '© 2025 RH Company',
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: Row(
+        children: [
+          // Lado esquerdo: filtros
+          Container(
+            width: 280,
+            padding: const EdgeInsets.all(16),
+            color: Colors.grey[200],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Filtros',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.add_business,
-                    color: Colors.black87,
+                const SizedBox(height: 16),
+                const Text('Data selecionada:'),
+                Text(
+                  '${diaSelecionado.day.toString().padLeft(2, '0')}/${diaSelecionado.month.toString().padLeft(2, '0')}/${diaSelecionado.year}',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: const Text('Selecionar Dia'),
+                  onPressed: selecionarDia,
+                ),
+                const Divider(height: 32),
+                const Text('Selecionar Curso:'),
+                const SizedBox(height: 8),
+
+                // Dropdown para cursos
+                DropdownButtonFormField<int>(
+                  value: cursoSelecionadoId,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
                   ),
-                  title: const Text(
-                    'Nova Alocação',
-                    style: TextStyle(color: Colors.black87),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CriarLocacaoPage(),
-                      ),
-                    );
+                  hint: const Text('Escolha um curso'),
+                  items:
+                      cursos.map((curso) {
+                        return DropdownMenuItem<int>(
+                          value: curso['id'],
+                          child: Text(curso['curso']),
+                        );
+                      }).toList(),
+                  onChanged: (int? valor) {
+                    setState(() {
+                      cursoSelecionadoId = valor;
+                    });
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.list_alt, color: Colors.black87),
-                  title: const Text(
-                    'Lista de Alocações',
-                    style: TextStyle(color: Colors.black87),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ListaLocacaoPage(),
-                      ),
-                    );
+
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.search),
+                  label: const Text('Buscar'),
+                  onPressed: () {
+                    if (cursoSelecionadoId != null) {
+                      carregarAgendamentos(cursoId: cursoSelecionadoId);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Selecione um curso primeiro'),
+                        ),
+                      );
+                    }
                   },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.meeting_room,
-                    color: Colors.black87,
-                  ),
-                  title: const Text(
-                    'Nova Sala',
-                    style: TextStyle(color: Colors.black87),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/criarsala');
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.school, color: Colors.black87),
-                  title: const Text(
-                    'Novo Curso',
-                    style: TextStyle(color: Colors.black87),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/criarcurso');
-                  },
-                ),
-                const Spacer(),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    '© 2025 RH Company',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                  ),
                 ),
               ],
             ),
           ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton.icon(
-              onPressed: selecionarDia,
-              icon: const Icon(Icons.calendar_today),
-              label: Text(textoDia),
-            ),
-          ),
+          const VerticalDivider(width: 1),
+          // Lado direito: lista expandida
           Expanded(
             child:
                 isLoading
@@ -350,20 +421,20 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     : agendamentos.isEmpty
                     ? const Center(child: Text('Nenhum agendamento encontrado'))
                     : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.all(16),
                       child: DataTable(
+                        columnSpacing: 20,
                         columns: const [
-                            DataColumn(label: Text('Dia')),
-                            DataColumn(label: Text('Curso')),
-                            DataColumn(label: Text('Semestre')),
-                            DataColumn(label: Text('Sala')),
-                            DataColumn(label: Text('Período')),
-                            DataColumn(label: Text('Aula')),     // AULA antes!
-                            DataColumn(label: Text('Início')),
-                            DataColumn(label: Text('Fim')),
-                            DataColumn(label: Text('Ações')),
-                          ],
-
+                          DataColumn(label: Text('Dia')),
+                          DataColumn(label: Text('Curso')),
+                          DataColumn(label: Text('Semestre')),
+                          DataColumn(label: Text('Sala')),
+                          DataColumn(label: Text('Período')),
+                          DataColumn(label: Text('Aula')),
+                          DataColumn(label: Text('Início')),
+                          DataColumn(label: Text('Fim')),
+                          DataColumn(label: Text('Ações')),
+                        ],
                         rows:
                             agendamentos.map((agendamento) {
                               final curso = agendamento['cursos'];
@@ -377,19 +448,31 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                               return DataRow(
                                 cells: [
                                   DataCell(Text(dataFormatada)),
-                                  DataCell(Text(curso['curso'] ?? '')),
-                                  DataCell(Text('Sem. ${curso['semestre']}')),
-                                  DataCell(Text('${sala['numero_sala']}')),
+                                  DataCell(Text(curso?['curso'] ?? '')),
                                   DataCell(
-                                    Text(periodoToString(curso['periodo'])), ),
-                                  DataCell(Text(agendamento['aula_periodo'] ?? '')),
-
-                                  DataCell(Text(horaInicio != null
-                                      ? horaInicio.toString().substring(0, 5)
-                                      : '')),
-                                  DataCell(Text(horaFim != null
-                                      ? horaFim.toString().substring(0, 5)
-                                      : '')), DataCell(
+                                    Text('Sem. ${curso?['semestre'] ?? '-'}'),
+                                  ),
+                                  DataCell(
+                                    Text('${sala?['numero_sala'] ?? '-'}'),
+                                  ),
+                                  DataCell(
+                                    Text(periodoToString(curso?['periodo'])),
+                                  ),
+                                  DataCell(
+                                    Text(agendamento['aula_periodo'] ?? ''),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      horaInicio?.toString().substring(0, 5) ??
+                                          '',
+                                    ),
+                                  ),
+                                  DataCell(
+                                    Text(
+                                      horaFim?.toString().substring(0, 5) ?? '',
+                                    ),
+                                  ),
+                                  DataCell(
                                     Row(
                                       children: [
                                         IconButton(
@@ -425,4 +508,16 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
       ),
     );
   }
+
+  final TextEditingController cursoController = TextEditingController();
+
+  @override
+  void dispose() {
+    cursoController.dispose();
+    super.dispose();
+  }
+}
+
+extension on SupabaseQueryBuilder {
+  eq(String s, String diaStr) {}
 }
