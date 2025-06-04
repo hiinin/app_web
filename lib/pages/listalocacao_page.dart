@@ -57,7 +57,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         periodo
       ),
       salas (
-        id,I
+        id,
         numero_sala
       )
     ''');
@@ -117,18 +117,8 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   }
 
   Future<void> editarAgendamento(Map agendamento) async {
-    final cursoAtual = agendamento['cursos'];
     final salaAtual = agendamento['salas'];
 
-    final novoCursoController = TextEditingController(
-      text: cursoAtual['curso'],
-    );
-    final novoSemestreController = TextEditingController(
-      text: cursoAtual['semestre'].toString(),
-    );
-    final novoPeriodoController = TextEditingController(
-      text: agendamento['aula_periodo'],
-    );
     final novaSalaController = TextEditingController(
       text: salaAtual['numero_sala'].toString(),
     );
@@ -150,28 +140,16 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
       builder:
           (context) => AlertDialog(
             title: const Text('Editar Agendamento'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: novoCursoController,
-                  decoration: const InputDecoration(labelText: 'Curso'),
-                ),
-                TextField(
-                  controller: novoSemestreController,
-                  decoration: const InputDecoration(labelText: 'Semestre'),
-                ),
-                TextField(
-                  controller: novoPeriodoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Período da Aula',
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: novaSalaController,
+                    decoration: const InputDecoration(labelText: 'Sala'),
                   ),
-                ),
-                TextField(
-                  controller: novaSalaController,
-                  decoration: const InputDecoration(labelText: 'Sala'),
-                ),
-              ],
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -188,10 +166,23 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
     if (confirmar == true) {
       try {
+        // Buscar o id da sala pelo número informado
+        final salaResult =
+            await supabase
+                .from('salas')
+                .select('id')
+                .eq('numero_sala', novaSalaController.text.trim())
+                .maybeSingle();
+        if (salaResult == null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Sala não encontrada!')));
+          return;
+        }
         await supabase
             .from('agendamento')
             .update({
-              'aula_periodo': novoPeriodoController.text,
+              'sala_id': salaResult['id'],
               'dia':
                   '${novaData.year.toString().padLeft(4, '0')}-${novaData.month.toString().padLeft(2, '0')}-${novaData.day.toString().padLeft(2, '0')}',
             })
@@ -247,14 +238,20 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Lista de Alocações')),
+      appBar: AppBar(
+        title: const Text(
+          'Lista de Alocações',
+          style: TextStyle(color: Colors.white),
+        ),
+        toolbarHeight: 80,
+        backgroundColor: const Color.fromARGB(255, 41, 123, 216),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       drawer: Drawer(
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 238, 236, 236),
-              ),
+              decoration: BoxDecoration(color: Colors.blue[800]),
               child: Row(
                 children: [
                   const Icon(
@@ -284,77 +281,101 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                 ],
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.add_business, color: Colors.black87),
-              title: const Text(
-                'Nova Alocação',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CriarLocacaoPage(),
+            Expanded(
+              child: ListView(
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.home,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
+                    title: const Text(
+                      'Início',
+                      style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(context, '/home');
+                    },
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.list_alt, color: Colors.black87),
-              title: const Text(
-                'Lista de Alocações',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ListaLocacaoPage(),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.school,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
+                    title: const Text(
+                      'Novo Curso',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarcurso');
+                    },
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.meeting_room, color: Colors.black87),
-              title: const Text(
-                'Nova Sala',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/criarsala');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.school, color: Colors.black87),
-              title: const Text(
-                'Novo Curso',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/criarcurso');
-              },
-            ),
-            ListTile(
-                  leading: const Icon(Icons.book, color: Colors.black87),
-                  title: const Text(
-                    'Nova Matéria',
-                    style: TextStyle(color: Colors.black87),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.add_business,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
+                    title: const Text(
+                      'Novo Agendamento',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarlocacao');
+                    },
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/criarmateria');
-                  },
-                ),
-            const Spacer(),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.book,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
+                    title: const Text(
+                      'Nova Matéria',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarmateria');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.meeting_room,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
+                    title: const Text(
+                      'Criar Sala',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarsala');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.list_alt,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
+                    title: const Text(
+                      'Lista de Alocações',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/listalocacao');
+                    },
+                  ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
                 '© 2025 RH Company',
-                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                style: TextStyle(color: Colors.grey[700], fontSize: 12),
               ),
             ),
           ],
@@ -364,7 +385,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         children: [
           // Lado esquerdo: filtros
           Container(
-            width: 280,
+            width: 340, // aumentei a largura do painel de filtros
             padding: const EdgeInsets.all(16),
             color: Colors.grey[200],
             child: Column(
@@ -375,61 +396,22 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                const Text('Data selecionada:'),
-                Text(
-                  '${diaSelecionado.day.toString().padLeft(2, '0')}/${diaSelecionado.month.toString().padLeft(2, '0')}/${diaSelecionado.year}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.calendar_today),
-                  label: const Text('Selecionar Dia'),
-                  onPressed: selecionarDia,
-                ),
-                const Divider(height: 32),
-                const Text('Selecionar Curso:'),
-                const SizedBox(height: 8),
-
-                // Dropdown para cursos
-                DropdownButtonFormField<int>(
-                  value: cursoSelecionadoId,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
+                const Text('Selecione o dia:'),
+                SizedBox(
+                  height: 320,
+                  child: CalendarDatePicker(
+                    initialDate: diaSelecionado,
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2030),
+                    onDateChanged: (picked) {
+                      setState(() {
+                        diaSelecionado = picked;
+                        carregarAgendamentos();
+                      });
+                    },
                   ),
-                  hint: const Text('Escolha um curso'),
-                  items:
-                      cursos.map((curso) {
-                        return DropdownMenuItem<int>(
-                          value: curso['id'],
-                          child: Text(curso['curso']),
-                        );
-                      }).toList(),
-                  onChanged: (int? valor) {
-                    setState(() {
-                      cursoSelecionadoId = valor;
-                    });
-                  },
                 ),
-
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.search),
-                  label: const Text('Buscar'),
-                  onPressed: () {
-                    if (cursoSelecionadoId != null) {
-                      carregarAgendamentos(cursoId: cursoSelecionadoId);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Selecione um curso primeiro'),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                // Removido o Dropdown de curso e botão buscar
               ],
             ),
           ),
@@ -439,90 +421,132 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
             child:
                 isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : agendamentos.isEmpty
-                    ? const Center(child: Text('Nenhum agendamento encontrado'))
-                    : SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: DataTable(
-                        columnSpacing: 20,
-                        columns: const [
-                          DataColumn(label: Text('Dia')),
-                          DataColumn(label: Text('Curso')),
-                          DataColumn(label: Text('Semestre')),
-                          DataColumn(label: Text('Sala')),
-                          DataColumn(label: Text('Período')),
-                          DataColumn(label: Text('Aula')),
-                          DataColumn(label: Text('Início')),
-                          DataColumn(label: Text('Fim')),
-                          DataColumn(label: Text('Ações')),
-                        ],
-                        rows:
-                            agendamentos.map((agendamento) {
-                              final curso = agendamento['cursos'];
-                              final sala = agendamento['salas'];
-                              final horaInicio = agendamento['hora_inicio'];
-                              final horaFim = agendamento['hora_fim'];
-                              final dia = DateTime.parse(agendamento['dia']);
-                              final dataFormatada =
-                                  '${dia.day.toString().padLeft(2, '0')}/${dia.month.toString().padLeft(2, '0')}/${dia.year}';
+                    : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: DataTable(
+                            columnSpacing: 20,
+                            columns: const [
+                              DataColumn(label: Text('Dia')),
+                              DataColumn(label: Text('Curso')),
+                              DataColumn(label: Text('Semestre')),
+                              DataColumn(label: Text('Sala')),
+                              DataColumn(label: Text('Período')),
+                              DataColumn(label: Text('Aula')),
+                              DataColumn(label: Text('Início')),
+                              DataColumn(label: Text('Fim')),
+                              DataColumn(label: Text('Ações')),
+                            ],
+                            rows:
+                                agendamentos.isEmpty
+                                    ? [
+                                      DataRow(
+                                        cells: [
+                                          const DataCell(
+                                            Text(
+                                              'Nenhum agendamento encontrado',
+                                            ),
+                                          ),
+                                          ...List.generate(
+                                            8,
+                                            (index) => const DataCell(Text('')),
+                                          ),
+                                        ],
+                                      ),
+                                    ]
+                                    : agendamentos.map((agendamento) {
+                                      final curso = agendamento['cursos'];
+                                      final sala = agendamento['salas'];
+                                      final horaInicio =
+                                          agendamento['hora_inicio'];
+                                      final horaFim = agendamento['hora_fim'];
+                                      final dia = DateTime.parse(
+                                        agendamento['dia'],
+                                      );
+                                      final dataFormatada =
+                                          '${dia.day.toString().padLeft(2, '0')}/${dia.month.toString().padLeft(2, '0')}/${dia.year}';
 
-                              return DataRow(
-                                cells: [
-                                  DataCell(Text(dataFormatada)),
-                                  DataCell(Text(curso?['curso'] ?? '')),
-                                  DataCell(
-                                    Text('Sem. ${curso?['semestre'] ?? '-'}'),
-                                  ),
-                                  DataCell(
-                                    Text('${sala?['numero_sala'] ?? '-'}'),
-                                  ),
-                                  DataCell(
-                                    Text(periodoToString(curso?['periodo'])),
-                                  ),
-                                  DataCell(
-                                    Text(agendamento['aula_periodo'] ?? ''),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      horaInicio?.toString().substring(0, 5) ??
-                                          '',
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      horaFim?.toString().substring(0, 5) ?? '',
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.edit,
-                                            color: Colors.blue,
+                                      return DataRow(
+                                        cells: [
+                                          DataCell(Text(dataFormatada)),
+                                          DataCell(Text(curso?['curso'] ?? '')),
+                                          DataCell(
+                                            Text(
+                                              'Sem. ${curso?['semestre'] ?? '-'}',
+                                            ),
                                           ),
-                                          onPressed:
-                                              () => editarAgendamento(
-                                                agendamento,
-                                              ),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(
-                                            Icons.delete,
-                                            color: Colors.red,
+                                          DataCell(
+                                            Text(
+                                              '${sala?['numero_sala'] ?? '-'}',
+                                            ),
                                           ),
-                                          onPressed:
-                                              () => excluirAgendamento(
-                                                agendamento['id'],
+                                          DataCell(
+                                            Text(
+                                              periodoToString(
+                                                curso?['periodo'],
                                               ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                      ),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Text(
+                                              agendamento['aula_periodo'] ?? '',
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Text(
+                                              horaInicio?.toString().substring(
+                                                    0,
+                                                    5,
+                                                  ) ??
+                                                  '',
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Text(
+                                              horaFim?.toString().substring(
+                                                    0,
+                                                    5,
+                                                  ) ??
+                                                  '',
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Row(
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.edit,
+                                                    color: Colors.blue,
+                                                  ),
+                                                  onPressed:
+                                                      () => editarAgendamento(
+                                                        agendamento,
+                                                      ),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.delete,
+                                                    color: Colors.red,
+                                                  ),
+                                                  onPressed:
+                                                      () => excluirAgendamento(
+                                                        agendamento['id'],
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
+                          ),
+                        ),
+                      ],
                     ),
           ),
         ],

@@ -199,34 +199,28 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 241, 241, 241),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 41, 123, 216),
         elevation: 0,
+        toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'Nova Alocação',
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              Navigator.of(context).pushReplacementNamed('/login');
-            },
-            tooltip: 'Sair',
-          ),
-        ],
       ),
       drawer: Drawer(
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(color: Colors.black),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 41, 123, 216),
+              ),
               child: Row(
                 children: [
                   const Icon(
@@ -260,7 +254,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               child: ListView(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.home, color: Colors.black87),
+                    leading: const Icon(
+                      Icons.home,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
                     title: const Text(
                       'Início',
                       style: TextStyle(color: Colors.black87),
@@ -271,7 +268,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.school, color: Colors.black87),
+                    leading: const Icon(
+                      Icons.school,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
                     title: const Text(
                       'Criar Curso',
                       style: TextStyle(color: Colors.black87),
@@ -282,7 +282,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.book, color: Colors.black87),
+                    leading: const Icon(
+                      Icons.book,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
                     title: const Text(
                       'Nova Matéria',
                       style: TextStyle(color: Colors.black87),
@@ -295,7 +298,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                   ListTile(
                     leading: const Icon(
                       Icons.meeting_room,
-                      color: Colors.black87,
+                      color: Color.fromARGB(255, 41, 123, 216),
                     ),
                     title: const Text(
                       'Criar Sala',
@@ -307,7 +310,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.list_alt, color: Colors.black87),
+                    leading: const Icon(
+                      Icons.list_alt,
+                      color: Color.fromARGB(255, 41, 123, 216),
+                    ),
                     title: const Text(
                       'Lista de Alocações',
                       style: TextStyle(color: Colors.black87),
@@ -324,56 +330,99 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               padding: const EdgeInsets.all(16.0),
               child: Text(
                 '© 2025 RH Company',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+                style: TextStyle(color: Colors.grey[700], fontSize: 12),
               ),
             ),
           ],
         ),
       ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Center(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth:
-                            MediaQuery.of(context).size.width *
-                            0.45, // 80% da tela
-                      ),
-                      child: Card(
-                        color: Colors.grey[850],
-                        elevation: 6,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+      body: SizedBox(
+        height: MediaQuery.of(context).size.height,
+        width: double.infinity,
+        child:
+            isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Row(
+                  children: [
+                    // Calendário à esquerda (agora 55% da tela)
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.5,
+                      height: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color.fromARGB(255, 245, 244, 244),
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(0),
+                          bottomRight: Radius.circular(0),
                         ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 0,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 30),
+                          const Text(
+                            'Selecione o Dia',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          Expanded(
+                            child: CalendarDatePicker(
+                              initialDate: dia ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime(2030),
+                              onDateChanged: (picked) {
+                                setState(() => dia = picked);
+                              },
+                              currentDate: DateTime.now(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Formulário à direita (agora 45% da tela)
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.5,
+                      height: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(0),
+                          bottomLeft: Radius.circular(0),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 0,
+                      ),
+                      child: SingleChildScrollView(
                         child: Padding(
-                          padding: const EdgeInsets.all(28),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 48,
+                            vertical: 32,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisAlignment: MainAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 20),
                               const Text(
                                 'Preencha os dados para alocar uma sala',
                                 style: TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 24,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: Colors.blue,
                                   letterSpacing: 1.1,
                                 ),
                                 textAlign: TextAlign.center,
-                              ),
-
-                              const SizedBox(height: 18),
-                              ElevatedButton.icon(
-                                onPressed: selecionarDia,
-                                icon: const Icon(Icons.calendar_today),
-                                label: Text(
-                                  dia == null
-                                      ? 'Selecionar Dia'
-                                      : 'Dia: ${dia!.day}/${dia!.month}/${dia!.year}',
-                                ),
                               ),
                               const SizedBox(height: 18),
                               DropdownButtonFormField<String>(
@@ -381,46 +430,46 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                 decoration: InputDecoration(
                                   labelText: 'Selecione a Aula (Período)',
                                   labelStyle: const TextStyle(
-                                    color: Colors.white70,
+                                    color: Colors.blue,
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey[900],
+                                  fillColor: Colors.blue[50],
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFF1976D2),
+                                      color: Colors.blue,
                                       width: 2,
                                     ),
                                   ),
                                 ),
-                                dropdownColor: Colors.grey[900],
-                                iconEnabledColor: Colors.white,
-                                style: const TextStyle(color: Colors.white),
+                                dropdownColor: Colors.blue[50],
+                                iconEnabledColor: Colors.blue,
+                                style: const TextStyle(color: Colors.blue),
                                 items: const [
                                   DropdownMenuItem(
                                     value: 'Primeira Aula',
                                     child: Text(
                                       'Primeira Aula',
-                                      style: TextStyle(color: Colors.white),
+                                      style: TextStyle(color: Colors.blue),
                                     ),
                                   ),
                                   DropdownMenuItem(
                                     value: 'Segunda Aula',
                                     child: Text(
                                       'Segunda Aula',
-                                      style: TextStyle(color: Colors.white),
+                                      style: TextStyle(color: Colors.blue),
                                     ),
                                   ),
                                 ],
@@ -429,40 +478,39 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                       () => periodoAulaSelecionado = value,
                                     ),
                               ),
-
                               const SizedBox(height: 18),
                               DropdownButtonFormField<sala_model.Sala>(
                                 value: salaSelecionada,
                                 decoration: InputDecoration(
                                   labelText: 'Selecione a Sala',
                                   labelStyle: const TextStyle(
-                                    color: Colors.white70,
+                                    color: Colors.blue,
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey[900],
+                                  fillColor: Colors.blue[50],
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFF1976D2),
+                                      color: Colors.blue,
                                       width: 2,
                                     ),
                                   ),
                                 ),
-                                dropdownColor: Colors.grey[900],
-                                iconEnabledColor: Colors.white,
-                                style: const TextStyle(color: Colors.white),
+                                dropdownColor: Colors.blue[50],
+                                iconEnabledColor: Colors.blue,
+                                style: const TextStyle(color: Colors.blue),
                                 items:
                                     salas
                                         .map(
@@ -471,7 +519,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             child: Text(
                                               '${s.numeroSala} - ${s.qtdCadeiras} cadeiras',
                                               style: const TextStyle(
-                                                color: Colors.white,
+                                                color: Colors.blue,
                                               ),
                                             ),
                                           ),
@@ -486,40 +534,39 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             ? 'Selecione uma sala'
                                             : null,
                               ),
-
                               const SizedBox(height: 18),
                               DropdownButtonFormField<curso_model.Curso>(
                                 value: cursoSelecionado,
                                 decoration: InputDecoration(
                                   labelText: 'Selecione o Curso',
                                   labelStyle: const TextStyle(
-                                    color: Colors.white70,
+                                    color: Colors.blue,
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey[900],
+                                  fillColor: Colors.blue[50],
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFF1976D2),
+                                      color: Colors.blue,
                                       width: 2,
                                     ),
                                   ),
                                 ),
-                                dropdownColor: Colors.grey[900],
-                                iconEnabledColor: Colors.white,
-                                style: const TextStyle(color: Colors.white),
+                                dropdownColor: Colors.blue[50],
+                                iconEnabledColor: Colors.blue,
+                                style: const TextStyle(color: Colors.blue),
                                 items:
                                     cursos
                                         .map(
@@ -528,7 +575,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             child: Text(
                                               '${c.curso} - ${c.semestre ?? "Semestre?"} - ${c.periodo != null ? periodoToString(c.periodo) : "Período?"}',
                                               style: const TextStyle(
-                                                color: Colors.white,
+                                                color: Colors.blue,
                                               ),
                                             ),
                                           ),
@@ -550,40 +597,95 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             ? 'Selecione um curso'
                                             : null,
                               ),
-
+                              const SizedBox(height: 12),
+                              if (cursoSelecionado != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  margin: const EdgeInsets.only(bottom: 18),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue[50],
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: Colors.blue[200]!,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Curso: ${cursoSelecionado!.curso}',
+                                        style: const TextStyle(
+                                          color: Colors.blue,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 12,
+                                            height: 12,
+                                            margin: const EdgeInsets.only(
+                                              right: 8,
+                                            ),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.blue,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Semestre: ${cursoSelecionado!.semestre ?? "Não informado"}',
+                                            style: const TextStyle(
+                                              color: Colors.blue,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        'Período: ${periodoToString(cursoSelecionado!.periodo)}',
+                                        style: const TextStyle(
+                                          color: Colors.blue,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 18),
                               DropdownButtonFormField<Map<String, dynamic>>(
                                 value: materiaSelecionada,
                                 decoration: InputDecoration(
                                   labelText: 'Selecione a Matéria',
                                   labelStyle: const TextStyle(
-                                    color: Colors.white70,
+                                    color: Colors.blue,
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey[900],
+                                  fillColor: Colors.blue[50],
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Colors.white24,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
-                                      color: Color(0xFF1976D2),
+                                      color: Colors.blue,
                                       width: 2,
                                     ),
                                   ),
                                 ),
-                                dropdownColor: Colors.grey[900],
-                                iconEnabledColor: Colors.white,
-                                style: const TextStyle(color: Colors.white),
+                                dropdownColor: Colors.blue[50],
+                                iconEnabledColor: Colors.blue,
+                                style: const TextStyle(color: Colors.blue),
                                 items:
                                     materias
                                         .map(
@@ -592,7 +694,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             child: Text(
                                               m['nome'] ?? '',
                                               style: const TextStyle(
-                                                color: Colors.white,
+                                                color: Colors.blue,
                                               ),
                                             ),
                                           ),
@@ -609,61 +711,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             ? 'Selecione uma matéria'
                                             : null,
                               ),
-
-                              if (cursoSelecionado != null) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[900],
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.white24),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Curso: ${cursoSelecionado!.curso}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 12,
-                                            height: 12,
-                                            margin: const EdgeInsets.only(
-                                              right: 8,
-                                            ),
-                                            decoration: const BoxDecoration(
-                                              color:
-                                                  Colors.blue, // Cor da bolinha
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          Text(
-                                            'Semestre: ${cursoSelecionado!.semestre ?? "Não informado"}',
-                                            style: const TextStyle(
-                                              color: Colors.white70,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Text(
-                                        'Período: ${periodoToString(cursoSelecionado!.periodo)}',
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
                               const SizedBox(height: 28),
                               SizedBox(
                                 width: double.infinity,
@@ -673,7 +720,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                     color: Colors.white,
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.black,
+                                    backgroundColor: Colors.blue[800],
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 16,
@@ -693,9 +740,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
+      ),
     );
   }
 }
