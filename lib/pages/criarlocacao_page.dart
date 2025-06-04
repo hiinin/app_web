@@ -15,9 +15,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
   List<sala_model.Sala> salas = [];
   List<curso_model.Curso> cursos = [];
-
+  List<Map<String, dynamic>> materias = [];
   sala_model.Sala? salaSelecionada;
   curso_model.Curso? cursoSelecionado;
+  Map<String, dynamic>? materiaSelecionada;
 
   bool isLoading = false;
 
@@ -46,9 +47,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     setState(() => isLoading = true);
     try {
       final responseSalas = await supabase.from('salas').select();
-
       final responseCursos = await supabase.from('cursos').select();
-
       setState(() {
         salas =
             (responseSalas as List)
@@ -60,13 +59,38 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                 .toList();
         cursos.sort(
           (a, b) => a.curso.toLowerCase().compareTo(b.curso.toLowerCase()),
-        ); // Ordena alfabeticamente
+        );
+        materias = [];
+        materiaSelecionada = null;
       });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro ao carregar dados: $e')));
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> carregarMateriasPorCurso(int cursoId) async {
+    setState(() {
+      materias = [];
+      materiaSelecionada = null;
+      isLoading = true;
+    });
+    try {
+      final response = await supabase
+          .from('materias')
+          .select()
+          .eq('curso_id', cursoId);
+      setState(() {
+        materias = List<Map<String, dynamic>>.from(response as List);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao carregar matérias: $e')));
     } finally {
       setState(() => isLoading = false);
     }
@@ -92,7 +116,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     if (dia == null ||
         salaSelecionada == null ||
         cursoSelecionado == null ||
-        periodoAulaSelecionado == null) {
+        periodoAulaSelecionado == null ||
+        materiaSelecionada == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Preencha todos os campos')));
@@ -125,11 +150,12 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     }
 
     try {
-      // 2. Inserir na tabela 'agendamento'
+      // Inserir na tabela 'agendamento' com a matéria selecionada
       await supabase.from('agendamento').insert({
         'aula_periodo': periodoAulaSelecionado!,
         'sala_id': salaSelecionada!.id,
         'curso_id': cursoSelecionado!.id,
+        'materia_id': materiaSelecionada!['id'],
         'dia':
             '${dia!.year.toString().padLeft(4, '0')}-${dia!.month.toString().padLeft(2, '0')}-${dia!.day.toString().padLeft(2, '0')}',
       });
@@ -511,15 +537,76 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                 onChanged: (value) {
                                   setState(() {
                                     cursoSelecionado = value;
+                                    materiaSelecionada = null;
+                                    materias = [];
                                   });
-                                  print(
-                                    'Selecionado: ${cursoSelecionado?.curso}, ${cursoSelecionado?.semestre}, ${cursoSelecionado?.periodo}',
-                                  );
+                                  if (value != null) {
+                                    carregarMateriasPorCurso(value.id);
+                                  }
                                 },
                                 validator:
                                     (value) =>
                                         value == null
                                             ? 'Selecione um curso'
+                                            : null,
+                              ),
+
+                              const SizedBox(height: 18),
+                              DropdownButtonFormField<Map<String, dynamic>>(
+                                value: materiaSelecionada,
+                                decoration: InputDecoration(
+                                  labelText: 'Selecione a Matéria',
+                                  labelStyle: const TextStyle(
+                                    color: Colors.white70,
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey[900],
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Colors.white24,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF1976D2),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                dropdownColor: Colors.grey[900],
+                                iconEnabledColor: Colors.white,
+                                style: const TextStyle(color: Colors.white),
+                                items:
+                                    materias
+                                        .map(
+                                          (m) => DropdownMenuItem(
+                                            value: m,
+                                            child: Text(
+                                              m['nome'] ?? '',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    materiaSelecionada = value;
+                                  });
+                                },
+                                validator:
+                                    (value) =>
+                                        value == null
+                                            ? 'Selecione uma matéria'
                                             : null,
                               ),
 
