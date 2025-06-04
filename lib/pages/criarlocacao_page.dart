@@ -73,21 +73,20 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   }
 
   Future<void> selecionarDia() async {
-  final DateTime hoje = DateTime.now();
-  final DateTime dataInicial = DateTime(hoje.year, hoje.month, hoje.day);
+    final DateTime hoje = DateTime.now();
+    final DateTime dataInicial = DateTime(hoje.year, hoje.month, hoje.day);
 
-  final DateTime? picked = await showDatePicker(
-    context: context,
-    initialDate: dia ?? dataInicial,
-    firstDate: dataInicial,
-    lastDate: DateTime(2030),
-  );
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: dia ?? dataInicial,
+      firstDate: dataInicial,
+      lastDate: DateTime(2030),
+    );
 
-  if (picked != null) {
-    setState(() => dia = picked);
+    if (picked != null) {
+      setState(() => dia = picked);
+    }
   }
-}
-
 
   Future<void> salvarLocacao() async {
     if (dia == null ||
@@ -126,12 +125,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     }
 
     try {
-      // 1. Inserir na tabela 'alocacoes'
-      await supabase.from('alocacoes').insert({
-        'sala_id': salaSelecionada!.id,
-        'curso_id': cursoSelecionado!.id,
-      });
-
       // 2. Inserir na tabela 'agendamento'
       await supabase.from('agendamento').insert({
         'aula_periodo': periodoAulaSelecionado!,
@@ -150,9 +143,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Alocação e agendamento salvos com sucesso'),
-        ),
+        const SnackBar(content: Text('Agendamento salvo com sucesso')),
       );
 
       carregarDados(); // Recarrega as opções
@@ -160,7 +151,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar alocação: $e')));
+      ).showSnackBar(SnackBar(content: Text('Erro ao salvar agendamento: $e')));
     } finally {
       setState(() => isLoading = false);
     }
@@ -262,6 +253,17 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/criarcurso');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.book, color: Colors.black87),
+                    title: const Text(
+                      'Nova Matéria',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarmateria');
                     },
                   ),
                   ListTile(

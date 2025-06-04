@@ -17,7 +17,6 @@ class _HomePageState extends State<HomePage> {
 
   List<sala_model.Sala> salas = [];
   List<curso_model.Curso> cursos = [];
-  List<Map<String, dynamic>> alocacoes = [];
 
   sala_model.Sala? salaSelecionada;
   curso_model.Curso? cursoSelecionado;
@@ -42,10 +41,6 @@ class _HomePageState extends State<HomePage> {
       final responseCursos = await supabase.from('cursos').select();
       print('DEBUG - responseCursos: $responseCursos');
 
-      final responseAlocacoes = await supabase
-          .from('alocacoes')
-          .select('id, sala:salas(numero_sala), curso:cursos(curso)');
-
       setState(() {
         salas =
             (responseSalas as List)
@@ -55,58 +50,14 @@ class _HomePageState extends State<HomePage> {
             (responseCursos as List)
                 .map((e) => curso_model.Curso.fromMap(e))
                 .toList();
-        alocacoes = List<Map<String, dynamic>>.from(responseAlocacoes);
       });
       print('Salas carregadas: ${salas.length}');
       print('Cursos carregados: ${cursos.length}');
-      print('Alocações carregadas: ${alocacoes.length}');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro ao carregar dados: $e')));
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> salvarLocacao() async {
-    if (salaSelecionada == null || cursoSelecionado == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Selecione sala e curso')));
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      await supabase.from('alocacoes').insert({
-        'sala_id': salaSelecionada!.id,
-        'curso_id': cursoSelecionado!.id,
-      });
-
-      await supabase
-          .from('salas')
-          .update({'disponivel': false})
-          .eq('id', salaSelecionada!.id);
-
-      await carregarDados();
-
-      if (!mounted) return;
-      setState(() {
-        salaSelecionada = null;
-        cursoSelecionado = null;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alocação salva com sucesso')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar alocação: $e')));
     } finally {
       setState(() => isLoading = false);
     }
@@ -233,7 +184,7 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.black87,
                   ),
                   title: const Text(
-                    'Nova Alocação',
+                    'Novo Agendamento',
                     style: TextStyle(color: Colors.black87),
                   ),
                   onTap: () {
@@ -249,7 +200,7 @@ class _HomePageState extends State<HomePage> {
                 ListTile(
                   leading: const Icon(Icons.list_alt, color: Colors.black87),
                   title: const Text(
-                    'Lista de Alocações',
+                    'Lista de Agendamentos',
                     style: TextStyle(color: Colors.black87),
                   ),
                   onTap: () {
@@ -285,6 +236,17 @@ class _HomePageState extends State<HomePage> {
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.pushNamed(context, '/criarcurso');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.book, color: Colors.black87),
+                  title: const Text(
+                    'Nova Matéria',
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/criarmateria');
                   },
                 ),
                 const Spacer(),

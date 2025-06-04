@@ -285,7 +285,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               ),
             ),
             
-           ListTile(
+                   ListTile(
                     leading: const Icon(Icons.home, color: Colors.black87),
                     title: const Text('Início', style: TextStyle(color: Colors.black87)),
                     onTap: () {
@@ -295,7 +295,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.add_business, color: Colors.black87),
-                    title: const Text('Criar Alocação', style: TextStyle(color: Colors.black87)),
+                    title: const Text('Novo Agendamento', style: TextStyle(color: Colors.black87)),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/criarlocacao');
@@ -310,6 +310,17 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/criarcurso');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.book, color: Colors.black87),
+                    title: const Text(
+                      'Nova Matéria',
+                      style: TextStyle(color: Colors.black87),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/criarmateria');
                     },
                   ),
                   

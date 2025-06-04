@@ -22,7 +22,6 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   @override
   void initState() {
     super.initState();
-    carregarAgendamentos();
   }
 
   Future<void> selecionarDia() async {
@@ -40,33 +39,44 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
   Future<void> carregarAgendamentos({int? cursoId}) async {
     setState(() => isLoading = true);
+
     try {
       final diaStr =
           '${diaSelecionado.year.toString().padLeft(4, '0')}-${diaSelecionado.month.toString().padLeft(2, '0')}-${diaSelecionado.day.toString().padLeft(2, '0')}';
 
-      var query = supabase.from('agendamento').eq('dia', diaStr);
+      var query = supabase.from('agendamento').select('''
+      id,
+      dia,
+      aula_periodo,
+      hora_inicio,
+      hora_fim,
+      cursos (
+        id,
+        curso,
+        semestre,
+        periodo
+      ),
+      salas (
+        id,I
+        numero_sala
+      )
+    ''');
+
+      query = query.eq('dia', diaStr);
 
       if (cursoId != null) {
         query = query.eq('curso_id', cursoId);
       }
 
-      final response = await query
-          .select('''
-          id,
-          dia,
-          aula_periodo,
-          hora_inicio,
-          hora_fim,
-          cursos(id, curso, semestre, periodo),
-          salas(id, numero_sala)
-        ''')
-          .order('dia');
+      final response = await query;
 
       setState(() => agendamentos = response);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar agendamentos: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao carregar agendamentos: $e')),
+        );
+      }
     } finally {
       setState(() => isLoading = false);
     }
@@ -86,10 +96,10 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
             .execute();
 
     if (response.status == 200) {
-      final dados = response.data as List<dynamic>;
-      // Atualize a lista com os dados obtidos
+      // final dados = response.data as List<dynamic>; // Removido: variável não utilizada
+      // Atualize a lista com os dados obtidos, se necessário
     } else {
-      print('Erro na busca: ${response.status}');
+      print('Erro na busca: ${response.status}');
     }
   }
 
@@ -328,6 +338,17 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                 Navigator.pushNamed(context, '/criarcurso');
               },
             ),
+            ListTile(
+                  leading: const Icon(Icons.book, color: Colors.black87),
+                  title: const Text(
+                    'Nova Matéria',
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/criarmateria');
+                  },
+                ),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -516,8 +537,4 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     cursoController.dispose();
     super.dispose();
   }
-}
-
-extension on SupabaseQueryBuilder {
-  eq(String s, String diaStr) {}
 }
