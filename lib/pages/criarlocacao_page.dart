@@ -349,7 +349,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                       width: MediaQuery.of(context).size.width * 0.5,
                       height: double.infinity,
                       decoration: const BoxDecoration(
-                        color: Color.fromARGB(255, 245, 244, 244),
+                        color: const Color(0xFFE3EAFD),
                         borderRadius: BorderRadius.only(
                           topRight: Radius.circular(0),
                           bottomRight: Radius.circular(0),

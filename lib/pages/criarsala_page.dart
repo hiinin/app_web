@@ -48,7 +48,9 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     try {
       final data = await supabase
           .from('salas')
-          .select('id, numero_sala, qtd_cadeiras, disponivel, cor, projetor, tv, ar_condicionado')
+          .select(
+            'id, numero_sala, qtd_cadeiras, disponivel, cor, projetor, tv, ar_condicionado',
+          )
           .order('numero_sala');
       setState(() {
         _salas = List<Map<String, dynamic>>.from(data);
@@ -67,11 +69,14 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
       if (query.isEmpty) {
         _salasFiltradas = _salas;
       } else {
-        _salasFiltradas = _salas.where((sala) {
-          final numero = (sala['numero_sala'] ?? '').toString().toLowerCase();
-          final cadeiras = (sala['qtd_cadeiras'] ?? '').toString().toLowerCase();
-          return numero.contains(query) || cadeiras.contains(query);
-        }).toList();
+        _salasFiltradas =
+            _salas.where((sala) {
+              final numero =
+                  (sala['numero_sala'] ?? '').toString().toLowerCase();
+              final cadeiras =
+                  (sala['qtd_cadeiras'] ?? '').toString().toLowerCase();
+              return numero.contains(query) || cadeiras.contains(query);
+            }).toList();
       }
     });
   }
@@ -88,11 +93,12 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     }
 
     // Verifica se já existe uma sala com o mesmo número
-    final existe = await supabase
-        .from('salas')
-        .select()
-        .eq('numero_sala', numeroSala)
-        .maybeSingle();
+    final existe =
+        await supabase
+            .from('salas')
+            .select()
+            .eq('numero_sala', numeroSala)
+            .maybeSingle();
 
     if (existe != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -113,16 +119,20 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     });
     await _buscarSalas(); // Adicione esta linha
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sala criada com sucesso!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Sala criada com sucesso!')));
     // Remova ou comente a linha abaixo para não sair da tela
     // Navigator.pop(context);
   }
 
   Future<void> _editarSalaDialog(Map<String, dynamic> sala) async {
-    final numeroController = TextEditingController(text: sala['numero_sala'] ?? '');
-    final cadeirasController = TextEditingController(text: sala['qtd_cadeiras']?.toString() ?? '');
+    final numeroController = TextEditingController(
+      text: sala['numero_sala'] ?? '',
+    );
+    final cadeirasController = TextEditingController(
+      text: sala['qtd_cadeiras']?.toString() ?? '',
+    );
     bool disponivel = sala['disponivel'] ?? true;
     bool projetor = sala['projetor'] ?? false;
     bool tv = sala['tv'] ?? false;
@@ -130,57 +140,62 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Sala'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: numeroController,
-                decoration: const InputDecoration(labelText: 'Número da Sala'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Editar Sala'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: numeroController,
+                    decoration: const InputDecoration(
+                      labelText: 'Número da Sala',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: cadeirasController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantidade de Cadeiras',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    title: const Text('Disponível'),
+                    value: disponivel,
+                    onChanged: (v) => disponivel = v,
+                  ),
+                  SwitchListTile(
+                    title: const Text('Projetor'),
+                    value: projetor,
+                    onChanged: (v) => projetor = v,
+                  ),
+                  SwitchListTile(
+                    title: const Text('TV'),
+                    value: tv,
+                    onChanged: (v) => tv = v,
+                  ),
+                  SwitchListTile(
+                    title: const Text('Ar Condicionado'),
+                    value: arCondicionado,
+                    onChanged: (v) => arCondicionado = v,
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: cadeirasController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantidade de Cadeiras'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
               ),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                title: const Text('Disponível'),
-                value: disponivel,
-                onChanged: (v) => disponivel = v,
-              ),
-              SwitchListTile(
-                title: const Text('Projetor'),
-                value: projetor,
-                onChanged: (v) => projetor = v,
-              ),
-              SwitchListTile(
-                title: const Text('TV'),
-                value: tv,
-                onChanged: (v) => tv = v,
-              ),
-              SwitchListTile(
-                title: const Text('Ar Condicionado'),
-                value: arCondicionado,
-                onChanged: (v) => arCondicionado = v,
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Salvar'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
     );
 
     if (result == true) {
@@ -205,20 +220,24 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   Future<void> _excluirSala(Map<String, dynamic> sala) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir sala'),
-        content: const Text('Tem certeza que deseja excluir esta sala?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Excluir sala'),
+            content: const Text('Tem certeza que deseja excluir esta sala?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  'Excluir',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
     if (confirm == true) {
       await supabase.from('salas').delete().match({'id': sala['id']});
@@ -245,16 +264,26 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Criar Sala'),
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 41, 123, 216),
+        elevation: 0,
+        toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
+        title: const Text(
+          'Nova Sala',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
       ),
       drawer: Drawer(
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(color: Colors.black),
+              decoration: const BoxDecoration(
+                color: Color.fromARGB(255, 41, 123, 216),
+              ),
               child: Row(
                 children: [
                   const Icon(
@@ -284,54 +313,90 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                 ],
               ),
             ),
-            
-                   ListTile(
-                    leading: const Icon(Icons.home, color: Colors.black87),
-                    title: const Text('Início', style: TextStyle(color: Colors.black87)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, '/home');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.add_business, color: Colors.black87),
-                    title: const Text('Novo Agendamento', style: TextStyle(color: Colors.black87)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarlocacao');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.school, color: Colors.black87),
-                    title: const Text(
-                      'Criar Curso',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarcurso');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.book, color: Colors.black87),
-                    title: const Text(
-                      'Nova Matéria',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarmateria');
-                    },
-                  ),
-                  
-                  ListTile(
-                    leading: const Icon(Icons.list_alt, color: Colors.black87),
-                    title: const Text('Lista de Alocações', style: TextStyle(color: Colors.black87)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/listalocacao');
-                    },
-                  ),
+            ListTile(
+              leading: const Icon(
+                Icons.home,
+                color: Color.fromARGB(255, 41, 123, 216),
+              ),
+              title: const Text(
+                'Início',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/home');
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.add_business,
+                color: Color.fromARGB(255, 41, 123, 216),
+              ),
+              title: const Text(
+                'Novo Agendamento',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarlocacao');
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.school,
+                color: Color.fromARGB(255, 41, 123, 216),
+              ),
+              title: const Text(
+                'Criar Curso',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarcurso');
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.book,
+                color: Color.fromARGB(255, 41, 123, 216),
+              ),
+              title: const Text(
+                'Nova Matéria',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarmateria');
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.meeting_room,
+                color: Color.fromARGB(255, 41, 123, 216),
+              ),
+              title: const Text(
+                'Nova Sala',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarsala');
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.list_alt,
+                color: Color.fromARGB(255, 41, 123, 216),
+              ),
+              title: const Text(
+                'Lista de Alocações',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/listalocacao');
+              },
+            ),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -343,173 +408,197 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
           ],
         ),
       ),
+      backgroundColor: Colors.white,
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.9,
-            ),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.8, // 80% da tela
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Formulário
-                  Expanded(
-                    flex: 4,
-                    child: Card(
-                      color: Colors.grey[900],
-                      elevation: 10,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
-                        child: Form(
-                          key: _formKey,
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.meeting_room, size: 48, color: Color(0xFF1976D2)),
-                                const SizedBox(height: 18),
-                                const Text(
-                                  "Cadastrar Nova Sala",
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 1.1,
-                                  ),
-                                ),
-                                const SizedBox(height: 28),
-                                TextFormField(
-                                  controller: _numeroSalaController,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: InputDecoration(
-                                    labelText: 'Número da Sala',
-                                    labelStyle: const TextStyle(color: Colors.white70),
-                                    filled: true,
-                                    fillColor: Colors.grey[850],
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Colors.white24),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Colors.white24),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
-                                    ),
-                                    prefixIcon: const Icon(Icons.confirmation_number, color: Colors.white70),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                TextFormField(
-                                  controller: _qtdCadeirasController,
-                                  keyboardType: TextInputType.number,
-                                  style: const TextStyle(color: Colors.white),
-                                  decoration: InputDecoration(
-                                    labelText: 'Quantidade de Cadeiras',
-                                    labelStyle: const TextStyle(color: Colors.white70),
-                                    filled: true,
-                                    fillColor: Colors.grey[850],
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Colors.white24),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Colors.white24),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
-                                    ),
-                                    prefixIcon: const Icon(Icons.chair, color: Colors.white70),
-                                  ),
-                                ),
-                                const SizedBox(height: 18),
-                                SwitchListTile(
-                                  title: const Text('Disponível', style: TextStyle(color: Colors.white)),
-                                  value: _disponivel,
-                                  activeColor: const Color(0xFF1976D2),
-                                  onChanged: (val) => setState(() => _disponivel = val),
-                                ),
-                                const SizedBox(height: 18),
-                                SwitchListTile(
-                                  title: const Text('Projetor', style: TextStyle(color: Colors.white)),
-                                  value: _projetor,
-                                  activeColor: const Color(0xFF1976D2),
-                                  onChanged: (val) => setState(() => _projetor = val),
-                                ),
-                                SwitchListTile(
-                                  title: const Text('TV', style: TextStyle(color: Colors.white)),
-                                  value: _tv,
-                                  activeColor: const Color(0xFF1976D2),
-                                  onChanged: (val) => setState(() => _tv = val),
-                                ),
-                                SwitchListTile(
-                                  title: const Text('Ar Condicionado', style: TextStyle(color: Colors.white)),
-                                  value: _arCondicionado,
-                                  activeColor: const Color(0xFF1976D2),
-                                  onChanged: (val) => setState(() => _arCondicionado = val),
-                                ),
-                                const SizedBox(height: 18),
-                                Row(
-                                  children: [
-                                    const Text('Cor da Sala:', style: TextStyle(color: Colors.white)),
-                                    const SizedBox(width: 16),
-                                    GestureDetector(
-                                      onTap: () async {
-                                        final cor = await showDialog<Color>(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: const Text('Escolha uma cor'),
-                                            content: SingleChildScrollView(
-                                              child: BlockPicker(
-                                                pickerColor: _corSelecionada,
-                                                onColorChanged: (color) =>
-                                                    Navigator.of(context).pop(color),
-                                              ),
-                                            ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Padding(
+            padding: const EdgeInsets.all(0), // Remove padding externo
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Formulário à esquerda (40% da tela)
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  height: MediaQuery.of(context).size.height - 80,
+                  color: const Color(0xFFE3EAFD), // azul bem claro
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 36,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Nova Sala',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFF297BD8),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _numeroSalaController,
+                          style: const TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            labelText: 'Número da Sala',
+                            labelStyle: const TextStyle(color: Colors.black54),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.confirmation_number,
+                              color: Color(0xFF297BD8),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        TextFormField(
+                          controller: _qtdCadeirasController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            labelText: 'Quantidade de Cadeiras',
+                            labelStyle: const TextStyle(color: Colors.black54),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.chair,
+                              color: Color(0xFF297BD8),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        SwitchListTile(
+                          title: const Text(
+                            'Disponível',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                          value: _disponivel,
+                          activeColor: const Color(0xFF297BD8),
+                          onChanged: (val) => setState(() => _disponivel = val),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        SwitchListTile(
+                          title: const Text(
+                            'Projetor',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                          value: _projetor,
+                          activeColor: const Color(0xFF297BD8),
+                          onChanged: (val) => setState(() => _projetor = val),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        SwitchListTile(
+                          title: const Text(
+                            'TV',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                          value: _tv,
+                          activeColor: const Color(0xFF297BD8),
+                          onChanged: (val) => setState(() => _tv = val),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        SwitchListTile(
+                          title: const Text(
+                            'Ar Condicionado',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                          value: _arCondicionado,
+                          activeColor: const Color(0xFF297BD8),
+                          onChanged:
+                              (val) => setState(() => _arCondicionado = val),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            const Text(
+                              'Cor da Sala:',
+                              style: TextStyle(color: Colors.black),
+                            ),
+                            const SizedBox(width: 16),
+                            GestureDetector(
+                              onTap: () async {
+                                final cor = await showDialog<Color>(
+                                  context: context,
+                                  builder:
+                                      (context) => AlertDialog(
+                                        title: const Text('Escolha uma cor'),
+                                        content: SingleChildScrollView(
+                                          child: BlockPicker(
+                                            pickerColor: _corSelecionada,
+                                            onColorChanged:
+                                                (color) => Navigator.of(
+                                                  context,
+                                                ).pop(color),
                                           ),
-                                        );
-                                        if (cor != null) setState(() => _corSelecionada = cor);
-                                      },
-                                      child: Container(
-                                        width: 36,
-                                        height: 36,
-                                        decoration: BoxDecoration(
-                                          color: _corSelecionada,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.white, width: 2),
                                         ),
-                                        child: const Icon(Icons.color_lens, color: Colors.white),
                                       ),
-                                    ),
-                                  ],
+                                );
+                                if (cor != null)
+                                  setState(() => _corSelecionada = cor);
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: _corSelecionada,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.black12,
+                                    width: 2,
+                                  ),
                                 ),
-                                const SizedBox(height: 32),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    icon: const Icon(Icons.save, color: Colors.white),
-                                    label: const Text("Salvar Sala"),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF1976D2),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
+                                child: const Icon(
+                                  Icons.color_lens,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon:
+                                _loadingSalas
+                                    ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
                                       ),
-                                      elevation: 2,
-                                    ),
-                                    onPressed: () {
+                                    )
+                                    : const Icon(Icons.save),
+                            label: const Text('Salvar Sala'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF297BD8),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              textStyle: const TextStyle(fontSize: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed:
+                                _loadingSalas
+                                    ? null
+                                    : () {
                                       _salvarSala();
                                       _numeroSalaController.clear();
                                       _qtdCadeirasController.clear();
@@ -521,285 +610,325 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                         _arCondicionado = false;
                                       });
                                     },
-                                  ),
-                                ),
-                              ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Lista de salas à direita (restante da tela)
+                Expanded(
+                  child: Container(
+                    height: MediaQuery.of(context).size.height - 80,
+                    color: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 36,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _searchController,
+                          style: const TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            hintText: 'Pesquisar sala ou cadeiras...',
+                            hintStyle: const TextStyle(color: Colors.black45),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.black45,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 0,
+                              horizontal: 12,
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 32),
-                  // Lista de salas
-                  Expanded(
-                    flex: 7,
-                    child: Card(
-                      color: Colors.grey[850],
-                      elevation: 10,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            TextField(
-                              controller: _searchController,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: InputDecoration(
-                                hintText: 'Pesquisar sala ou cadeiras...',
-                                hintStyle: TextStyle(color: Colors.white54),
-                                prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                                filled: true,
-                                fillColor: Colors.grey[800],
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            const Text(
-                              'Salas cadastradas:',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: const [
-                                Expanded(
-                                  flex: 3,
-                                  child: Text(
-                                    'Sala',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    'Cadeiras',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    'Disponível',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Icon(Icons.videocam, color: Colors.white70, size: 18),
-                                ), // Projetor
-                                Expanded(
-                                  flex: 1,
-                                  child: Icon(Icons.tv, color: Colors.white70, size: 18),
-                                ), // TV
-                                Expanded(
-                                  flex: 1,
-                                  child: Icon(Icons.ac_unit, color: Colors.white70, size: 18),
-                                ), // Ar
-                                Expanded(
-                                  flex: 1,
-                                  child: Text(
-                                    'Editar',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Text(
-                                    'Excluir',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Divider(color: Colors.white24, thickness: 1, height: 20),
+                        const SizedBox(height: 18),
+                        const Text(
+                          'Salas cadastradas:',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: const [
                             Expanded(
-                              child: _loadingSalas
-                                  ? const Center(child: CircularProgressIndicator())
+                              flex: 3,
+                              child: Text(
+                                'Sala',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Cadeiras',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                'Disponível',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Icon(
+                                Icons.videocam,
+                                color: Colors.black45,
+                                size: 18,
+                              ),
+                            ), // Projetor
+                            Expanded(
+                              flex: 1,
+                              child: Icon(
+                                Icons.tv,
+                                color: Colors.black45,
+                                size: 18,
+                              ),
+                            ), // TV
+                            Expanded(
+                              flex: 1,
+                              child: Icon(
+                                Icons.ac_unit,
+                                color: Colors.black45,
+                                size: 18,
+                              ),
+                            ), // Ar
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                'Editar',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Expanded(
+                              flex: 1,
+                              child: Text(
+                                'Excluir',
+                                style: TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(
+                          color: Colors.black12,
+                          thickness: 1,
+                          height: 20,
+                        ),
+                        Expanded(
+                          child:
+                              _loadingSalas
+                                  ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
                                   : _salasFiltradas.isEmpty
-                                      ? const Text(
-                                          'Nenhuma sala cadastrada.',
-                                          style: TextStyle(color: Colors.white70),
-                                        )
-                                      : Scrollbar(
-                                          thumbVisibility: true,
-                                          controller: _scrollController,
-                                          child: Padding(
-                                            padding: const EdgeInsets.only(right: 8), // Afasta a barra da borda
-                                            child: ListView.builder(
-                                              controller: _scrollController,
-                                              itemCount: _salasFiltradas.length,
-                                              itemBuilder: (context, index) {
-                                                final sala = _salasFiltradas[index];
-                                                return Container(
-                                                  margin: const EdgeInsets.symmetric(vertical: 8),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey[800],
-                                                    borderRadius: BorderRadius.circular(12),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black.withOpacity(0.18),
-                                                        blurRadius: 8,
-                                                        offset: const Offset(0, 4),
+                                  ? const Center(
+                                    child: Text(
+                                      'Nenhuma sala cadastrada.',
+                                      style: TextStyle(color: Colors.black45),
+                                    ),
+                                  )
+                                  : ListView.separated(
+                                    controller: _scrollController,
+                                    itemCount: _salasFiltradas.length,
+                                    separatorBuilder:
+                                        (_, __) => const Divider(
+                                          color: Colors.black12,
+                                          height: 1,
+                                        ),
+                                    itemBuilder: (context, index) {
+                                      final sala = _salasFiltradas[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 4.0,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          right: 12,
+                                                        ),
+                                                    width: 32,
+                                                    height: 32,
+                                                    decoration: BoxDecoration(
+                                                      color: _parseSalaColor(
+                                                        sala['cor'],
                                                       ),
-                                                    ],
-                                                  ),
-                                                  child: Padding(
-                                                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
-                                                    child: Row(
-                                                      children: [
-                                                        const SizedBox(width: 10), // Espaço menor à esquerda da bolinha
-                                                        Expanded(
-                                                          flex: 3,
-                                                          child: Stack(
-                                                            alignment: Alignment.centerLeft,
-                                                            children: [
-                                                              // Bola colorida atrás do texto, com shadow escuro
-                                                              Container(
-                                                                margin: const EdgeInsets.only(left: 0, right: 12),
-                                                                width: 44,
-                                                                height: 44,
-                                                                decoration: BoxDecoration(
-                                                                  color: _parseSalaColor(sala['cor']),
-                                                                  shape: BoxShape.circle,
-                                                                  boxShadow: [
-                                                                    BoxShadow(
-                                                                      color: Colors.black.withOpacity(0.5), // shadow escuro
-                                                                      blurRadius: 10,
-                                                                      offset: const Offset(0, 4),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                                alignment: Alignment.center,
-                                                                child: Text(
-                                                                  sala['numero_sala'] ?? '',
-                                                                  textAlign: TextAlign.center,
-                                                                  style: const TextStyle(
-                                                                    color: Colors.white,
-                                                                    fontSize: 20,
-                                                                    fontWeight: FontWeight.bold,
-                                                                    shadows: [
-                                                                      Shadow(
-                                                                        color: Colors.black54,
-                                                                        blurRadius: 6,
-                                                                        offset: Offset(0, 2),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ),
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black
+                                                              .withOpacity(
+                                                                0.08,
                                                               ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          flex: 2,
-                                                          child: Text(
-                                                            '${sala['qtd_cadeiras'] ?? ''}',
-                                                            style: const TextStyle(
-                                                              color: Colors.white70,
-                                                              fontSize: 16,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          flex: 2,
-                                                          child: Text(
-                                                            sala['disponivel'] == true ? 'Sim' : 'Não',
-                                                            style: TextStyle(
-                                                              color: sala['disponivel'] == true ? Colors.green : Colors.red,
-                                                              fontWeight: FontWeight.bold,
-                                                              fontSize: 16,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          flex: 1,
-                                                          child: Icon(
-                                                            sala['projetor'] == true ? Icons.check : Icons.close,
-                                                            color: sala['projetor'] == true ? Colors.green : Colors.red,
-                                                            size: 20,
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          flex: 1,
-                                                          child: Icon(
-                                                            sala['tv'] == true ? Icons.check : Icons.close,
-                                                            color: sala['tv'] == true ? Colors.green : Colors.red,
-                                                            size: 20,
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          flex: 1,
-                                                          child: Icon(
-                                                            sala['ar_condicionado'] == true ? Icons.check : Icons.close,
-                                                            color: sala['ar_condicionado'] == true ? Colors.green : Colors.red,
-                                                            size: 20,
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          flex: 1,
-                                                          child: IconButton(
-                                                            icon: const Icon(Icons.edit, color: Colors.blue, size: 22),
-                                                            tooltip: 'Editar',
-                                                            onPressed: () => _editarSalaDialog(sala),
-                                                          ),
-                                                        ),
-                                                        Expanded(
-                                                          flex: 1,
-                                                          child: IconButton(
-                                                            icon: const Icon(Icons.delete, color: Colors.red, size: 22),
-                                                            tooltip: 'Excluir',
-                                                            onPressed: () => _excluirSala(sala),
+                                                          blurRadius: 4,
+                                                          offset: const Offset(
+                                                            0,
+                                                            2,
                                                           ),
                                                         ),
                                                       ],
                                                     ),
+                                                    alignment: Alignment.center,
+                                                    child: Text(
+                                                      sala['numero_sala'] ?? '',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
                                                   ),
-                                                );
-                                              },
+                                                ],
+                                              ),
                                             ),
-                                          ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                '${sala['qtd_cadeiras'] ?? ''}',
+                                                style: const TextStyle(
+                                                  color: Colors.black87,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                sala['disponivel'] == true
+                                                    ? 'Sim'
+                                                    : 'Não',
+                                                style: TextStyle(
+                                                  color:
+                                                      sala['disponivel'] == true
+                                                          ? Colors.green
+                                                          : Colors.red,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 15,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: Icon(
+                                                sala['projetor'] == true
+                                                    ? Icons.check
+                                                    : Icons.close,
+                                                color:
+                                                    sala['projetor'] == true
+                                                        ? Colors.green
+                                                        : Colors.red,
+                                                size: 18,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: Icon(
+                                                sala['tv'] == true
+                                                    ? Icons.check
+                                                    : Icons.close,
+                                                color:
+                                                    sala['tv'] == true
+                                                        ? Colors.green
+                                                        : Colors.red,
+                                                size: 18,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: Icon(
+                                                sala['ar_condicionado'] == true
+                                                    ? Icons.check
+                                                    : Icons.close,
+                                                color:
+                                                    sala['ar_condicionado'] ==
+                                                            true
+                                                        ? Colors.green
+                                                        : Colors.red,
+                                                size: 18,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit,
+                                                  color: Color(0xFF297BD8),
+                                                  size: 20,
+                                                ),
+                                                tooltip: 'Editar',
+                                                onPressed:
+                                                    () =>
+                                                        _editarSalaDialog(sala),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete,
+                                                  color: Colors.red,
+                                                  size: 20,
+                                                ),
+                                                tooltip: 'Excluir',
+                                                onPressed:
+                                                    () => _excluirSala(sala),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                            ),
-                          ],
+                                      );
+                                    },
+                                  ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

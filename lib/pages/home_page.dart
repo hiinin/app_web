@@ -269,30 +269,126 @@ class _HomePageState extends State<HomePage> {
                 right: 0,
                 height:
                     MediaQuery.of(context).size.height *
-                    0.4, // 50% da altura da tela
-
+                    0.5, // 50% da altura da tela
                 child: Container(
                   width: double.infinity,
-
-                  height: MediaQuery.of(context).size.height * 2 * 2,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(
-                        20,
-                      ), // Borda arredondada só no canto superior esquerdo
-                      topRight: Radius.circular(
-                        20,
-                      ), // Borda arredondada só no canto superior direito
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
                     ),
                   ),
-                  child: const Center(child: Center()),
+                  child:
+                      isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32.0,
+                              vertical: 32.0,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Bem-vindo ao Painel RH!',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _InfoCard(
+                                      label: 'Salas',
+                                      value: salas.length.toString(),
+                                      icon: Icons.meeting_room,
+                                    ),
+                                    const SizedBox(width: 32),
+                                    _InfoCard(
+                                      label: 'Cursos',
+                                      value: cursos.length.toString(),
+                                      icon: Icons.school,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 32),
+                                const Text(
+                                  'Utilize o menu lateral ou os botões acima para navegar entre as funções do sistema.',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
                 ),
               ),
             ],
           ),
           // Body vazio, apenas a imagem de fundo com gradiente
         ),
+      ),
+    );
+  }
+}
+
+// Widget auxiliar para exibir informações
+class _InfoCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  const _InfoCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.blue, size: 32),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 16, color: Colors.black87),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'criarlocacao_page.dart';
 
 class ListaLocacaoPage extends StatefulWidget {
   const ListaLocacaoPage({super.key});
@@ -385,9 +384,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         children: [
           // Lado esquerdo: filtros
           Container(
-            width: 340, // aumentei a largura do painel de filtros
+            width: 390, // aumentei a largura do painel de filtros
             padding: const EdgeInsets.all(16),
-            color: Colors.grey[200],
+            color: const Color(0xFFE3EAFD),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -421,132 +420,177 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
             child:
                 isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: DataTable(
-                            columnSpacing: 20,
-                            columns: const [
-                              DataColumn(label: Text('Dia')),
-                              DataColumn(label: Text('Curso')),
-                              DataColumn(label: Text('Semestre')),
-                              DataColumn(label: Text('Sala')),
-                              DataColumn(label: Text('Período')),
-                              DataColumn(label: Text('Aula')),
-                              DataColumn(label: Text('Início')),
-                              DataColumn(label: Text('Fim')),
-                              DataColumn(label: Text('Ações')),
-                            ],
-                            rows:
-                                agendamentos.isEmpty
-                                    ? [
-                                      DataRow(
-                                        cells: [
-                                          const DataCell(
-                                            Text(
-                                              'Nenhum agendamento encontrado',
-                                            ),
-                                          ),
-                                          ...List.generate(
-                                            8,
-                                            (index) => const DataCell(Text('')),
-                                          ),
-                                        ],
-                                      ),
-                                    ]
-                                    : agendamentos.map((agendamento) {
-                                      final curso = agendamento['cursos'];
-                                      final sala = agendamento['salas'];
-                                      final horaInicio =
-                                          agendamento['hora_inicio'];
-                                      final horaFim = agendamento['hora_fim'];
-                                      final dia = DateTime.parse(
-                                        agendamento['dia'],
-                                      );
-                                      final dataFormatada =
-                                          '${dia.day.toString().padLeft(2, '0')}/${dia.month.toString().padLeft(2, '0')}/${dia.year}';
-
-                                      return DataRow(
-                                        cells: [
-                                          DataCell(Text(dataFormatada)),
-                                          DataCell(Text(curso?['curso'] ?? '')),
-                                          DataCell(
-                                            Text(
-                                              'Sem. ${curso?['semestre'] ?? '-'}',
-                                            ),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              '${sala?['numero_sala'] ?? '-'}',
-                                            ),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              periodoToString(
-                                                curso?['periodo'],
+                    : Container(
+                      color: const Color(0xFFF5F6FA),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(
+                              top: 18,
+                              left: 18,
+                              right: 18,
+                              bottom: 0,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: DataTable(
+                              columnSpacing: 20,
+                              headingRowColor: MaterialStateProperty.all(
+                                const Color(0xFFE3EAFD),
+                              ),
+                              headingTextStyle: const TextStyle(
+                                color: Color(0xFF297BD8),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                              dataRowColor: MaterialStateProperty.resolveWith<
+                                Color?
+                              >((states) {
+                                if (states.contains(MaterialState.hovered)) {
+                                  return const Color(
+                                    0xFFE3EAFD,
+                                  ).withOpacity(0.45); // leve azul
+                                }
+                                return Colors.transparent;
+                              }),
+                              dataTextStyle: const TextStyle(
+                                color: Color(0xFF222B45),
+                                fontSize: 14,
+                              ),
+                              columns: const [
+                                DataColumn(label: Text('Dia')),
+                                DataColumn(label: Text('Curso')),
+                                DataColumn(label: Text('Semestre')),
+                                DataColumn(label: Text('Sala')),
+                                DataColumn(label: Text('Período')),
+                                DataColumn(label: Text('Aula')),
+                                DataColumn(label: Text('Início')),
+                                DataColumn(label: Text('Fim')),
+                                DataColumn(label: Text('Ações')),
+                              ],
+                              rows:
+                                  agendamentos.isEmpty
+                                      ? [
+                                        DataRow(
+                                          cells: [
+                                            const DataCell(
+                                              Text(
+                                                'Nenhum agendamento encontrado',
                                               ),
                                             ),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              agendamento['aula_periodo'] ?? '',
+                                            ...List.generate(
+                                              8,
+                                              (index) =>
+                                                  const DataCell(Text('')),
                                             ),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              horaInicio?.toString().substring(
-                                                    0,
-                                                    5,
-                                                  ) ??
-                                                  '',
+                                          ],
+                                        ),
+                                      ]
+                                      : agendamentos.map((agendamento) {
+                                        final curso = agendamento['cursos'];
+                                        final sala = agendamento['salas'];
+                                        final horaInicio =
+                                            agendamento['hora_inicio'];
+                                        final horaFim = agendamento['hora_fim'];
+                                        final dia = DateTime.parse(
+                                          agendamento['dia'],
+                                        );
+                                        final dataFormatada =
+                                            '${dia.day.toString().padLeft(2, '0')}/${dia.month.toString().padLeft(2, '0')}/${dia.year}';
+                                        return DataRow(
+                                          cells: [
+                                            DataCell(Text(dataFormatada)),
+                                            DataCell(
+                                              Text(curso?['curso'] ?? ''),
                                             ),
-                                          ),
-                                          DataCell(
-                                            Text(
-                                              horaFim?.toString().substring(
-                                                    0,
-                                                    5,
-                                                  ) ??
-                                                  '',
+                                            DataCell(
+                                              Text(
+                                                'Sem. ${curso?['semestre'] ?? '-'}',
+                                              ),
                                             ),
-                                          ),
-                                          DataCell(
-                                            Row(
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.edit,
-                                                    color: Colors.blue,
-                                                  ),
-                                                  onPressed:
-                                                      () => editarAgendamento(
-                                                        agendamento,
-                                                      ),
+                                            DataCell(
+                                              Text(
+                                                '${sala?['numero_sala'] ?? '-'}',
+                                              ),
+                                            ),
+                                            DataCell(
+                                              Text(
+                                                periodoToString(
+                                                  curso?['periodo'],
                                                 ),
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.delete,
-                                                    color: Colors.red,
-                                                  ),
-                                                  onPressed:
-                                                      () => excluirAgendamento(
-                                                        agendamento['id'],
-                                                      ),
-                                                ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      );
-                                    }).toList(),
+                                            DataCell(
+                                              Text(
+                                                agendamento['aula_periodo'] ??
+                                                    '',
+                                              ),
+                                            ),
+                                            DataCell(
+                                              Text(
+                                                horaInicio
+                                                        ?.toString()
+                                                        .substring(0, 5) ??
+                                                    '',
+                                              ),
+                                            ),
+                                            DataCell(
+                                              Text(
+                                                horaFim?.toString().substring(
+                                                      0,
+                                                      5,
+                                                    ) ??
+                                                    '',
+                                              ),
+                                            ),
+                                            DataCell(
+                                              Row(
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                      Icons.edit,
+                                                      color: Color(0xFF297BD8),
+                                                    ),
+                                                    onPressed:
+                                                        () => editarAgendamento(
+                                                          agendamento,
+                                                        ),
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                      Icons.delete,
+                                                      color: Colors.red,
+                                                    ),
+                                                    onPressed:
+                                                        () =>
+                                                            excluirAgendamento(
+                                                              agendamento['id'],
+                                                            ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      }).toList(),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
           ),
         ],
