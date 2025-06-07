@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 class CriarSalaPage extends StatefulWidget {
   const CriarSalaPage({super.key});
@@ -112,7 +111,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
       'numero_sala': numeroSala,
       'qtd_cadeiras': qtdCadeiras,
       'disponivel': _disponivel,
-      'cor': _corSelecionada.value.toRadixString(16).padLeft(8, '0'),
+      'cor': Colors.blue.value, // Sempre azul
       'projetor': _projetor,
       'tv': _tv,
       'ar_condicionado': _arCondicionado,
@@ -249,22 +248,16 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   }
 
   Color _parseSalaColor(dynamic cor) {
-    if (cor == null) return Colors.white;
-    String corStr = cor.toString().toUpperCase().replaceAll('#', '');
-    // Se vier só com 6 dígitos (RGB), adiciona FF (opacidade máxima)
-    if (corStr.length == 6) corStr = 'FF$corStr';
-    try {
-      return Color(int.parse('0x$corStr'));
-    } catch (_) {
-      return Colors.white;
-    }
+    return Colors.blue;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 41, 123, 216),
+        backgroundColor: const Color(
+          0xFF1E40AF,
+        ), // Azul principal igual criarcurso
         elevation: 0,
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -282,7 +275,14 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
           children: [
             DrawerHeader(
               decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 41, 123, 216),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF1E3A8A), // Azul escuro
+                    Color(0xFF3B82F6), // Azul médio
+                  ],
+                ),
               ),
               child: Row(
                 children: [
@@ -314,88 +314,60 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.home,
-                color: Color.fromARGB(255, 41, 123, 216),
-              ),
+              leading: const Icon(Icons.home, color: Color(0xFF1E40AF)),
               title: const Text(
-                'Início',
+                'Inicio',
                 style: TextStyle(color: Colors.black87),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacementNamed(context, '/home');
-              },
+              onTap: () => Navigator.pushNamed(context, '/home'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.add_business,
-                color: Color.fromARGB(255, 41, 123, 216),
-              ),
+              leading: const Icon(Icons.add_box, color: Color(0xFF1E40AF)),
               title: const Text(
                 'Novo Agendamento',
                 style: TextStyle(color: Colors.black87),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/criarlocacao');
-              },
+              onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.school,
-                color: Color.fromARGB(255, 41, 123, 216),
-              ),
+              leading: const Icon(Icons.list_alt, color: Color(0xFF1E40AF)),
               title: const Text(
-                'Criar Curso',
+                'Lista Agendamento',
                 style: TextStyle(color: Colors.black87),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/criarcurso');
-              },
+              onTap: () => Navigator.pushNamed(context, '/listalocacao'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.book,
-                color: Color.fromARGB(255, 41, 123, 216),
-              ),
-              title: const Text(
-                'Nova Matéria',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/criarmateria');
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.meeting_room,
-                color: Color.fromARGB(255, 41, 123, 216),
-              ),
+              leading: const Icon(Icons.meeting_room, color: Color(0xFF1E40AF)),
               title: const Text(
                 'Nova Sala',
                 style: TextStyle(color: Colors.black87),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/criarsala');
-              },
+              onTap: () => Navigator.pushNamed(context, '/criarsala'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.list_alt,
-                color: Color.fromARGB(255, 41, 123, 216),
-              ),
+              leading: const Icon(Icons.school, color: Color(0xFF1E40AF)),
               title: const Text(
-                'Lista de Alocações',
+                'Novo Curso',
                 style: TextStyle(color: Colors.black87),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/listalocacao');
-              },
+              onTap: () => Navigator.pushNamed(context, '/criarcurso'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.book, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Nova Matéria',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarmateria'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.people, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Novo Professor',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
             ),
             const Spacer(),
             Padding(
@@ -408,12 +380,12 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
           ],
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC), // igual criarcurso
       body: Center(
         child: SingleChildScrollView(
           scrollDirection: Axis.vertical,
           child: Padding(
-            padding: const EdgeInsets.all(0), // Remove padding externo
+            padding: const EdgeInsets.all(0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -530,43 +502,11 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                               style: TextStyle(color: Colors.black),
                             ),
                             const SizedBox(width: 16),
-                            GestureDetector(
-                              onTap: () async {
-                                final cor = await showDialog<Color>(
-                                  context: context,
-                                  builder:
-                                      (context) => AlertDialog(
-                                        title: const Text('Escolha uma cor'),
-                                        content: SingleChildScrollView(
-                                          child: BlockPicker(
-                                            pickerColor: _corSelecionada,
-                                            onColorChanged:
-                                                (color) => Navigator.of(
-                                                  context,
-                                                ).pop(color),
-                                          ),
-                                        ),
-                                      ),
-                                );
-                                if (cor != null)
-                                  setState(() => _corSelecionada = cor);
-                              },
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: _corSelecionada,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.black12,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.color_lens,
-                                  color: Colors.black,
-                                ),
-                              ),
+                            // Botões de cor fixa
+                            _CorOption(
+                              cor: Colors.blue,
+                              selecionada: true,
+                              onTap: () {}, // Não faz nada
                             ),
                           ],
                         ),
@@ -587,7 +527,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                     : const Icon(Icons.save),
                             label: const Text('Salvar Sala'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF297BD8),
+                              backgroundColor: const Color(0xFF1E40AF),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               textStyle: const TextStyle(fontSize: 16),
@@ -932,6 +872,41 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CorOption extends StatelessWidget {
+  final Color cor;
+  final bool selecionada;
+  final VoidCallback onTap;
+
+  const _CorOption({
+    required this.cor,
+    required this.selecionada,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: cor,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: selecionada ? Colors.black : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child:
+            selecionada
+                ? const Icon(Icons.check, color: Colors.white, size: 18)
+                : null,
       ),
     );
   }

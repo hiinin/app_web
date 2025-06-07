@@ -102,7 +102,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: dia ?? dataInicial,
+      initialDate: dia ?? DateTime.now(),
       firstDate: dataInicial,
       lastDate: DateTime(2030),
     );
@@ -113,6 +113,15 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   }
 
   Future<void> salvarLocacao() async {
+    if (isLoading) return; // Evita duplo clique
+
+    print(
+      'Chamou salvarLocacao para: '
+      'curso=${cursoSelecionado?.id}, '
+      'sala=${salaSelecionada?.id}, '
+      'aula=$periodoAulaSelecionado',
+    );
+
     if (dia == null ||
         salaSelecionada == null ||
         cursoSelecionado == null ||
@@ -126,22 +135,68 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
     setState(() => isLoading = true);
 
-    // Verifica se já existe um agendamento com a mesma sala, dia e período
-    final agendamentosExistentes = await supabase
+    final dataFormatada =
+        '${dia!.year.toString().padLeft(4, '0')}-${dia!.month.toString().padLeft(2, '0')}-${dia!.day.toString().padLeft(2, '0')}';
+    final periodoCurso =
+        cursoSelecionado!.periodo; // 1=Matutino, 2=Vespertino, 3=Noturno
+
+    // 1. Verifica quantos agendamentos já existem para a sala nesse dia e período
+    final agendamentosSala = await supabase
         .from('agendamento')
         .select()
         .eq('sala_id', salaSelecionada!.id)
-        .eq(
-          'dia',
-          '${dia!.year.toString().padLeft(4, '0')}-${dia!.month.toString().padLeft(2, '0')}-${dia!.day.toString().padLeft(2, '0')}',
-        )
-        .eq('aula_periodo', periodoAulaSelecionado!);
+        .eq('dia', dataFormatada)
+        .eq('periodo', periodoCurso);
 
-    if (agendamentosExistentes.isNotEmpty) {
+    if (agendamentosSala.length >= 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Essa sala já está alocada nesse período. Escolha outro.',
+            'Essa sala já atingiu o limite de agendamentos para esse período.',
+          ),
+        ),
+      );
+      setState(() => isLoading = false);
+      return;
+    }
+
+    // 2. Verifica se o curso já tem agendamento nesse dia e período
+    final agendamentosCurso = await supabase
+        .from('agendamento')
+        .select()
+        .eq('curso_id', cursoSelecionado!.id)
+        .eq('dia', dataFormatada)
+        .eq('periodo', periodoCurso);
+
+    if (agendamentosCurso.length >= 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Este curso já possui o limite de agendamentos para esse período.',
+          ),
+        ),
+      );
+      setState(() => isLoading = false);
+      return;
+    }
+
+    // 3. Verifica se já existe um agendamento igual para este curso, sala, dia, período e aula
+    final agendamentoExistente =
+        await supabase
+            .from('agendamento')
+            .select()
+            .eq('sala_id', salaSelecionada!.id)
+            .eq('curso_id', cursoSelecionado!.id)
+            .eq('dia', dataFormatada)
+            .eq('periodo', periodoCurso)
+            .eq('aula_periodo', periodoAulaSelecionado!)
+            .maybeSingle();
+
+    if (agendamentoExistente != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Já existe um agendamento igual para este curso, sala, dia, período e aula!',
           ),
         ),
       );
@@ -150,16 +205,15 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     }
 
     try {
-      // Inserir na tabela 'agendamento' com a matéria selecionada
       await supabase.from('agendamento').insert({
         'aula_periodo': periodoAulaSelecionado!,
         'sala_id': salaSelecionada!.id,
         'curso_id': cursoSelecionado!.id,
         'materia_id': materiaSelecionada!['id'],
-        'dia':
-            '${dia!.year.toString().padLeft(4, '0')}-${dia!.month.toString().padLeft(2, '0')}-${dia!.day.toString().padLeft(2, '0')}',
+        'dia': dataFormatada,
+        'periodo': periodoCurso, // Salve o período do curso aqui!
       });
-      // 4. Resetar campos
+
       setState(() {
         salaSelecionada = null;
         cursoSelecionado = null;
@@ -172,7 +226,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         const SnackBar(content: Text('Agendamento salvo com sucesso')),
       );
 
-      carregarDados(); // Recarrega as opções
+      carregarDados();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -199,14 +253,15 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 41, 123, 216),
+        backgroundColor: const Color(
+          0xFF1E40AF,
+        ), // Azul principal igual criarcurso
         elevation: 0,
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Nova Alocação',
+          'Novo Agendamento',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -218,8 +273,15 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         child: Column(
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 41, 123, 216),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF1E3A8A), // Azul escuro
+                    Color(0xFF3B82F6), // Azul médio
+                  ],
+                ),
               ),
               child: Row(
                 children: [
@@ -250,92 +312,74 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                 ],
               ),
             ),
-            Expanded(
-              child: ListView(
-                children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.home,
-                      color: Color.fromARGB(255, 41, 123, 216),
-                    ),
-                    title: const Text(
-                      'Início',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacementNamed(context, '/home');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.school,
-                      color: Color.fromARGB(255, 41, 123, 216),
-                    ),
-                    title: const Text(
-                      'Criar Curso',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarcurso');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.book,
-                      color: Color.fromARGB(255, 41, 123, 216),
-                    ),
-                    title: const Text(
-                      'Nova Matéria',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarmateria');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.meeting_room,
-                      color: Color.fromARGB(255, 41, 123, 216),
-                    ),
-                    title: const Text(
-                      'Criar Sala',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/criarsala');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.list_alt,
-                      color: Color.fromARGB(255, 41, 123, 216),
-                    ),
-                    title: const Text(
-                      'Lista de Alocações',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/listalocacao');
-                    },
-                  ),
-                ],
+            ListTile(
+              leading: const Icon(Icons.home, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Inicio',
+                style: TextStyle(color: Colors.black87),
               ),
+              onTap: () => Navigator.pushNamed(context, '/home'),
             ),
+            ListTile(
+              leading: const Icon(Icons.add_box, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Novo Agendamento',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Lista Agendamento',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/listalocacao'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.meeting_room, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Nova Sala',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarsala'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.school, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Novo Curso',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarcurso'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.book, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Nova Matéria',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarmateria'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.people, color: Color(0xFF1E40AF)),
+              title: const Text(
+                'Novo Professor',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
+            ),
+            const Spacer(),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
                 '© 2025 RH Company',
-                style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ),
           ],
         ),
       ),
+      backgroundColor: const Color(0xFFF8FAFC), // igual criarcurso
       body: SizedBox(
         height: MediaQuery.of(context).size.height,
         width: double.infinity,
@@ -415,7 +459,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                             children: [
                               const SizedBox(height: 20),
                               const Text(
-                                'Preencha os dados para alocar uma sala',
+                                'Preencha os dados para realizar um agendamento',
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
@@ -712,28 +756,70 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                             : null,
                               ),
                               const SizedBox(height: 28),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(
-                                    Icons.add,
-                                    color: Colors.white,
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[800],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      icon: const Icon(
+                                        Icons.list,
+                                        color: Colors.white,
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        textStyle: const TextStyle(
+                                          fontSize: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                      onPressed: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/listalocacao',
+                                        );
+                                      },
+                                      label: const Text('Ver agendamentos'),
                                     ),
-                                    textStyle: const TextStyle(fontSize: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    elevation: 2,
                                   ),
-                                  onPressed: salvarLocacao,
-                                  label: const Text('Alocar Sala'),
-                                ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      icon: const Icon(
+                                        Icons.add,
+                                        color: Colors.white,
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF1E40AF,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        textStyle: const TextStyle(
+                                          fontSize: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                      onPressed:
+                                          isLoading ? null : salvarLocacao,
+                                      label: const Text('Agendar aula'),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
