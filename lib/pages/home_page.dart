@@ -34,10 +34,8 @@ class _HomePageState extends State<HomePage> {
           .from('salas')
           .select()
           .eq('disponivel', true);
-      print('responseSalas: $responseSalas');
 
       final responseCursos = await supabase.from('cursos').select();
-      print('DEBUG - responseCursos: $responseCursos');
 
       setState(() {
         salas =
@@ -49,8 +47,6 @@ class _HomePageState extends State<HomePage> {
                 .map((e) => curso_model.Curso.fromMap(e))
                 .toList();
       });
-      print('Salas carregadas: ${salas.length}');
-      print('Cursos carregados: ${cursos.length}');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -247,6 +243,14 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: Colors.black87),
                   ),
                   onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.event, color: Color(0xFF1E40AF)),
+                  title: const Text(
+                    'Novo Evento',
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  onTap: () => Navigator.pushNamed(context, '/criarevento'),
                 ),
                 const Spacer(),
                 Padding(

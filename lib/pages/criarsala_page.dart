@@ -286,10 +286,16 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.account_circle,
-                    color: Colors.white,
-                    size: 48,
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16.0,
+                    ), // Espaço à esquerda
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Column(
@@ -750,15 +756,19 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                                       ],
                                                     ),
                                                     alignment: Alignment.center,
-                                                    child: Text(
-                                                      sala['numero_sala'] ?? '',
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.bold,
+                                                    child: FittedBox(
+                                                      fit: BoxFit.scaleDown,
+                                                      child: Text(
+                                                        sala['numero_sala'] ??
+                                                            '',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
                                                       ),
                                                     ),
                                                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../pages/home_page.dart'; // ajuste o caminho e nome conforme seu projeto
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -40,7 +41,22 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       }
 
       if (response['password'] == passwordInput) {
-        Navigator.pushReplacementNamed(context, '/home');
+        // Quando o login for bem-sucedido, use este código:
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder:
+                (context, animation, secondaryAnimation) => const HomePage(),
+            transitionsBuilder: (
+              context,
+              animation,
+              secondaryAnimation,
+              child,
+            ) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(
           context,

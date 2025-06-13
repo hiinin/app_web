@@ -9,6 +9,20 @@ class CriarMateriaPage extends StatefulWidget {
   State<CriarMateriaPage> createState() => _CriarMateriaPageState();
 }
 
+// Adicione esta função no início do seu arquivo ou dentro da classe _CriarMateriaPageState
+String periodoToString(int? periodo) {
+  switch (periodo) {
+    case 1:
+      return 'Matutino';
+    case 2:
+      return 'Vespertino';
+    case 3:
+      return 'Noturno';
+    default:
+      return 'Período?';
+  }
+}
+
 class _CriarMateriaPageState extends State<CriarMateriaPage> {
   final _formKey = GlobalKey<FormState>();
   final _nomeMateriaController = TextEditingController();
@@ -109,6 +123,17 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
     }
   }
 
+  Future<void> excluirProfessor(int professorId) async {
+    await Supabase.instance.client
+        .from('professores')
+        .delete()
+        .eq('id', professorId);
+  
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Professor excluído com sucesso!')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Agrupa as matérias por curso_id
@@ -149,10 +174,16 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.account_circle,
-                    color: Colors.white,
-                    size: 48,
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16.0,
+                    ), // Espaço à esquerda
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Column(
@@ -383,11 +414,9 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
                               (c) => DropdownMenuItem(
                                 value: c,
                                 child: Text(
-                                  '${c.curso} - ${c.semestre ?? "Semestre?"}',
+                                  '${c.curso} - ${c.semestre ?? "Semestre?"} - ${periodoToString(c.periodo)}',
                                   style: const TextStyle(
-                                    color: Color(
-                                      0xFF475569,
-                                    ), // Cinza escuro azulado
+                                    color: Color(0xFF475569),
                                   ),
                                 ),
                               ),
@@ -396,33 +425,87 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
                     onChanged: (c) => setState(() => _cursoSelecionado = c),
                     validator: (v) => v == null ? 'Selecione o curso' : null,
                   ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon:
-                          _isLoading
-                              ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Icon(Icons.save),
-                      label: const Text('Salvar Matéria'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E40AF),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        textStyle: const TextStyle(fontSize: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 2,
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    icon:
+                        _isLoading
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                            : const Icon(Icons.save),
+                    label: const Text('Salvar Matéria'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E40AF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      textStyle: const TextStyle(fontSize: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      onPressed: _isLoading ? null : _salvarMateria,
+                      elevation: 2,
+                    ),
+                    onPressed: _isLoading ? null : _salvarMateria,
+                  ),
+                  const SizedBox(height: 32),
+                  // Bloco quadrado para associação
+                  Container(
+                    height: 200, // Aumenta a altura para ficar mais quadrado
+                    padding: const EdgeInsets.all(20),
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFE0F2FE), // Azul claro suave
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                      border: Border.all(color: Color(0xFF38BDF8), width: 1.2),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Deseja associar uma matéria nova ou existente a um professor?',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFF1E40AF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: const Icon(
+                            Icons.person_add,
+                            color: Colors.white,
+                          ),
+                          label: const Text('Associar Matéria a Professor'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF059669), // Verde
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            textStyle: const TextStyle(fontSize: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(8),
+                              ),
+                            ),
+                            elevation: 2,
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/criarprofessor');
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],

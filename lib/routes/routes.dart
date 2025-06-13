@@ -7,6 +7,7 @@ import '../pages/listalocacao_page.dart';
 import '../pages/criarsala_page.dart';
 import '../pages/criarmateria_page.dart';
 import '../pages/criarprofessor_page.dart';
+import '../pages/criarevento_page.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
   '/home': (context) => const HomePage(),
@@ -17,4 +18,5 @@ final Map<String, WidgetBuilder> appRoutes = {
   '/criarcurso': (context) => const CriarCursoPage(),
   '/criarmateria': (context) => const CriarMateriaPage(),
   '/criarprofessor': (context) => CriarProfessorPage(),
+  '/criarevento': (context) => const CriarEventoPage(),
 };

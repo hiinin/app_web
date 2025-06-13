@@ -85,18 +85,25 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
   // Associar matérias ao professor selecionado
   Future<void> _associarMaterias() async {
     if (professorSelecionado == null || materiasSelecionadas.isEmpty) return;
-    // Remove associações antigas
-    await supabase
+
+    // Busca matérias já associadas
+    final existentes = await supabase
         .from('professor_materias')
-        .delete()
+        .select('materia_id')
         .eq('professor_id', professorSelecionado);
-    // Adiciona novas associações
+
+    final idsExistentes = existentes.map((e) => e['materia_id'] as int).toSet();
+
+    // Adiciona apenas as novas
     for (final materiaId in materiasSelecionadas) {
-      await supabase.from('professor_materias').insert({
-        'professor_id': professorSelecionado,
-        'materia_id': materiaId,
-      });
+      if (!idsExistentes.contains(materiaId)) {
+        await supabase.from('professor_materias').insert({
+          'professor_id': professorSelecionado,
+          'materia_id': materiaId,
+        });
+      }
     }
+
     materiasSelecionadas = [];
     await _carregarProfessores();
     setState(() {});
@@ -110,20 +117,20 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
 
   Future<void> excluirProfessor(int professorId) async {
     try {
-      // 1. Exclua as relações do professor com as matérias
       await supabase
           .from('professor_materias')
           .delete()
           .eq('professor_id', professorId);
 
-      // 2. Agora exclua o professor
       await supabase.from('professores').delete().eq('id', professorId);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Professor excluído com sucesso!')),
       );
-      // Atualize a lista, se necessário
-      _carregarProfessores();
+      await _carregarProfessores();
+      setState(() {
+        professorSelecionado = null; // ou cursoSelecionado = null;
+      });
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -161,10 +168,16 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.account_circle,
-                    color: Colors.white,
-                    size: 48,
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16.0,
+                    ), // Espaço à esquerda
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Column(
@@ -323,7 +336,10 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                   ),
                   const SizedBox(height: 18),
                   DropdownButtonFormField<int>(
-                    value: professorSelecionado,
+                    value:
+                        professores.any((p) => p['id'] == professorSelecionado)
+                            ? professorSelecionado
+                            : null,
                     items:
                         professores
                             .map(
