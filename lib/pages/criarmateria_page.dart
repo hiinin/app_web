@@ -123,15 +123,30 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
     }
   }
 
-  Future<void> excluirProfessor(int professorId) async {
-    await Supabase.instance.client
-        .from('professores')
-        .delete()
-        .eq('id', professorId);
-  
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Professor excluído com sucesso!')),
-    );
+  Future<void> excluirMateria(int materiaId) async {
+    try {
+      await Supabase.instance.client
+          .from('materias')
+          .delete()
+          .eq('id', materiaId);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Matéria excluída com sucesso!'),
+          backgroundColor: Color(0xFF44A301),
+        ),
+      );
+
+      // Recarrega a lista após excluir
+      await _buscarMaterias();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao excluir matéria: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -145,7 +160,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E40AF), // Azul principal
+        backgroundColor: const Color(0xFF44A301), // Verde principal
         elevation: 0,
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -162,16 +177,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3A8A), // Azul escuro
-                    Color(0xFF3B82F6), // Azul médio
-                  ],
-                ),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFF44A301)),
               child: Row(
                 children: [
                   Padding(
@@ -191,7 +197,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'RH Painel',
+                        'Campus Map',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -208,10 +214,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.home,
-                color: Color(0xFF1E40AF), // Azul principal
-              ),
+              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
               title: const Text(
                 'Inicio',
                 style: TextStyle(color: Colors.black87),
@@ -219,10 +222,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               onTap: () => Navigator.pushNamed(context, '/home'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.add_box,
-                color: Color(0xFF1E40AF), // Azul principal
-              ),
+              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Agendamento',
                 style: TextStyle(color: Colors.black87),
@@ -230,10 +230,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.list_alt,
-                color: Color(0xFF1E40AF), // Azul principal
-              ),
+              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
               title: const Text(
                 'Lista Agendamento',
                 style: TextStyle(color: Colors.black87),
@@ -241,10 +238,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               onTap: () => Navigator.pushNamed(context, '/listalocacao'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.meeting_room,
-                color: Color(0xFF1E40AF), // Azul principal
-              ),
+              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Sala',
                 style: TextStyle(color: Colors.black87),
@@ -252,10 +246,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarsala'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.school,
-                color: Color(0xFF1E40AF), // Azul principal
-              ),
+              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Curso',
                 style: TextStyle(color: Colors.black87),
@@ -263,10 +254,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarcurso'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.book,
-                color: Color(0xFF1E40AF), // Azul principal
-              ),
+              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Matéria',
                 style: TextStyle(color: Colors.black87),
@@ -274,15 +262,36 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarmateria'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.people,
-                color: Color(0xFF1E40AF), // Azul principal
-              ),
+              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Professor',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
+              title: const Text(
+                'Novo Evento',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarevento'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
+              title: const Text(
+                'Agendar Prova',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarprova'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
+              title: const Text(
+                'Historico de Acoes',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
             ),
             const Spacer(),
             Padding(
@@ -295,467 +304,653 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
           ],
         ),
       ),
-      backgroundColor: const Color(
-        0xFFF8FAFC,
-      ), // Cinza muito claro/quase branco
-      body: Row(
-        children: [
-          // Formulário à esquerda (40%)
-          Container(
-            width: MediaQuery.of(context).size.width * 0.4,
-            height: MediaQuery.of(context).size.height - 80,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFEFF6FF),
-                  Color(0xFFDBEAFE),
-                ], // Gradiente azul claro
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Nova Matéria',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF1E40AF), // Azul principal
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  TextFormField(
-                    controller: _nomeMateriaController,
-                    style: const TextStyle(color: Color(0xFF1E40AF)),
-                    decoration: InputDecoration(
-                      labelText: 'Nome da Matéria',
-                      labelStyle: const TextStyle(
-                        color: Color(0xFF64748B),
-                      ), // Cinza azulado
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF93C5FD),
-                        ), // Azul claro
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFE2E8F0),
-                        ), // Cinza muito claro
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF3B82F6),
-                          width: 2,
-                        ), // Azul médio
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 16,
-                        horizontal: 16,
-                      ),
-                    ),
-                    validator:
-                        (v) =>
-                            v == null || v.trim().isEmpty
-                                ? 'Informe o nome da matéria'
-                                : null,
-                  ),
-                  const SizedBox(height: 18),
-                  DropdownButtonFormField<Curso>(
-                    value: _cursoSelecionado,
-                    decoration: InputDecoration(
-                      labelText: 'Curso',
-                      labelStyle: const TextStyle(
-                        color: Color(0xFF64748B),
-                      ), // Cinza azulado
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF93C5FD),
-                        ), // Azul claro
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFE2E8F0),
-                        ), // Cinza muito claro
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF3B82F6),
-                          width: 2,
-                        ), // Azul médio
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 4,
-                        horizontal: 16,
-                      ),
-                    ),
-                    dropdownColor: Colors.white,
-                    style: const TextStyle(color: Color(0xFF1E40AF)),
-                    items:
-                        _cursos
-                            .map(
-                              (c) => DropdownMenuItem(
-                                value: c,
-                                child: Text(
-                                  '${c.curso} - ${c.semestre ?? "Semestre?"} - ${periodoToString(c.periodo)}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF475569),
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: (c) => setState(() => _cursoSelecionado = c),
-                    validator: (v) => v == null ? 'Selecione o curso' : null,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    icon:
-                        _isLoading
-                            ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                            : const Icon(Icons.save),
-                    label: const Text('Salvar Matéria'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E40AF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      textStyle: const TextStyle(fontSize: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 2,
-                    ),
-                    onPressed: _isLoading ? null : _salvarMateria,
-                  ),
-                  const SizedBox(height: 32),
-                  // Bloco quadrado para associação
-                  Container(
-                    height: 200, // Aumenta a altura para ficar mais quadrado
-                    padding: const EdgeInsets.all(20),
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-                      color: Color(0xFFE0F2FE), // Azul claro suave
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
+      backgroundColor: const Color(0xFFF8FAFC), // igual criarcurso
+      body: Center(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Padding(
+            padding: const EdgeInsets.all(0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Formulário à esquerda (40% da tela)
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  height: MediaQuery.of(context).size.height - 80,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFE8F5E8), // Verde muito claro
+                        Color(0xFFF0F8F0), // Verde quase branco
                       ],
-                      border: Border.all(color: Color(0xFF38BDF8), width: 1.2),
                     ),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 36,
+                  ),
+                  child: Form(
+                    key: _formKey,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const Text(
-                          'Deseja associar uma matéria nova ou existente a um professor?',
+                          'Nova Matéria',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF1E40AF),
+                            color: Color(0xFF44A301),
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 22,
+                            letterSpacing: 1.2,
                           ),
+                        ),
+                        const SizedBox(height: 32),
+                        TextFormField(
+                          controller: _nomeMateriaController,
+                          style: const TextStyle(color: Color(0xFF44A301)),
+                          decoration: InputDecoration(
+                            labelText: 'Nome da Matéria',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFF388E3C),
+                            ), // Verde escuro
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE8F5E8),
+                              ), // Verde claro
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE8F5E8),
+                              ), // Verde claro
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                                width: 2,
+                              ), // Verde principal
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
+                          ),
+                          validator:
+                              (v) =>
+                                  v == null || v.trim().isEmpty
+                                      ? 'Informe o nome da matéria'
+                                      : null,
+                        ),
+                        const SizedBox(height: 18),
+                        DropdownButtonFormField<Curso>(
+                          value: _cursoSelecionado,
+                          decoration: InputDecoration(
+                            labelText: 'Curso',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFF388E3C),
+                            ), // Verde escuro
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE8F5E8),
+                              ), // Verde claro
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE8F5E8),
+                              ), // Verde claro
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                                width: 2,
+                              ), // Verde principal
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 4,
+                              horizontal: 16,
+                            ),
+                          ),
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Color(0xFF44A301)),
+                          items:
+                              _cursos
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(
+                                        '${c.curso} - ${c.semestre ?? "Semestre?"} - ${periodoToString(c.periodo)}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF388E3C),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (c) => setState(() => _cursoSelecionado = c),
+                          validator:
+                              (v) => v == null ? 'Selecione o curso' : null,
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
-                          icon: const Icon(
-                            Icons.person_add,
-                            color: Colors.white,
-                          ),
-                          label: const Text('Associar Matéria a Professor'),
+                          icon:
+                              _isLoading
+                                  ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Icon(Icons.save),
+                          label: const Text('Salvar Matéria'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF059669), // Verde
+                            backgroundColor: const Color(0xFF44A301),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
                             textStyle: const TextStyle(fontSize: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(8),
-                              ),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             elevation: 2,
                           ),
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/criarprofessor');
-                          },
+                          onPressed: _isLoading ? null : _salvarMateria,
+                        ),
+                        const SizedBox(height: 32),
+                        // Bloco quadrado para associação
+                        Container(
+                          height:
+                              200, // Aumenta a altura para ficar mais quadrado
+                          padding: const EdgeInsets.all(20),
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFE8F5E8), // Verde claro suave
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: Color(0xFF44A301),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Text(
+                                'Deseja associar uma matéria nova ou existente a um professor?',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Color(0xFF44A301),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton.icon(
+                                icon: const Icon(
+                                  Icons.person_add,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  'Associar Matéria a Professor',
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(
+                                    0xFF388E3C,
+                                  ), // Verde escuro
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  textStyle: const TextStyle(fontSize: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(8),
+                                    ),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/criarprofessor',
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          // Lista de matérias à direita (restante da tela)
-          Expanded(
-            child: Container(
-              height: MediaQuery.of(context).size.height - 80,
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      hintText: 'Pesquisar matéria...',
-                      hintStyle: const TextStyle(
-                        color: Color(0xFF94A3B8),
-                      ), // Cinza azulado claro
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: Color(0xFF64748B), // Cinza azulado
-                      ),
-                      filled: true,
-                      fillColor: const Color(
-                        0xFFF1F5F9,
-                      ), // Cinza azulado muito claro
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 0,
-                        horizontal: 12,
-                      ),
-                    ),
-                    onChanged: (_) => _filtrarMaterias(),
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Matérias cadastradas:',
-                    style: TextStyle(
-                      color: Color(0xFF1E40AF), // Azul principal
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: const [
-                      Expanded(
-                        flex: 4,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Text(
-                            'Matéria',
+                ),
+                // Lista de matérias à direita (60% da tela)
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  height: MediaQuery.of(context).size.height - 80,
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Cabeçalho da lista
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF44A301),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.book,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Matérias Criadas',
                             style: TextStyle(
-                              color: Color(0xFF475569), // Cinza escuro azulado
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              color: Color(0xFF44A301),
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: _buscarMaterias,
+                            icon: const Icon(
+                              Icons.refresh,
+                              color: Color(0xFF44A301),
+                            ),
+                            tooltip: 'Atualizar lista',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Campo de busca
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: '🔍 Buscar matérias...',
+                            hintStyle: TextStyle(color: Colors.grey[500]),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Color(0xFF44A301),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.grey),
+                              onPressed: () {
+                                _searchController.clear();
+                                _filtrarMaterias();
+                              },
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 20),
+
+                      // Lista de matérias
                       Expanded(
-                        flex: 3,
-                        child: Text(
-                          'Curso',
-                          style: TextStyle(
-                            color: Color(0xFF475569), // Cinza escuro azulado
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child:
+                            _loadingMaterias
+                                ? const Center(
+                                  child: CircularProgressIndicator(),
+                                )
+                                : _materiasFiltradas.isEmpty
+                                ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.book_outlined,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        _searchController.text.isNotEmpty
+                                            ? 'Nenhuma matéria encontrada para "${_searchController.text}"'
+                                            : 'Nenhuma matéria criada ainda',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.grey[600],
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      if (_searchController
+                                          .text
+                                          .isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Tente usar termos diferentes ou limpar a busca',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                )
+                                : ListView.builder(
+                                  controller: _scrollController,
+                                  itemCount: materiasPorCurso.length,
+                                  itemBuilder: (context, index) {
+                                    final cursoId = materiasPorCurso.keys
+                                        .elementAt(index);
+                                    final materiasDoCurso =
+                                        materiasPorCurso[cursoId]!;
+                                    final curso = _cursos.firstWhere(
+                                      (c) => c.id == cursoId,
+                                      orElse:
+                                          () => Curso(
+                                            id: cursoId,
+                                            curso: 'Curso não encontrado',
+                                            semestre: null,
+                                            periodo: null,
+                                          ),
+                                    );
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Cabeçalho do curso
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 12,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF44A301,
+                                              ).withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: const Color(
+                                                  0xFF44A301,
+                                                ).withOpacity(0.3),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.school,
+                                                  color: Color(0xFF44A301),
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    '${curso.curso} - ${curso.semestre ?? "Semestre?"} - ${periodoToString(curso.periodo)}',
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF44A301),
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFF44A301,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    '${materiasDoCurso.length} matéria${materiasDoCurso.length == 1 ? '' : 's'}',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+
+                                          // Lista de matérias do curso
+                                          ...materiasDoCurso
+                                              .map(
+                                                (materia) => Container(
+                                                  margin: const EdgeInsets.only(
+                                                    bottom: 8,
+                                                  ),
+                                                  padding: const EdgeInsets.all(
+                                                    16,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.grey
+                                                            .withOpacity(0.1),
+                                                        spreadRadius: 1,
+                                                        blurRadius: 4,
+                                                        offset: const Offset(
+                                                          0,
+                                                          1,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      Container(
+                                                        width: 40,
+                                                        height: 40,
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(
+                                                            0xFF44A301,
+                                                          ).withOpacity(0.1),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                        child: const Icon(
+                                                          Icons.book,
+                                                          color: Color(
+                                                            0xFF44A301,
+                                                          ),
+                                                          size: 20,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              materia['nome'] ??
+                                                                  'Nome não informado',
+                                                              style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 16,
+                                                                color: Color(
+                                                                  0xFF44A301,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                              height: 4,
+                                                            ),
+                                                            Text(
+                                                              'ID: ${materia['id']}',
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color:
+                                                                    Colors
+                                                                        .grey[600],
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      IconButton(
+                                                        onPressed: () async {
+                                                          // Confirmação antes de excluir
+                                                          final confirmar = await showDialog<
+                                                            bool
+                                                          >(
+                                                            context: context,
+                                                            builder:
+                                                                (
+                                                                  context,
+                                                                ) => AlertDialog(
+                                                                  title: const Row(
+                                                                    children: [
+                                                                      Icon(
+                                                                        Icons
+                                                                            .warning,
+                                                                        color:
+                                                                            Colors.orange,
+                                                                      ),
+                                                                      SizedBox(
+                                                                        width:
+                                                                            8,
+                                                                      ),
+                                                                      Text(
+                                                                        'Confirmar Exclusão',
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  content: Text(
+                                                                    'Tem certeza que deseja excluir a matéria "${materia['nome']}"?',
+                                                                  ),
+                                                                  actions: [
+                                                                    TextButton(
+                                                                      onPressed:
+                                                                          () => Navigator.of(
+                                                                            context,
+                                                                          ).pop(
+                                                                            false,
+                                                                          ),
+                                                                      child: const Text(
+                                                                        'Cancelar',
+                                                                      ),
+                                                                    ),
+                                                                    ElevatedButton(
+                                                                      onPressed:
+                                                                          () => Navigator.of(
+                                                                            context,
+                                                                          ).pop(
+                                                                            true,
+                                                                          ),
+                                                                      style: ElevatedButton.styleFrom(
+                                                                        backgroundColor:
+                                                                            Colors.red,
+                                                                        foregroundColor:
+                                                                            Colors.white,
+                                                                      ),
+                                                                      child: const Text(
+                                                                        'Excluir',
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                          );
+
+                                                          if (confirmar ==
+                                                              true) {
+                                                            await excluirMateria(
+                                                              materia['id'],
+                                                            );
+                                                          }
+                                                        },
+                                                        icon: const Icon(
+                                                          Icons.delete,
+                                                          color: Colors.red,
+                                                        ),
+                                                        tooltip:
+                                                            'Excluir matéria',
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              )
+                                              .toList(),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                       ),
                     ],
                   ),
-                  const Divider(
-                    color: Color(0xFFE2E8F0), // Cinza muito claro
-                    thickness: 1,
-                    height: 20,
-                  ),
-                  Expanded(
-                    child:
-                        _loadingMaterias
-                            ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF3B82F6),
-                              ),
-                            )
-                            : _materiasFiltradas.isEmpty
-                            ? const Center(
-                              child: Text(
-                                'Nenhuma matéria cadastrada.',
-                                style: TextStyle(color: Color(0xFF94A3B8)),
-                              ),
-                            )
-                            : ListView(
-                              children:
-                                  materiasPorCurso.entries.map((entry) {
-                                    final curso = _cursos.firstWhere(
-                                      (c) => c.id == entry.key,
-                                      orElse:
-                                          () => Curso(
-                                            id: 0,
-                                            curso: 'Curso?',
-                                            semestre: '',
-                                            periodo: 0,
-                                          ),
-                                    );
-                                    final materiasDoCurso = entry.value;
-                                    return Card(
-                                      margin: const EdgeInsets.symmetric(
-                                        vertical: 6,
-                                      ),
-                                      child: ExpansionTile(
-                                        title: Text(
-                                          curso.curso,
-                                          style: const TextStyle(
-                                            color: Color(0xFF1E40AF),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        children:
-                                            materiasDoCurso.map((materia) {
-                                              return ListTile(
-                                                title: Text(
-                                                  materia['nome'] ?? '',
-                                                  style: const TextStyle(
-                                                    color: Color(0xFF1E293B),
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                trailing: IconButton(
-                                                  icon: const Icon(
-                                                    Icons.delete,
-                                                    color: Color(0xFFDC2626),
-                                                    size: 22,
-                                                  ),
-                                                  tooltip: 'Excluir',
-                                                  onPressed: () async {
-                                                    final confirm = await showDialog<
-                                                      bool
-                                                    >(
-                                                      context: context,
-                                                      builder:
-                                                          (
-                                                            context,
-                                                          ) => AlertDialog(
-                                                            backgroundColor:
-                                                                Colors.white,
-                                                            title: const Text(
-                                                              'Excluir matéria',
-                                                              style: TextStyle(
-                                                                color: Color(
-                                                                  0xFF1E40AF,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            content: const Text(
-                                                              'Tem certeza que deseja excluir esta matéria?',
-                                                              style: TextStyle(
-                                                                color: Color(
-                                                                  0xFF475569,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            actions: [
-                                                              TextButton(
-                                                                onPressed:
-                                                                    () => Navigator.pop(
-                                                                      context,
-                                                                      false,
-                                                                    ),
-                                                                child: const Text(
-                                                                  'Cancelar',
-                                                                  style: TextStyle(
-                                                                    color: Color(
-                                                                      0xFF64748B,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              TextButton(
-                                                                onPressed:
-                                                                    () => Navigator.pop(
-                                                                      context,
-                                                                      true,
-                                                                    ),
-                                                                child: const Text(
-                                                                  'Excluir',
-                                                                  style: TextStyle(
-                                                                    color: Color(
-                                                                      0xFFDC2626,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                    );
-                                                    if (confirm == true) {
-                                                      await Supabase
-                                                          .instance
-                                                          .client
-                                                          .from('materias')
-                                                          .delete()
-                                                          .eq(
-                                                            'id',
-                                                            materia['id'],
-                                                          );
-                                                      await _buscarMaterias();
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          content: const Text(
-                                                            'Matéria excluída com sucesso!',
-                                                            style: TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                            ),
-                                                          ),
-                                                          backgroundColor:
-                                                              const Color(
-                                                                0xFF059669,
-                                                              ),
-                                                        ),
-                                                      );
-                                                    }
-                                                  },
-                                                ),
-                                              );
-                                            }).toList(),
-                                      ),
-                                    );
-                                  }).toList(),
-                            ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

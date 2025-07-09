@@ -14,7 +14,6 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   final _numeroSalaController = TextEditingController();
   final _qtdCadeirasController = TextEditingController();
   bool _disponivel = true;
-  Color _corSelecionada = Colors.blue;
 
   List<Map<String, dynamic>> _salas = [];
   List<Map<String, dynamic>> _salasFiltradas = [];
@@ -51,11 +50,15 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
             'id, numero_sala, qtd_cadeiras, disponivel, cor, projetor, tv, ar_condicionado',
           )
           .order('numero_sala');
+
+      print('Dados recebidos do banco: $data');
+
       setState(() {
         _salas = List<Map<String, dynamic>>.from(data);
         _filtrarSalas();
       });
     } catch (e) {
+      print('Erro ao buscar salas: $e');
       // Opcional: mostrar erro
     } finally {
       setState(() => _loadingSalas = false);
@@ -106,12 +109,13 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
       return;
     }
 
-    // Salva a sala
+    // Gera uma cor baseada no número da sala
+    final corSala = _gerarCorSala(numeroSala);
     await supabase.from('salas').insert({
       'numero_sala': numeroSala,
       'qtd_cadeiras': qtdCadeiras,
       'disponivel': _disponivel,
-      'cor': Colors.blue.value, // Sempre azul
+      'cor': _normalizeColor(corSala),
       'projetor': _projetor,
       'tv': _tv,
       'ar_condicionado': _arCondicionado,
@@ -140,70 +144,76 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     final result = await showDialog<bool>(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Editar Sala'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: numeroController,
-                    decoration: const InputDecoration(
-                      labelText: 'Número da Sala',
+          (context) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  title: const Text('Editar Sala'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: numeroController,
+                          decoration: const InputDecoration(
+                            labelText: 'Número da Sala',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: cadeirasController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Quantidade de Cadeiras',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SwitchListTile(
+                          title: const Text('Disponível'),
+                          value: disponivel,
+                          onChanged: (v) => disponivel = v,
+                        ),
+                        SwitchListTile(
+                          title: const Text('Projetor'),
+                          value: projetor,
+                          onChanged: (v) => projetor = v,
+                        ),
+                        SwitchListTile(
+                          title: const Text('TV'),
+                          value: tv,
+                          onChanged: (v) => tv = v,
+                        ),
+                        SwitchListTile(
+                          title: const Text('Ar Condicionado'),
+                          value: arCondicionado,
+                          onChanged: (v) => arCondicionado = v,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: cadeirasController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Quantidade de Cadeiras',
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    title: const Text('Disponível'),
-                    value: disponivel,
-                    onChanged: (v) => disponivel = v,
-                  ),
-                  SwitchListTile(
-                    title: const Text('Projetor'),
-                    value: projetor,
-                    onChanged: (v) => projetor = v,
-                  ),
-                  SwitchListTile(
-                    title: const Text('TV'),
-                    value: tv,
-                    onChanged: (v) => tv = v,
-                  ),
-                  SwitchListTile(
-                    title: const Text('Ar Condicionado'),
-                    value: arCondicionado,
-                    onChanged: (v) => arCondicionado = v,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Salvar'),
-              ),
-            ],
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Salvar'),
+                    ),
+                  ],
+                ),
           ),
     );
 
     if (result == true) {
+      // Gera uma nova cor baseada no número da sala
+      final novaCorSala = _gerarCorSala(numeroController.text.trim());
       await supabase
           .from('salas')
           .update({
             'numero_sala': numeroController.text.trim(),
             'qtd_cadeiras': int.tryParse(cadeirasController.text.trim()) ?? 0,
             'disponivel': disponivel,
+            'cor': _normalizeColor(novaCorSala),
             'projetor': projetor,
             'tv': tv,
             'ar_condicionado': arCondicionado,
@@ -248,16 +258,72 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   }
 
   Color _parseSalaColor(dynamic cor) {
-    return Colors.blue;
+    if (cor == null) return const Color(0xFF44A301);
+
+    try {
+      int colorValue;
+
+      if (cor is String) {
+        String cleanCor = cor.trim();
+
+        // Remove o prefixo 'ff' se existir (formato hexadecimal)
+        if (cleanCor.startsWith('ff')) {
+          cleanCor = cleanCor.substring(2);
+        }
+
+        // Remove o prefixo '#' se existir
+        if (cleanCor.startsWith('#')) {
+          cleanCor = cleanCor.substring(1);
+        }
+
+        // Verifica se é hexadecimal ou decimal
+        if (cleanCor.contains(RegExp(r'[a-fA-F]', caseSensitive: false))) {
+          // É hexadecimal
+          colorValue = int.parse(cleanCor, radix: 16);
+          // Adiciona o alpha se não estiver presente
+          if (colorValue < 0xFF000000) {
+            colorValue = 0xFF000000 | colorValue;
+          }
+        } else {
+          // É decimal
+          colorValue = int.parse(cleanCor);
+        }
+      } else if (cor is int) {
+        colorValue = cor;
+      } else {
+        return const Color(0xFF44A301);
+      }
+
+      return Color(colorValue);
+    } catch (e) {
+      return const Color(0xFF44A301); // Cor padrão se houver erro
+    }
+  }
+
+  // Função auxiliar para normalizar cores
+  String _normalizeColor(Color color) {
+    return color.value.toString();
+  }
+
+  // Função para gerar cor baseada no número da sala
+  Color _gerarCorSala(String numeroSala) {
+    final cores = [
+      Colors.green, // 1 - Verde
+      Colors.yellow, // 2 - Amarelo
+      Colors.red, // 3 - Vermelho
+      const Color(0xFF44A301), // 4 - Verde
+    ];
+
+    // Usa o número da sala para escolher uma cor
+    final numero = int.tryParse(numeroSala) ?? 0;
+    return cores[(numero - 1) % cores.length];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(
-          0xFF1E40AF,
-        ), // Azul principal igual criarcurso
+        backgroundColor: const Color(0xFF44A301), // Verde principal do tema
         elevation: 0,
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -274,16 +340,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3A8A), // Azul escuro
-                    Color(0xFF3B82F6), // Azul médio
-                  ],
-                ),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFF44A301)),
               child: Row(
                 children: [
                   Padding(
@@ -303,7 +360,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'RH Painel',
+                        'Campus Map',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -320,7 +377,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
               title: const Text(
                 'Inicio',
                 style: TextStyle(color: Colors.black87),
@@ -328,7 +385,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               onTap: () => Navigator.pushNamed(context, '/home'),
             ),
             ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Agendamento',
                 style: TextStyle(color: Colors.black87),
@@ -336,7 +393,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
             ),
             ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
               title: const Text(
                 'Lista Agendamento',
                 style: TextStyle(color: Colors.black87),
@@ -344,7 +401,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               onTap: () => Navigator.pushNamed(context, '/listalocacao'),
             ),
             ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Sala',
                 style: TextStyle(color: Colors.black87),
@@ -352,7 +409,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarsala'),
             ),
             ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Curso',
                 style: TextStyle(color: Colors.black87),
@@ -360,7 +417,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarcurso'),
             ),
             ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Matéria',
                 style: TextStyle(color: Colors.black87),
@@ -368,12 +425,36 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
               onTap: () => Navigator.pushNamed(context, '/criarmateria'),
             ),
             ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Professor',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
+              title: const Text(
+                'Novo Evento',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarevento'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
+              title: const Text(
+                'Agendar Prova',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarprova'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
+              title: const Text(
+                'Historico de Acoes',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
             ),
             const Spacer(),
             Padding(
@@ -399,7 +480,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                 Container(
                   width: MediaQuery.of(context).size.width * 0.4,
                   height: MediaQuery.of(context).size.height - 80,
-                  color: const Color(0xFFE3EAFD), // azul bem claro
+                  color: const Color(0xFFE8F5E8), // verde bem claro
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 36,
@@ -414,7 +495,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           'Nova Sala',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF297BD8),
+                            color: Color(0xFF44A301),
                             fontWeight: FontWeight.bold,
                             fontSize: 22,
                           ),
@@ -434,7 +515,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             ),
                             prefixIcon: const Icon(
                               Icons.confirmation_number,
-                              color: Color(0xFF297BD8),
+                              color: Color(0xFF44A301),
                             ),
                           ),
                         ),
@@ -454,7 +535,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             ),
                             prefixIcon: const Icon(
                               Icons.chair,
-                              color: Color(0xFF297BD8),
+                              color: Color(0xFF44A301),
                             ),
                           ),
                         ),
@@ -465,7 +546,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             style: TextStyle(color: Colors.black),
                           ),
                           value: _disponivel,
-                          activeColor: const Color(0xFF297BD8),
+                          activeColor: const Color(0xFF44A301),
                           onChanged: (val) => setState(() => _disponivel = val),
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -475,7 +556,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             style: TextStyle(color: Colors.black),
                           ),
                           value: _projetor,
-                          activeColor: const Color(0xFF297BD8),
+                          activeColor: const Color(0xFF44A301),
                           onChanged: (val) => setState(() => _projetor = val),
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -485,7 +566,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             style: TextStyle(color: Colors.black),
                           ),
                           value: _tv,
-                          activeColor: const Color(0xFF297BD8),
+                          activeColor: const Color(0xFF44A301),
                           onChanged: (val) => setState(() => _tv = val),
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -495,26 +576,10 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             style: TextStyle(color: Colors.black),
                           ),
                           value: _arCondicionado,
-                          activeColor: const Color(0xFF297BD8),
+                          activeColor: const Color(0xFF44A301),
                           onChanged:
                               (val) => setState(() => _arCondicionado = val),
                           contentPadding: EdgeInsets.zero,
-                        ),
-                        const SizedBox(height: 18),
-                        Row(
-                          children: [
-                            const Text(
-                              'Cor da Sala:',
-                              style: TextStyle(color: Colors.black),
-                            ),
-                            const SizedBox(width: 16),
-                            // Botões de cor fixa
-                            _CorOption(
-                              cor: Colors.blue,
-                              selecionada: true,
-                              onTap: () {}, // Não faz nada
-                            ),
-                          ],
                         ),
                         const SizedBox(height: 32),
                         SizedBox(
@@ -533,7 +598,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                     : const Icon(Icons.save),
                             label: const Text('Salvar Sala'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E40AF),
+                              backgroundColor: const Color(0xFF44A301),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               textStyle: const TextStyle(fontSize: 16),
@@ -550,7 +615,6 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                       _qtdCadeirasController.clear();
                                       setState(() {
                                         _disponivel = true;
-                                        _corSelecionada = Colors.blue;
                                         _projetor = false;
                                         _tv = false;
                                         _arCondicionado = false;
@@ -846,7 +910,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                               child: IconButton(
                                                 icon: const Icon(
                                                   Icons.edit,
-                                                  color: Color(0xFF297BD8),
+                                                  color: Color(0xFF44A301),
                                                   size: 20,
                                                 ),
                                                 tooltip: 'Editar',
@@ -882,41 +946,6 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _CorOption extends StatelessWidget {
-  final Color cor;
-  final bool selecionada;
-  final VoidCallback onTap;
-
-  const _CorOption({
-    required this.cor,
-    required this.selecionada,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: cor,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: selecionada ? Colors.black : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child:
-            selecionada
-                ? const Icon(Icons.check, color: Colors.white, size: 18)
-                : null,
       ),
     );
   }

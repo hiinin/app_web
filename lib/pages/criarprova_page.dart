@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/sala.dart' as sala_model;
 import '../models/curso.dart' as curso_model;
+import '../models/professor.dart' as professor_model;
 
-class CriarLocacaoPage extends StatefulWidget {
-  const CriarLocacaoPage({super.key});
+class CriarProvaPage extends StatefulWidget {
+  const CriarProvaPage({super.key});
 
   @override
-  State<CriarLocacaoPage> createState() => _CriarLocacaoPageState();
+  State<CriarProvaPage> createState() => _CriarProvaPageState();
 }
 
-class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
+class _CriarProvaPageState extends State<CriarProvaPage> {
   final supabase = Supabase.instance.client;
 
   List<sala_model.Sala> salas = [];
@@ -49,10 +50,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   final GlobalKey _cursoFieldKey = GlobalKey();
   final GlobalKey _materiaFieldKey = GlobalKey();
   final GlobalKey _professorFieldKey = GlobalKey();
-
-  // Novo: controle de modo do calendário
-  bool modoMultiplo = false;
-  Set<DateTime> diasMultiplosSelecionados = {};
 
   String formatHora(TimeOfDay hora) {
     final horaFormatada = hora.hour.toString().padLeft(2, '0');
@@ -181,14 +178,17 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     } else if (T == curso_model.Curso) {
       isOpen = isCursoDropdownOpen;
       searchText = cursoSearchText;
-    } else if (T == Map<String, dynamic>) {
-      // Verifica se é matéria ou professor baseado no campo
+    } else {
+      // Para Map<String, dynamic>, verifica se é matéria ou professor baseado no contexto
       if (fieldKey == _materiaFieldKey) {
         isOpen = isMateriaDropdownOpen;
         searchText = materiaSearchText;
       } else if (fieldKey == _professorFieldKey) {
         isOpen = isProfessorDropdownOpen;
         searchText = professorSearchText;
+      } else {
+        isOpen = isMateriaDropdownOpen;
+        searchText = materiaSearchText;
       }
     }
 
@@ -291,12 +291,18 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                             } else if (T == curso_model.Curso) {
                               isCursoDropdownOpen = false;
                               cursoSearchText = '';
-                            } else if (fieldKey == _materiaFieldKey) {
-                              isMateriaDropdownOpen = false;
-                              materiaSearchText = '';
-                            } else if (fieldKey == _professorFieldKey) {
-                              isProfessorDropdownOpen = false;
-                              professorSearchText = '';
+                            } else {
+                              // Para Map<String, dynamic>, verifica se é matéria ou professor
+                              if (fieldKey == _materiaFieldKey) {
+                                isMateriaDropdownOpen = false;
+                                materiaSearchText = '';
+                              } else if (fieldKey == _professorFieldKey) {
+                                isProfessorDropdownOpen = false;
+                                professorSearchText = '';
+                              } else {
+                                isMateriaDropdownOpen = false;
+                                materiaSearchText = '';
+                              }
                             }
                           });
                           _overlayEntry?.remove();
@@ -338,21 +344,32 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
             } else {
               _showOverlay();
             }
-          } else if (fieldKey == _materiaFieldKey) {
-            isMateriaDropdownOpen = !isMateriaDropdownOpen;
-            if (!isMateriaDropdownOpen) {
-              materiaSearchText = '';
-              _hideOverlay();
+          } else {
+            // Para Map<String, dynamic>, verifica se é matéria ou professor
+            if (fieldKey == _materiaFieldKey) {
+              isMateriaDropdownOpen = !isMateriaDropdownOpen;
+              if (!isMateriaDropdownOpen) {
+                materiaSearchText = '';
+                _hideOverlay();
+              } else {
+                _showOverlay();
+              }
+            } else if (fieldKey == _professorFieldKey) {
+              isProfessorDropdownOpen = !isProfessorDropdownOpen;
+              if (!isProfessorDropdownOpen) {
+                professorSearchText = '';
+                _hideOverlay();
+              } else {
+                _showOverlay();
+              }
             } else {
-              _showOverlay();
-            }
-          } else if (fieldKey == _professorFieldKey) {
-            isProfessorDropdownOpen = !isProfessorDropdownOpen;
-            if (!isProfessorDropdownOpen) {
-              professorSearchText = '';
-              _hideOverlay();
-            } else {
-              _showOverlay();
+              isMateriaDropdownOpen = !isMateriaDropdownOpen;
+              if (!isMateriaDropdownOpen) {
+                materiaSearchText = '';
+                _hideOverlay();
+              } else {
+                _showOverlay();
+              }
             }
           }
         });
@@ -361,7 +378,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         decoration: BoxDecoration(
-          color: const Color(0xFF44A301).withOpacity(0.1),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFF44A301)),
         ),
@@ -387,10 +404,15 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                               salaSearchText = text;
                             } else if (T == curso_model.Curso) {
                               cursoSearchText = text;
-                            } else if (fieldKey == _materiaFieldKey) {
-                              materiaSearchText = text;
-                            } else if (fieldKey == _professorFieldKey) {
-                              professorSearchText = text;
+                            } else {
+                              // Para Map<String, dynamic>, verifica se é matéria ou professor
+                              if (fieldKey == _materiaFieldKey) {
+                                materiaSearchText = text;
+                              } else if (fieldKey == _professorFieldKey) {
+                                professorSearchText = text;
+                              } else {
+                                materiaSearchText = text;
+                              }
                             }
                           });
                           // Atualiza o overlay com a nova filtragem
@@ -429,6 +451,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       currentMonth.month + 1,
       0,
     );
+    // Ajusta o weekday para começar no domingo (0) em vez de segunda (1)
     final firstWeekday =
         firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
 
@@ -445,19 +468,11 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
       // Verifica se está selecionado (modo único ou múltiplo)
       bool isSelected = false;
-      if (modoMultiplo) {
-        isSelected = diasMultiplosSelecionados.any(
-          (d) =>
-              d.year == currentDate.year &&
-              d.month == currentDate.month &&
-              d.day == currentDate.day,
-        );
-      } else {
-        isSelected =
-            dia != null &&
-            dia!.year == currentDate.year &&
-            dia!.month == currentDate.month &&
-            dia!.day == currentDate.day;
+      if (dia != null &&
+          dia!.year == currentDate.year &&
+          dia!.month == currentDate.month &&
+          dia!.day == currentDate.day) {
+        isSelected = true;
       }
 
       final isToday =
@@ -476,22 +491,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     ? null
                     : () {
                       setState(() {
-                        if (modoMultiplo) {
-                          // Modo múltiplo: adiciona/remove da lista
-                          if (isSelected) {
-                            diasMultiplosSelecionados.removeWhere(
-                              (d) =>
-                                  d.year == currentDate.year &&
-                                  d.month == currentDate.month &&
-                                  d.day == currentDate.day,
-                            );
-                          } else {
-                            diasMultiplosSelecionados.add(currentDate);
-                          }
-                        } else {
-                          // Modo único: seleciona apenas um dia
-                          dia = currentDate;
-                        }
+                        dia = currentDate;
                       });
                     },
             child: Container(
@@ -557,7 +557,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       children: [
         // Título
         const Text(
-          'Selecione o(s) Dia(s)',
+          'Selecione o Dia',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -566,105 +566,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 20),
-
-        // Abas estilo Google para seleção de modo de agendamento
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              // Aba "1 dia"
-              Expanded(
-                child: GestureDetector(
-                  onTap:
-                      () => setState(() {
-                        modoMultiplo = false;
-                      }),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: !modoMultiplo ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow:
-                          !modoMultiplo
-                              ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 2,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ]
-                              : null,
-                    ),
-                    child: Text(
-                      'Único dia',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight:
-                            !modoMultiplo ? FontWeight.bold : FontWeight.normal,
-                        color:
-                            !modoMultiplo
-                                ? const Color(0xFF44A301)
-                                : Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Aba "Vários dias"
-              Expanded(
-                child: GestureDetector(
-                  onTap:
-                      () => setState(() {
-                        modoMultiplo = true;
-                      }),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                      horizontal: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: modoMultiplo ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow:
-                          modoMultiplo
-                              ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 2,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ]
-                              : null,
-                    ),
-                    child: Text(
-                      'Vários dias',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight:
-                            modoMultiplo ? FontWeight.bold : FontWeight.normal,
-                        color:
-                            modoMultiplo
-                                ? const Color(0xFF44A301)
-                                : Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-
         // Calendário completo em uma caixa
         Container(
           padding: const EdgeInsets.all(20),
@@ -691,12 +592,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        if (modoMultiplo) {
-                          if (diasMultiplosSelecionados.isNotEmpty)
-                            diasMultiplosSelecionados.clear();
-                        } else {
-                          dia = null;
-                        }
                         dia = DateTime(
                           (dia ?? DateTime.now()).year,
                           (dia ?? DateTime.now()).month - 1,
@@ -720,12 +615,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                   IconButton(
                     onPressed: () {
                       setState(() {
-                        if (modoMultiplo) {
-                          if (diasMultiplosSelecionados.isNotEmpty)
-                            diasMultiplosSelecionados.clear();
-                        } else {
-                          dia = null;
-                        }
                         dia = DateTime(
                           (dia ?? DateTime.now()).year,
                           (dia ?? DateTime.now()).month + 1,
@@ -742,7 +631,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               ),
               const SizedBox(height: 16),
 
-              // Dias da semana (corrigido o alinhamento)
+              // Dias da semana
               Row(
                 children: const [
                   Expanded(
@@ -860,30 +749,24 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     return months[month - 1];
   }
 
-  Future<void> salvarLocacao() async {
+  Future<void> salvarProva() async {
     if (isLoading) return; // Evita duplo clique
 
     print(
-      'Chamou salvarLocacao para: '
+      'Chamou salvarProva para: '
       'curso=${cursoSelecionado?.id}, '
       'sala=${salaSelecionada?.id}, '
       'aula=$periodoAulaSelecionado',
     );
 
-    final bool temDiasSelecionados =
-        modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
-
-    if (!temDiasSelecionados ||
-        salaSelecionada == null ||
+    if (salaSelecionada == null ||
         cursoSelecionado == null ||
         periodoAulaSelecionado == null ||
         materiaSelecionada == null ||
         professorSelecionado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, preencha todos os campos obrigatórios'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Preencha todos os campos')));
       return;
     }
 
@@ -892,16 +775,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     final periodoCurso =
         cursoSelecionado!.periodo; // 1=Matutino, 2=Vespertino, 3=Noturno
 
-    // Lista de dias para processar
-    List<DateTime> diasParaProcessar = [];
-    if (modoMultiplo) {
-      diasParaProcessar = diasMultiplosSelecionados.toList();
-    } else {
-      diasParaProcessar = [dia!];
-    }
-
     // Verifica todos os dias antes de salvar
-    for (DateTime diaProcessar in diasParaProcessar) {
+    for (DateTime diaProcessar in [dia!]) {
       final dataFormatada =
           '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
@@ -910,7 +785,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           .from('agendamento')
           .select()
           .eq('sala_id', salaSelecionada!.id)
-          .eq('dia', dataFormatada);
+          .eq('dia', dataFormatada)
+          .eq('periodo', periodoCurso);
 
       if (agendamentosSala.length >= 6) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -931,17 +807,18 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           .select()
           .eq('sala_id', salaSelecionada!.id)
           .eq('dia', dataFormatada)
+          .eq('periodo', periodoCurso)
           .eq('aula_periodo', periodoAulaSelecionado!)
           .eq(
             'tipo_agendamento',
-            'A',
-          ); // Verifica apenas agendamentos do tipo Aula
+            'M',
+          ); // Verifica apenas agendamentos do tipo Prova
 
       if (agendamentosSalaPeriodoTipo.length >= 2) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Essa sala já atingiu o limite de 2 aulas para o período "${periodoAulaSelecionado}" no dia ${dataFormatada.split('-').reversed.join('/')}.',
+              'Essa sala já atingiu o limite de 2 provas para o período "${periodoAulaSelecionado}" no dia ${dataFormatada.split('-').reversed.join('/')}.',
             ),
             backgroundColor: Colors.red,
           ),
@@ -953,7 +830,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       // 3. Verifica quantos agendamentos já existem para este curso nesse dia
       final agendamentosCurso = await supabase
           .from('agendamento')
-          .select()
+          .select('id, tipo_agendamento, aula_periodo')
           .eq('curso_id', cursoSelecionado!.id)
           .eq('dia', dataFormatada);
 
@@ -970,31 +847,14 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         return;
       }
 
-      // 4. Verifica se já existe um agendamento igual para este curso, sala, dia, período e aula
-      final agendamentoExistente =
-          await supabase
-              .from('agendamento')
-              .select()
-              .eq('sala_id', salaSelecionada!.id)
-              .eq('curso_id', cursoSelecionado!.id)
-              .eq('dia', dataFormatada)
-              .eq('aula_periodo', periodoAulaSelecionado!)
-              .maybeSingle();
+      // 4. Verifica se há conflito de horário com outros tipos de agendamento (aula, prova, evento)
+      // Esta verificação deve vir ANTES da verificação de agendamento existente
+      print('DEBUG - Iniciando verificação de conflitos...');
+      print('DEBUG - Parâmetros da consulta:');
+      print('  - Sala ID: ${salaSelecionada!.id}');
+      print('  - Data: $dataFormatada');
+      print('  - Aula período: $periodoAulaSelecionado');
 
-      if (agendamentoExistente != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Já existe um agendamento igual para o dia ${dataFormatada.split('-').reversed.join('/')}!',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-
-      // 5. Verifica se há conflito de horário com outros tipos de agendamento (aula, prova, evento)
       final conflitosHorario = await supabase
           .from('agendamento')
           .select()
@@ -1002,15 +862,23 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           .eq('dia', dataFormatada)
           .eq('aula_periodo', periodoAulaSelecionado!);
 
+      print('DEBUG - Conflitos encontrados: $conflitosHorario'); // Debug
+      print(
+        'DEBUG - Quantidade de conflitos: ${conflitosHorario.length}',
+      ); // Debug
+
       if (conflitosHorario.isNotEmpty) {
-        // Verifica se já existe um agendamento do mesmo tipo (aula) no mesmo horário
+        // Verifica se já existe um agendamento do mesmo tipo (prova) no mesmo horário
         final tiposExistentes =
             conflitosHorario.map((a) => a['tipo_agendamento']).toSet();
 
-        if (tiposExistentes.contains('A')) {
+        print('DEBUG - Tipos existentes: $tiposExistentes'); // Debug
+
+        if (tiposExistentes.contains('M')) {
+          print('DEBUG - Bloqueando: já existe uma prova'); // Debug
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Já existe uma aula agendada para este horário.'),
+              content: Text('Já existe uma prova agendada para este horário.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -1035,6 +903,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
             tipoExistente = 'agendamento';
         }
 
+        print('DEBUG - Bloqueando: já existe uma $tipoExistente'); // Debug
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -1046,114 +916,82 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         setState(() => isLoading = false);
         return;
       }
+
+      print('DEBUG - Nenhum conflito encontrado, permitindo criação'); // Debug
+
+      // 5. Verifica se já existe um agendamento igual para este curso, sala, dia, período e aula
+      final agendamentoExistente2 =
+          await supabase
+              .from('agendamento')
+              .select()
+              .eq('sala_id', salaSelecionada!.id)
+              .eq('curso_id', cursoSelecionado!.id)
+              .eq('dia', dataFormatada)
+              .eq('aula_periodo', periodoAulaSelecionado!)
+              .maybeSingle();
+
+      print('DEBUG - Agendamento existente 2: $agendamentoExistente2'); // Debug
+
+      if (agendamentoExistente2 != null) {
+        print('DEBUG - Bloqueando: agendamento existente 2'); // Debug
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Já existe um agendamento igual para o dia ${dataFormatada.split('-').reversed.join('/')}!',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // Vamos verificar se há agendamentos na sala para este dia
+      final todosAgendamentosSala = await supabase
+          .from('agendamento')
+          .select()
+          .eq('sala_id', salaSelecionada!.id)
+          .eq('dia', dataFormatada);
+
+      print(
+        'DEBUG - Todos os agendamentos da sala para este dia: $todosAgendamentosSala',
+      );
+      print(
+        'DEBUG - Quantidade total de agendamentos na sala: ${todosAgendamentosSala.length}',
+      );
     }
 
     try {
-      List<int> idsAgendamentosCriados = [];
-      final timestampCriacao = DateTime.now();
-
       // Salva agendamentos para todos os dias selecionados
-      for (DateTime diaProcessar in diasParaProcessar) {
+      for (DateTime diaProcessar in [dia!]) {
         final dataFormatada =
             '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
-        final response =
-            await supabase.from('agendamento').insert({
-              'aula_periodo': periodoAulaSelecionado!,
-              'sala_id': salaSelecionada!.id,
-              'curso_id': cursoSelecionado!.id,
-              'materia_id': materiaSelecionada!['id'],
-              'professor_id': professorSelecionado!['id'],
-              'dia': dataFormatada,
-              'periodo': periodoCurso,
-              'tipo_agendamento': 'A', // A=Aula
-            }).select();
-
-        // Captura o ID do agendamento criado
-        if (response != null && response.isNotEmpty) {
-          idsAgendamentosCriados.add(response[0]['id']);
-        }
-      }
-
-      // Se foram criados múltiplos agendamentos, aguarda um pouco e então
-      // remove os registros individuais do histórico e cria um registro múltiplo
-      if (idsAgendamentosCriados.length > 1) {
-        // Aguarda um pouco para os triggers criarem os registros
-        await Future.delayed(const Duration(milliseconds: 1000));
-
-        // Remove os registros individuais do histórico criados pelos triggers
-        await supabase
-            .from('historico_acoes')
-            .delete()
-            .eq('tabela_afetada', 'agendamento')
-            .eq('acao', 'INSERT')
-            .in_('registro_id', idsAgendamentosCriados)
-            .gte(
-              'data_hora',
-              timestampCriacao
-                  .subtract(const Duration(seconds: 10))
-                  .toIso8601String(),
-            )
-            .lte(
-              'data_hora',
-              timestampCriacao
-                  .add(const Duration(seconds: 10))
-                  .toIso8601String(),
-            );
-
-        // Formata as datas para exibição
-        final datasFormatadas =
-            diasParaProcessar.map((data) {
-              return '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
-            }).toList();
-
-        final detalhes =
-            'Agendamento múltiplo criado para ${diasParaProcessar.length} dias: ${datasFormatadas.join(', ')}';
-
-        // Cria um registro especial no histórico que agrupa todos os agendamentos
-        await supabase.from('historico_acoes').insert({
-          'tabela_afetada': 'agendamento',
-          'acao': 'INSERT_MULTIPLE',
-          'registro_id':
-              idsAgendamentosCriados.first, // Usa o primeiro ID como referência
-          'dados_anteriores': null,
-          'dados_novos': {
-            'ids_agendamentos': idsAgendamentosCriados,
-            'quantidade_dias': diasParaProcessar.length,
-            'datas': datasFormatadas,
-            'sala_id': salaSelecionada!.id,
-            'curso_id': cursoSelecionado!.id,
-            'materia_id': materiaSelecionada!['id'],
-            'professor_id': professorSelecionado!['id'],
-            'periodo': periodoCurso,
-            'aula_periodo': periodoAulaSelecionado,
-            'tipo_agendamento': 'A',
-          },
-          'detalhes': detalhes,
-          'data_hora': timestampCriacao.toIso8601String(),
+        await supabase.from('agendamento').insert({
+          'aula_periodo': periodoAulaSelecionado!,
+          'sala_id': salaSelecionada!.id,
+          'curso_id': cursoSelecionado!.id,
+          'materia_id': materiaSelecionada!['id'],
+          'professor_id': professorSelecionado!['id'],
+          'dia': dataFormatada,
+          'periodo': periodoCurso,
+          'tipo_agendamento': 'M', // M=Prova
         });
       }
 
       setState(() {
         salaSelecionada = null;
         cursoSelecionado = null;
+        periodoAulaSelecionado = null;
         materiaSelecionada = null;
         professorSelecionado = null;
-        periodoAulaSelecionado = null;
         horaInicio = null;
         horaFim = null;
         dia = null;
-        diasMultiplosSelecionados.clear();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            modoMultiplo
-                ? 'Agendamento para ${diasParaProcessar.length} dias salvo com sucesso'
-                : 'Agendamento salvo com sucesso',
-          ),
-        ),
+        const SnackBar(content: Text('Agendamento salvo com sucesso')),
       );
 
       carregarDados();
@@ -1184,12 +1022,12 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF44A301), // Verde principal do tema
+        backgroundColor: const Color(0xFF44A301), // Verde principal
         elevation: 0,
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Novo Agendamento',
+          'Nova Prova',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -1205,7 +1043,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
+                  colors: [Color(0xFF44A301), Color(0xFF66BB6A)],
                 ),
               ),
               child: Row(
@@ -1363,6 +1201,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const SizedBox(height: 30),
+                          const SizedBox(height: 30),
                           Expanded(child: _buildCustomCalendar()),
                         ],
                       ),
@@ -1404,7 +1243,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF44A301),
+                                  color: Color(0xFF44A301),
                                   letterSpacing: 1.1,
                                 ),
                                 textAlign: TextAlign.center,
@@ -1418,9 +1257,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                     color: Color(0xFF44A301),
                                   ),
                                   filled: true,
-                                  fillColor: const Color(
-                                    0xFF44A301,
-                                  ).withOpacity(0.1),
+                                  fillColor: Colors.white,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                     borderSide: const BorderSide(
@@ -1643,8 +1480,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                       onChanged: (value) {
                                         setState(() {
                                           materiaSelecionada = value;
+                                          professorSelecionado = null;
+                                          professores = [];
                                         });
-                                        // Carrega os professores associados à matéria selecionada
                                         if (value != null) {
                                           carregarProfessoresPorMateria(
                                             value['id'],
@@ -1680,53 +1518,56 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildSearchableDropdown<
-                                      Map<String, dynamic>
-                                    >(
-                                      value: professorSelecionado,
-                                      labelText: 'Selecione o Professor',
-                                      items: professores,
-                                      displayText:
-                                          (professor) =>
-                                              professor['nome_professor'] ?? '',
-                                      onChanged: (value) {
-                                        setState(() {
-                                          professorSelecionado = value;
-                                        });
-                                      },
-                                      validator:
-                                          (value) =>
-                                              value == null
-                                                  ? 'Selecione um professor'
-                                                  : null,
-                                      fieldKey: _professorFieldKey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF44A301),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      onPressed:
-                                          () => Navigator.pushNamed(
-                                            context,
-                                            '/criarprofessor',
-                                          ),
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
+                              if (materiaSelecionada != null) ...[
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildSearchableDropdown<
+                                        Map<String, dynamic>
+                                      >(
+                                        value: professorSelecionado,
+                                        labelText: 'Selecione o Professor',
+                                        items: professores,
+                                        displayText:
+                                            (professor) =>
+                                                professor['nome_professor'] ??
+                                                '',
+                                        onChanged: (value) {
+                                          setState(() {
+                                            professorSelecionado = value;
+                                          });
+                                        },
+                                        validator:
+                                            (value) =>
+                                                value == null
+                                                    ? 'Selecione um professor'
+                                                    : null,
+                                        fieldKey: _professorFieldKey,
                                       ),
-                                      tooltip: 'Criar novo professor',
                                     ),
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF44A301),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: IconButton(
+                                        onPressed:
+                                            () => Navigator.pushNamed(
+                                              context,
+                                              '/criarprofessor',
+                                            ),
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Colors.white,
+                                        ),
+                                        tooltip: 'Criar novo professor',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               const SizedBox(height: 28),
                               Row(
                                 children: [
@@ -1734,21 +1575,13 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                     child: ElevatedButton.icon(
                                       icon: const Icon(
                                         Icons.list,
-                                        color: Color.fromARGB(255, 0, 0, 0),
+                                        color: Colors.white,
                                       ),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color.fromARGB(
-                                          255,
-                                          247,
-                                          245,
-                                          96,
+                                        backgroundColor: const Color(
+                                          0xFF44A301,
                                         ),
-                                        foregroundColor: const Color.fromARGB(
-                                          255,
-                                          0,
-                                          0,
-                                          0,
-                                        ),
+                                        foregroundColor: Colors.white,
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 16,
                                         ),
@@ -1796,9 +1629,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                         ),
                                         elevation: 2,
                                       ),
-                                      onPressed:
-                                          isLoading ? null : salvarLocacao,
-                                      label: const Text('Agendar aula'),
+                                      onPressed: isLoading ? null : salvarProva,
+                                      label: const Text('Agendar prova'),
                                     ),
                                   ),
                                 ],

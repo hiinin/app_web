@@ -140,13 +140,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               children: [
                 DrawerHeader(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                    ),
-                  ),
+                  decoration: const BoxDecoration(color: Color(0xFF44A301)),
                   child: Row(
                     children: [
                       Padding(
@@ -160,16 +154,16 @@ class _HomePageState extends State<HomePage> {
                           fit: BoxFit.contain,
                         ),
                       ),
-                      const SizedBox(width: 24),
+                      const SizedBox(width: 16),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
                           Text(
-                            'RH Painel',
+                            'Campus Map',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 30,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -177,7 +171,7 @@ class _HomePageState extends State<HomePage> {
                             'Bem-vindo!',
                             style: TextStyle(
                               color: Colors.white70,
-                              fontSize: 20,
+                              fontSize: 16,
                             ),
                           ),
                         ],
@@ -185,16 +179,21 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
+                // INÍCIO
                 ListTile(
-                  leading: const Icon(Icons.home, color: Color(0xFF1E40AF)),
+                  leading: const Icon(Icons.home, color: Color(0xFF44A301)),
                   title: const Text(
-                    'Inicio',
-                    style: TextStyle(color: Colors.black87),
+                    'Início',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   onTap: () => Navigator.pushNamed(context, '/home'),
                 ),
+
                 ListTile(
-                  leading: const Icon(Icons.add_box, color: Color(0xFF1E40AF)),
+                  leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
                   title: const Text(
                     'Novo Agendamento',
                     style: TextStyle(color: Colors.black87),
@@ -202,17 +201,18 @@ class _HomePageState extends State<HomePage> {
                   onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.list_alt, color: Color(0xFF1E40AF)),
+                  leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
                   title: const Text(
-                    'Lista Agendamento',
+                    'Lista de Agendamento',
                     style: TextStyle(color: Colors.black87),
                   ),
                   onTap: () => Navigator.pushNamed(context, '/listalocacao'),
                 ),
+
                 ListTile(
                   leading: const Icon(
                     Icons.meeting_room,
-                    color: Color(0xFF1E40AF),
+                    color: Color(0xFF44A301),
                   ),
                   title: const Text(
                     'Nova Sala',
@@ -221,7 +221,7 @@ class _HomePageState extends State<HomePage> {
                   onTap: () => Navigator.pushNamed(context, '/criarsala'),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.school, color: Color(0xFF1E40AF)),
+                  leading: const Icon(Icons.school, color: Color(0xFF44A301)),
                   title: const Text(
                     'Novo Curso',
                     style: TextStyle(color: Colors.black87),
@@ -229,15 +229,7 @@ class _HomePageState extends State<HomePage> {
                   onTap: () => Navigator.pushNamed(context, '/criarcurso'),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.book, color: Color(0xFF1E40AF)),
-                  title: const Text(
-                    'Nova Matéria',
-                    style: TextStyle(color: Colors.black87),
-                  ),
-                  onTap: () => Navigator.pushNamed(context, '/criarmateria'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.people, color: Color(0xFF1E40AF)),
+                  leading: const Icon(Icons.people, color: Color(0xFF44A301)),
                   title: const Text(
                     'Novo Professor',
                     style: TextStyle(color: Colors.black87),
@@ -245,12 +237,36 @@ class _HomePageState extends State<HomePage> {
                   onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.event, color: Color(0xFF1E40AF)),
+                  leading: const Icon(Icons.book, color: Color(0xFF44A301)),
+                  title: const Text(
+                    'Nova Matéria',
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  onTap: () => Navigator.pushNamed(context, '/criarmateria'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
+                  title: const Text(
+                    'Agendar Prova',
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  onTap: () => Navigator.pushNamed(context, '/criarprova'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.event, color: Color(0xFF44A301)),
                   title: const Text(
                     'Novo Evento',
                     style: TextStyle(color: Colors.black87),
                   ),
                   onTap: () => Navigator.pushNamed(context, '/criarevento'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history, color: Color(0xFF44A301)),
+                  title: const Text(
+                    'Histórico de Ações',
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
                 ),
                 const Spacer(),
                 Padding(
@@ -265,12 +281,24 @@ class _HomePageState extends State<HomePage> {
           ),
           body: Padding(
             padding: const EdgeInsets.only(top: 80.0, left: 32.0, right: 32.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Carrossel alinhado à esquerda
-                Expanded(child: _HomeCarousel()),
-              ],
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 32.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Calendário à esquerda (35% da largura)
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.35,
+                      child: _HomeCalendar(),
+                    ),
+                    const SizedBox(width: 32),
+                    // Carrossel alinhado à direita (65% da largura)
+                    Expanded(child: _HomeCarousel()),
+                  ],
+                ),
+              ),
             ),
           ),
           // Body vazio, apenas a imagem de fundo com gradiente
@@ -308,12 +336,15 @@ class _HomeActionCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.10),
+              color: const Color(0xFF44A301).withOpacity(0.10),
               blurRadius: 18,
               offset: const Offset(0, 8),
             ),
           ],
-          border: Border.all(color: Colors.blue.shade100, width: 2),
+          border: Border.all(
+            color: const Color(0xFF44A301).withOpacity(0.3),
+            width: 2,
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(18),
@@ -322,7 +353,7 @@ class _HomeActionCard extends StatelessWidget {
             children: [
               Icon(
                 data.icon,
-                color: const Color(0xFF1E40AF),
+                color: const Color(0xFF44A301),
                 size: 64, // era 44
               ),
               Text(
@@ -355,8 +386,8 @@ class _HomeActionCard extends StatelessWidget {
                     onPressed: onPressed,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(
-                        0xFF1E40AF,
-                      ), // Cor escura do drawer
+                        0xFF44A301,
+                      ), // Cor verde do tema
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -389,8 +420,8 @@ class _HomeCarousel extends StatefulWidget {
 }
 
 class _HomeCarouselState extends State<_HomeCarousel> {
-  // Troque o valor do viewportFraction para ~0.26
-  final PageController _controller = PageController(viewportFraction: 0.26);
+  // Ajustado o viewportFraction para melhor visualização dos cards maiores
+  final PageController _controller = PageController(viewportFraction: 0.32);
   int _currentPage = 0;
 
   final List<_HomeActionCardData> _cards = [
@@ -454,134 +485,588 @@ class _HomeCarouselState extends State<_HomeCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    final double cardSize = 270; // era 210, agora maior
-    return Align(
-      alignment: Alignment.bottomLeft,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 32.0, left: 0, right: 0),
-        child: SizedBox(
-          height: cardSize + 24,
-          width: double.infinity,
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 48,
-                ), // igual ou maior que o raio das setas + margem
-                child: ShaderMask(
-                  shaderCallback: (Rect bounds) {
-                    return LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black,
-                        Colors.black,
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.02, 0.98, 1.0], // FADE BEM MENOR
-                    ).createShader(bounds);
-                  },
-                  blendMode: BlendMode.dstIn,
-                  child: PageView.builder(
-                    controller: _controller,
-                    itemCount: _cards.length,
-                    padEnds: false,
-                    onPageChanged:
-                        (page) => setState(() => _currentPage = page),
-                    itemBuilder: (context, index) {
-                      // final isActive = index == _currentPage; // pode remover se não usar mais
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 18, // valor fixo para todos os cards
-                          vertical: 0, // sem efeito de "aumentar"
-                        ),
-                        child: _HomeActionCard(
-                          data: _cards[index],
-                          size: cardSize,
-                          isActive:
-                              false, // ou remova o parâmetro se não usar mais
-                          onPressed: () {
-                            Navigator.pushNamed(context, _cards[index].route);
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
+    final double cardSize = 400; // Exatamente igual à altura do calendário
+    return SizedBox(
+      height: cardSize, // Removido o +24 para ser exatamente igual
+      width: double.infinity,
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 48,
+            ), // igual ou maior que o raio das setas + margem
+            child: ShaderMask(
+              shaderCallback: (Rect bounds) {
+                return LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black,
+                    Colors.black,
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.02, 0.98, 1.0], // FADE BEM MENOR
+                ).createShader(bounds);
+              },
+              blendMode: BlendMode.dstIn,
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: _cards.length,
+                padEnds: false,
+                onPageChanged: (page) => setState(() => _currentPage = page),
+                itemBuilder: (context, index) {
+                  // final isActive = index == _currentPage; // pode remover se não usar mais
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOut,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 18, // valor fixo para todos os cards
+                      vertical: 0, // sem efeito de "aumentar"
+                    ),
+                    child: _HomeActionCard(
+                      data: _cards[index],
+                      size: cardSize,
+                      isActive: false, // ou remova o parâmetro se não usar mais
+                      onPressed: () {
+                        Navigator.pushNamed(context, _cards[index].route);
+                      },
+                    ),
+                  );
+                },
               ),
-              // Setas de navegação
-              Positioned(
-                left: 8,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new,
-                        size: 28,
-                        color: Colors.blue, // Azul forte para destaque
-                      ),
-                      onPressed:
-                          _currentPage > 0
-                              ? () => _goToPage(_currentPage - 1)
-                              : null,
-                      splashRadius: 28,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 8,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 28,
-                        color: Colors.blue, // Azul forte para destaque
-                      ),
-                      onPressed:
-                          _currentPage < _cards.length - 1
-                              ? () => _goToPage(_currentPage + 1)
-                              : null,
-                      splashRadius: 28,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+          // Setas de navegação
+          Positioned(
+            left: 8,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 28,
+                    color: Color(0xFF44A301), // Verde para destaque
+                  ),
+                  onPressed:
+                      _currentPage > 0
+                          ? () => _goToPage(_currentPage - 1)
+                          : null,
+                  splashRadius: 28,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 8,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 28,
+                    color: Color(0xFF44A301), // Verde para destaque
+                  ),
+                  onPressed:
+                      _currentPage < _cards.length - 1
+                          ? () => _goToPage(_currentPage + 1)
+                          : null,
+                  splashRadius: 28,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Widget do Calendário
+class _HomeCalendar extends StatefulWidget {
+  @override
+  State<_HomeCalendar> createState() => _HomeCalendarState();
+}
+
+class _HomeCalendarState extends State<_HomeCalendar> {
+  final supabase = Supabase.instance.client;
+  DateTime _selectedDate = DateTime.now();
+  DateTime _focusedDate = DateTime.now();
+  Map<DateTime, List<Map<String, dynamic>>> _events = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
+
+  Future<void> _loadEvents() async {
+    try {
+      // Buscar agendamentos do mês atual
+      final startOfMonth = DateTime(_focusedDate.year, _focusedDate.month, 1);
+      final endOfMonth = DateTime(_focusedDate.year, _focusedDate.month + 1, 0);
+
+      final response = await supabase
+          .from('agendamento')
+          .select('dia, tipo_agendamento')
+          .gte('dia', startOfMonth.toIso8601String().split('T')[0])
+          .lte('dia', endOfMonth.toIso8601String().split('T')[0]);
+
+      setState(() {
+        _events.clear();
+        for (var event in response) {
+          final date = DateTime.parse(event['dia']).toLocal();
+          final day = DateTime(date.year, date.month, date.day);
+          if (!_events.containsKey(day)) {
+            _events[day] = [];
+          }
+          _events[day]!.add({
+            'tipo': event['tipo_agendamento'],
+            'data': event['dia'],
+          });
+        }
+      });
+    } catch (e) {
+      print('Erro ao carregar eventos: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 450, // Aumentei a altura para acomodar melhor o conteúdo
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF44A301).withOpacity(0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(
+          color: const Color(0xFF44A301).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12), // Reduzi mais o padding
+        child: Column(
+          children: [
+            // Título do calendário
+            const Text(
+              'Calendário de Agendamentos',
+              style: TextStyle(
+                fontSize: 16, // Reduzi mais o tamanho da fonte
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF44A301),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8), // Reduzi o espaçamento
+            // Legenda
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildLegendItem('Aulas', const Color(0xFF44A301)),
+                _buildLegendItem('Eventos', Colors.orange),
+                _buildLegendItem('Provas', Colors.red),
+              ],
+            ),
+            const SizedBox(height: 8), // Reduzi o espaçamento
+            // Cabeçalho do calendário
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.chevron_left,
+                    color: Color(0xFF44A301),
+                    size: 18, // Reduzi mais o tamanho do ícone
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _focusedDate = DateTime(
+                        _focusedDate.year,
+                        _focusedDate.month - 1,
+                      );
+                    });
+                    _loadEvents();
+                  },
+                ),
+                Text(
+                  '${_getMonthName(_focusedDate.month)} ${_focusedDate.year}',
+                  style: const TextStyle(
+                    fontSize: 14, // Reduzi mais o tamanho da fonte
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF44A301),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF44A301),
+                    size: 18, // Reduzi mais o tamanho do ícone
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _focusedDate = DateTime(
+                        _focusedDate.year,
+                        _focusedDate.month + 1,
+                      );
+                    });
+                    _loadEvents();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 6), // Reduzi o espaçamento
+            // Dias da semana
+            Row(
+              children: const [
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Dom',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44A301),
+                        fontSize: 11, // Reduzi mais o tamanho da fonte
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Seg',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44A301),
+                        fontSize: 11, // Reduzi mais o tamanho da fonte
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Ter',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44A301),
+                        fontSize: 11, // Reduzi mais o tamanho da fonte
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Qua',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44A301),
+                        fontSize: 11, // Reduzi mais o tamanho da fonte
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Qui',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44A301),
+                        fontSize: 11, // Reduzi mais o tamanho da fonte
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Sex',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44A301),
+                        fontSize: 11, // Reduzi mais o tamanho da fonte
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Sáb',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44A301),
+                        fontSize: 11, // Reduzi mais o tamanho da fonte
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6), // Reduzi o espaçamento
+            // Grade do calendário - agora ocupa mais espaço
+            Expanded(
+              flex: 3, // Dá mais espaço para o calendário
+              child: _buildCalendarGrid(),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.grey[300]!, width: 1),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    final now = DateTime.now();
+    final currentMonth = _focusedDate;
+    final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
+    final lastDayOfMonth = DateTime(
+      currentMonth.year,
+      currentMonth.month + 1,
+      0,
+    );
+    // Ajusta o weekday para começar no domingo (0) em vez de segunda (1)
+    final firstWeekday =
+        firstDayOfMonth.weekday == 7 ? 0 : firstDayOfMonth.weekday;
+
+    List<Widget> calendarDays = [];
+
+    // Adiciona dias vazios no início (corrigindo o alinhamento)
+    for (int i = 0; i < firstWeekday; i++) {
+      calendarDays.add(const Expanded(child: SizedBox()));
+    }
+
+    // Adiciona os dias do mês
+    for (int day = 1; day <= lastDayOfMonth.day; day++) {
+      final currentDate = DateTime(currentMonth.year, currentMonth.month, day);
+
+      // Verifica se há eventos neste dia
+      final events =
+          _events.entries
+              .where(
+                (e) =>
+                    e.key.year == currentDate.year &&
+                    e.key.month == currentDate.month &&
+                    e.key.day == currentDate.day,
+              )
+              .expand((e) => e.value)
+              .toList();
+      final hasEvents = events.isNotEmpty;
+
+      final isToday =
+          now.year == currentDate.year &&
+          now.month == currentDate.month &&
+          now.day == currentDate.day;
+      final isPastDate = currentDate.isBefore(
+        DateTime(now.year, now.month, now.day),
+      );
+
+      // Determina os tipos de eventos presentes
+      final hasProvas = events.any((e) => e['tipo'] == 'M');
+      final hasEventos = events.any((e) => e['tipo'] == 'E');
+      final hasAulas = events.any((e) => e['tipo'] == 'A');
+
+      calendarDays.add(
+        Expanded(
+          child: Container(
+            height: 45, // Aumentei mais a altura dos dias
+            margin: const EdgeInsets.all(2), // Aumentei um pouco a margem
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.transparent, // Sempre transparente
+              border:
+                  isToday
+                      ? Border.all(color: const Color(0xFF44A301), width: 2)
+                      : Border.all(
+                        color: Colors.grey.withOpacity(0.3),
+                        width: 1,
+                      ), // Borda sutil para todos os dias
+              boxShadow:
+                  isToday
+                      ? [
+                        BoxShadow(
+                          color: const Color(0xFF44A301).withOpacity(0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                      : null,
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Text(
+                    day.toString(),
+                    style: TextStyle(
+                      color:
+                          isToday
+                              ? const Color(
+                                0xFF44A301,
+                              ) // Texto verde para o dia atual
+                              : isPastDate
+                              ? Colors.grey[400]
+                              : const Color(0xFF44A301),
+                      fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 16, // Aumentei mais o tamanho da fonte
+                    ),
+                  ),
+                ),
+                if (hasEvents)
+                  Positioned(
+                    bottom: 2,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (hasProvas)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 0.5,
+                              ),
+                            ),
+                          ),
+                        if (hasEventos)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.only(right: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 0.5,
+                              ),
+                            ),
+                          ),
+                        if (hasAulas)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF44A301),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 0.5,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Adiciona dias vazios no final para completar 6 semanas (42 dias)
+    final totalDias = calendarDays.length;
+    final diasNecessarios = 42; // 6 semanas * 7 dias
+    for (int i = totalDias; i < diasNecessarios; i++) {
+      calendarDays.add(const Expanded(child: SizedBox()));
+    }
+
+    return Column(
+      children: List.generate((calendarDays.length / 7).ceil(), (weekIndex) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 1,
+          ), // Reduzi o espaçamento vertical
+          child: Row(
+            children: calendarDays.skip(weekIndex * 7).take(7).toList(),
+          ),
+        );
+      }),
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ];
+    return months[month - 1];
   }
 }
 

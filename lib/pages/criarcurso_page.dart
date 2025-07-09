@@ -166,7 +166,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
             backgroundColor: Colors.white,
             title: const Text(
               'Editar Curso',
-              style: TextStyle(color: Color(0xFF1E3A8A)),
+              style: TextStyle(color: Color(0xFF44A301)),
             ),
             content: SingleChildScrollView(
               child: Column(
@@ -174,16 +174,16 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                 children: [
                   TextField(
                     controller: nomeController,
-                    style: const TextStyle(color: Color(0xFF1E3A8A)),
+                    style: const TextStyle(color: Color(0xFF44A301)),
                     decoration: InputDecoration(
                       labelText: 'Nome do Curso',
-                      labelStyle: const TextStyle(color: Color(0xFF3B82F6)),
+                      labelStyle: const TextStyle(color: Color(0xFF44A301)),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFFE0E7FF)),
+                        borderSide: const BorderSide(color: Color(0xFFE8F5E8)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                        borderSide: const BorderSide(color: Color(0xFF44A301)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -192,16 +192,16 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                   TextField(
                     controller: semestreController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Color(0xFF1E3A8A)),
+                    style: const TextStyle(color: Color(0xFF44A301)),
                     decoration: InputDecoration(
                       labelText: 'Semestre',
-                      labelStyle: const TextStyle(color: Color(0xFF3B82F6)),
+                      labelStyle: const TextStyle(color: Color(0xFF44A301)),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFFE0E7FF)),
+                        borderSide: const BorderSide(color: Color(0xFFE8F5E8)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                        borderSide: const BorderSide(color: Color(0xFF44A301)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -211,38 +211,38 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                     value: periodoEdit,
                     decoration: InputDecoration(
                       labelText: 'Período',
-                      labelStyle: const TextStyle(color: Color(0xFF3B82F6)),
+                      labelStyle: const TextStyle(color: Color(0xFF44A301)),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFFE0E7FF)),
+                        borderSide: const BorderSide(color: Color(0xFFE8F5E8)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+                        borderSide: const BorderSide(color: Color(0xFF44A301)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     dropdownColor: Colors.white,
-                    style: const TextStyle(color: Color(0xFF1E3A8A)),
+                    style: const TextStyle(color: Color(0xFF44A301)),
                     items: const [
                       DropdownMenuItem(
                         value: 1,
                         child: Text(
                           'Matutino',
-                          style: TextStyle(color: Color(0xFF1E3A8A)),
+                          style: TextStyle(color: Color(0xFF44A301)),
                         ),
                       ),
                       DropdownMenuItem(
                         value: 2,
                         child: Text(
                           'Vespertino',
-                          style: TextStyle(color: Color(0xFF1E3A8A)),
+                          style: TextStyle(color: Color(0xFF44A301)),
                         ),
                       ),
                       DropdownMenuItem(
                         value: 3,
                         child: Text(
                           'Noturno',
-                          style: TextStyle(color: Color(0xFF1E3A8A)),
+                          style: TextStyle(color: Color(0xFF44A301)),
                         ),
                       ),
                     ],
@@ -263,7 +263,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text(
                   'Salvar',
-                  style: TextStyle(color: Color(0xFF1E3A8A)),
+                  style: TextStyle(color: Color(0xFF44A301)),
                 ),
               ),
             ],
@@ -308,7 +308,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
             backgroundColor: Colors.white,
             title: const Text(
               'Excluir curso',
-              style: TextStyle(color: Color(0xFF1E3A8A)),
+              style: TextStyle(color: Color(0xFF44A301)),
             ),
             content: const Text(
               'Tem certeza que deseja excluir este curso?',
@@ -362,7 +362,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E40AF), // Azul mais escuro e elegante
+        backgroundColor: const Color(0xFF44A301), // Verde principal do tema
         elevation: 2,
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -379,16 +379,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF1E3A8A), // Azul escuro
-                    Color(0xFF3B82F6), // Azul médio
-                  ],
-                ),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFF44A301)),
               child: Row(
                 children: [
                   Padding(
@@ -408,7 +399,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'RH Painel',
+                        'Campus Map',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -417,10 +408,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                       ),
                       Text(
                         'Bem-vindo!',
-                        style: TextStyle(
-                          color: Color(0xFFE0E7FF),
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
                       ),
                     ],
                   ),
@@ -428,67 +416,84 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF3B82F6)),
+              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
               title: const Text(
                 'Inicio',
-                style: TextStyle(color: Color(0xFF1F2937)),
+                style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/home'),
             ),
             ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF3B82F6)),
+              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Agendamento',
-                style: TextStyle(color: Color(0xFF1F2937)),
+                style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
             ),
             ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF3B82F6)),
+              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
               title: const Text(
                 'Lista Agendamento',
-                style: TextStyle(color: Color(0xFF1F2937)),
+                style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/listalocacao'),
             ),
             ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF3B82F6)),
+              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Sala',
-                style: TextStyle(color: Color(0xFF1F2937)),
+                style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarsala'),
             ),
             ListTile(
-              leading: const Icon(
-                Icons.school,
-                color: Color(0xFF1E3A8A), // Destaque para página atual
-              ),
+              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Curso',
-                style: TextStyle(
-                  color: Color(0xFF1E3A8A),
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: Colors.black87),
               ),
-              tileColor: const Color(0xFFF0F4FF), // Fundo sutil para item ativo
               onTap: () => Navigator.pushNamed(context, '/criarcurso'),
             ),
             ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF3B82F6)),
+              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Matéria',
-                style: TextStyle(color: Color(0xFF1F2937)),
+                style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarmateria'),
             ),
             ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF3B82F6)),
+              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Professor',
-                style: TextStyle(color: Color(0xFF1F2937)),
+                style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
+              title: const Text(
+                'Novo Evento',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarevento'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
+              title: const Text(
+                'Agendar Prova',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarprova'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
+              title: const Text(
+                'Historico de Acoes',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
             ),
             const Spacer(),
             Padding(
@@ -521,8 +526,8 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xFFE0E7FF), // Azul muito claro
-                        Color(0xFFF0F4FF), // Azul quase branco
+                        Color(0xFFE8F5E8), // Verde muito claro
+                        Color(0xFFF0F8F0), // Verde quase branco
                       ],
                     ),
                   ),
@@ -540,7 +545,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           'Novo Curso',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFF1E3A8A),
+                            color: Color(0xFF44A301),
                             fontWeight: FontWeight.bold,
                             fontSize: 22,
                             letterSpacing: 1.2,
@@ -549,30 +554,30 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                         const SizedBox(height: 32),
                         TextFormField(
                           controller: _cursoController,
-                          style: const TextStyle(color: Color(0xFF1E3A8A)),
+                          style: const TextStyle(color: Color(0xFF44A301)),
                           decoration: InputDecoration(
                             labelText: 'Nome do Curso',
                             labelStyle: const TextStyle(
-                              color: Color(0xFF3B82F6),
+                              color: Color(0xFF44A301),
                             ),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFFE0E7FF),
+                                color: Color(0xFFE8F5E8),
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFFE0E7FF),
+                                color: Color(0xFFE8F5E8),
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFF3B82F6),
+                                color: Color(0xFF44A301),
                                 width: 2,
                               ),
                             ),
@@ -590,30 +595,30 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                         const SizedBox(height: 18),
                         TextFormField(
                           controller: _semestreController,
-                          style: const TextStyle(color: Color(0xFF1E3A8A)),
+                          style: const TextStyle(color: Color(0xFF44A301)),
                           decoration: InputDecoration(
                             labelText: 'Semestre',
                             labelStyle: const TextStyle(
-                              color: Color(0xFF3B82F6),
+                              color: Color(0xFF44A301),
                             ),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFFE0E7FF),
+                                color: Color(0xFFE8F5E8),
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFFE0E7FF),
+                                color: Color(0xFFE8F5E8),
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFF3B82F6),
+                                color: Color(0xFF44A301),
                                 width: 2,
                               ),
                             ),
@@ -634,26 +639,26 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           decoration: InputDecoration(
                             labelText: 'Período',
                             labelStyle: const TextStyle(
-                              color: Color(0xFF3B82F6),
+                              color: Color(0xFF44A301),
                             ),
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFFE0E7FF),
+                                color: Color(0xFFE8F5E8),
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFFE0E7FF),
+                                color: Color(0xFFE8F5E8),
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFF3B82F6),
+                                color: Color(0xFF44A301),
                                 width: 2,
                               ),
                             ),
@@ -663,27 +668,27 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                             ),
                           ),
                           dropdownColor: Colors.white,
-                          style: const TextStyle(color: Color(0xFF1E3A8A)),
+                          style: const TextStyle(color: Color(0xFF44A301)),
                           items: const [
                             DropdownMenuItem(
                               value: 1,
                               child: Text(
                                 'Matutino',
-                                style: TextStyle(color: Color(0xFF1E3A8A)),
+                                style: TextStyle(color: Color(0xFF44A301)),
                               ),
                             ),
                             DropdownMenuItem(
                               value: 2,
                               child: Text(
                                 'Vespertino',
-                                style: TextStyle(color: Color(0xFF1E3A8A)),
+                                style: TextStyle(color: Color(0xFF44A301)),
                               ),
                             ),
                             DropdownMenuItem(
                               value: 3,
                               child: Text(
                                 'Noturno',
-                                style: TextStyle(color: Color(0xFF1E3A8A)),
+                                style: TextStyle(color: Color(0xFF44A301)),
                               ),
                             ),
                           ],
@@ -708,7 +713,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                     : const Icon(Icons.save),
                             label: const Text('Salvar Curso'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E40AF),
+                              backgroundColor: const Color(0xFF44A301),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               textStyle: const TextStyle(fontSize: 16),
@@ -739,7 +744,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                       children: [
                         TextField(
                           controller: _searchController,
-                          style: const TextStyle(color: Color(0xFF1F2937)),
+                          style: const TextStyle(color: Color(0xFF44A301)),
                           decoration: InputDecoration(
                             hintText: 'Pesquisar curso, semestre ou período...',
                             hintStyle: const TextStyle(
@@ -766,7 +771,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                               borderSide: const BorderSide(
-                                color: Color(0xFF3B82F6),
+                                color: Color(0xFF44A301),
                                 width: 2,
                               ),
                             ),
@@ -781,7 +786,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                         const Text(
                           'Cursos cadastrados:',
                           style: TextStyle(
-                            color: Color(0xFF1F2937),
+                            color: Color(0xFF44A301),
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                           ),
@@ -854,7 +859,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                               _loadingCursos
                                   ? const Center(
                                     child: CircularProgressIndicator(
-                                      color: Color(0xFF3B82F6),
+                                      color: Color(0xFF44A301),
                                     ),
                                   )
                                   : _cursosFiltrados.isEmpty
@@ -895,7 +900,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                               child: Text(
                                                 curso['curso'] ?? '',
                                                 style: const TextStyle(
-                                                  color: Color(0xFF1F2937),
+                                                  color: Color(0xFF44A301),
                                                   fontSize: 15,
                                                   fontWeight: FontWeight.w500,
                                                 ),

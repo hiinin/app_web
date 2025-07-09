@@ -142,7 +142,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E40AF),
+        backgroundColor: const Color(0xFF44A301),
         elevation: 0,
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -159,13 +159,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                ),
-              ),
+              decoration: const BoxDecoration(color: Color(0xFF44A301)),
               child: Row(
                 children: [
                   Padding(
@@ -185,7 +179,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'RH Painel',
+                        'Campus Map',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 22,
@@ -202,7 +196,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
               title: const Text(
                 'Inicio',
                 style: TextStyle(color: Colors.black87),
@@ -210,7 +204,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               onTap: () => Navigator.pushNamed(context, '/home'),
             ),
             ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Agendamento',
                 style: TextStyle(color: Colors.black87),
@@ -218,7 +212,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
             ),
             ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
               title: const Text(
                 'Lista Agendamento',
                 style: TextStyle(color: Colors.black87),
@@ -226,7 +220,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               onTap: () => Navigator.pushNamed(context, '/listalocacao'),
             ),
             ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Sala',
                 style: TextStyle(color: Colors.black87),
@@ -234,16 +228,15 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               onTap: () => Navigator.pushNamed(context, '/criarsala'),
             ),
             ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Curso',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarcurso'),
             ),
-
             ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
               title: const Text(
                 'Nova Matéria',
                 style: TextStyle(color: Colors.black87),
@@ -251,12 +244,36 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               onTap: () => Navigator.pushNamed(context, '/criarmateria'),
             ),
             ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
               title: const Text(
                 'Novo Professor',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
+              title: const Text(
+                'Novo Evento',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarevento'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
+              title: const Text(
+                'Agendar Prova',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/criarprova'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
+              title: const Text(
+                'Historico de Acoes',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
             ),
             const Spacer(),
             Padding(
@@ -270,440 +287,491 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
         ),
       ),
       backgroundColor: Colors.white,
-      body: Row(
-        children: [
-          // Formulário à esquerda
-          Container(
-            width: MediaQuery.of(context).size.width * 0.4,
-            height: MediaQuery.of(context).size.height - 80,
-            color: const Color(0xFFE3EAFD),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // NOVO PROFESSOR
-                  const Text(
-                    'Novo Professor',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF297BD8),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _nomeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome do Professor',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                    ),
-                    validator:
-                        (v) =>
-                            v == null || v.trim().isEmpty
-                                ? 'Digite o nome'
-                                : null,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.save),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E40AF),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    onPressed: isLoading ? null : _salvarProfessor,
-                    label: const Text('Adicionar'),
-                  ),
-                  const SizedBox(height: 40),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Ajusta a largura baseado no tamanho da tela
+          final isSmallScreen = constraints.maxWidth < 800;
+          final leftWidth =
+              isSmallScreen
+                  ? constraints.maxWidth * 0.45
+                  : constraints.maxWidth * 0.4;
 
-                  // ASSOCIAR PROFESSOR E MATÉRIA
-                  const Text(
-                    'Associar Professor à Matéria',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF297BD8),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  DropdownButtonFormField<int>(
-                    value:
-                        professores.any((p) => p['id'] == professorSelecionado)
-                            ? professorSelecionado
-                            : null,
-                    items:
-                        professores
-                            .map(
-                              (p) => DropdownMenuItem<int>(
-                                value: p['id'] as int,
-                                child: Text(p['nome_professor'] ?? ''),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: (v) => setState(() => professorSelecionado = v),
-                    decoration: const InputDecoration(
-                      labelText: 'Professor',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<int>(
-                    value: cursoSelecionado,
-                    items:
-                        cursos
-                            .map(
-                              (c) => DropdownMenuItem<int>(
-                                value: c['id'] as int,
-                                child: Text(c['curso'] ?? ''),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: (value) async {
-                      setState(() {
-                        cursoSelecionado = value;
-                        materiasSelecionadas.clear();
-                        materiasFiltradas = [];
-                      });
-                      await _carregarMaterias(cursoId: value);
-                      setState(() {
-                        materiasFiltradas =
-                            materias; // Atualiza matérias filtradas após carregar
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Curso',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<int>(
-                    value: null,
-                    items:
-                        materiasFiltradas
-                            .map(
-                              (m) => DropdownMenuItem<int>(
-                                value: m['id'] as int,
-                                child: Text(m['nome'] ?? ''),
-                              ),
-                            )
-                            .toList(),
-                    onChanged:
-                        (cursoSelecionado == null)
-                            ? null // Desabilita se não selecionou curso
-                            : (value) {
-                              if (value != null &&
-                                  !materiasSelecionadas.contains(value)) {
-                                setState(() {
-                                  materiasSelecionadas.add(value);
-                                });
-                              }
-                            },
-                    decoration: const InputDecoration(
-                      labelText: 'Matérias (adicione uma por vez)',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(),
-                    ),
-                    disabledHint: const Text('Selecione um curso primeiro'),
-                  ),
-                  const SizedBox(height: 8),
+          return Row(
+            children: [
+              // Formulário à esquerda
+              Container(
+                width: leftWidth,
+                height: constraints.maxHeight - 80,
+                color: const Color(0xFFE8F5E8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 20,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // NOVO PROFESSOR
+                        const Text(
+                          'Novo Professor',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFF44A301),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _nomeController,
+                          decoration: const InputDecoration(
+                            labelText: 'Nome do Professor',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(),
+                          ),
+                          validator:
+                              (v) =>
+                                  v == null || v.trim().isEmpty
+                                      ? 'Digite o nome'
+                                      : null,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.save),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF44A301),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          onPressed: isLoading ? null : _salvarProfessor,
+                          label: const Text('Adicionar'),
+                        ),
+                        const SizedBox(height: 40),
 
-                  // Exibe as matérias selecionadas com opção de remover
-                  Wrap(
-                    spacing: 8,
-                    children:
-                        materiasSelecionadas.map((id) {
-                          final materia = materias.firstWhere(
-                            (m) => m['id'] == id,
-                            orElse: () => {},
-                          );
-                          return Chip(
-                            label: Text(materia['nome'] ?? ''),
-                            onDeleted: () {
-                              setState(() {
-                                materiasSelecionadas.remove(id);
-                              });
-                            },
-                          );
-                        }).toList(),
-                  ),
+                        // ASSOCIAR PROFESSOR E MATÉRIA
+                        const Text(
+                          'Associar Professor à Matéria',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFF44A301),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        DropdownButtonFormField<int>(
+                          value:
+                              professores.any(
+                                    (p) => p['id'] == professorSelecionado,
+                                  )
+                                  ? professorSelecionado
+                                  : null,
+                          items:
+                              professores
+                                  .map(
+                                    (p) => DropdownMenuItem<int>(
+                                      value: p['id'] as int,
+                                      child: Text(p['nome_professor'] ?? ''),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (v) => setState(() => professorSelecionado = v),
+                          decoration: const InputDecoration(
+                            labelText: 'Professor',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: cursoSelecionado,
+                          items:
+                              cursos
+                                  .map(
+                                    (c) => DropdownMenuItem<int>(
+                                      value: c['id'] as int,
+                                      child: Text(c['curso'] ?? ''),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (value) async {
+                            setState(() {
+                              cursoSelecionado = value;
+                              materiasSelecionadas.clear();
+                              materiasFiltradas = [];
+                            });
+                            await _carregarMaterias(cursoId: value);
+                            setState(() {
+                              materiasFiltradas =
+                                  materias; // Atualiza matérias filtradas após carregar
+                            });
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Curso',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: null,
+                          items:
+                              materiasFiltradas
+                                  .map(
+                                    (m) => DropdownMenuItem<int>(
+                                      value: m['id'] as int,
+                                      child: Text(m['nome'] ?? ''),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (cursoSelecionado == null)
+                                  ? null // Desabilita se não selecionou curso
+                                  : (value) {
+                                    if (value != null &&
+                                        !materiasSelecionadas.contains(value)) {
+                                      setState(() {
+                                        materiasSelecionadas.add(value);
+                                      });
+                                    }
+                                  },
+                          decoration: const InputDecoration(
+                            labelText: 'Matérias (adicione uma por vez)',
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(),
+                          ),
+                          disabledHint: const Text(
+                            'Selecione um curso primeiro',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
 
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.link),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(48),
+                        // Exibe as matérias selecionadas com opção de remover
+                        Wrap(
+                          spacing: 8,
+                          children:
+                              materiasSelecionadas.map((id) {
+                                final materia = materias.firstWhere(
+                                  (m) => m['id'] == id,
+                                  orElse: () => {},
+                                );
+                                return Chip(
+                                  label: Text(materia['nome'] ?? ''),
+                                  onDeleted: () {
+                                    setState(() {
+                                      materiasSelecionadas.remove(id);
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                        ),
+
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.link),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF44A301),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          onPressed:
+                              (professorSelecionado != null &&
+                                      materiasSelecionadas.isNotEmpty)
+                                  ? _associarMaterias
+                                  : null,
+                          label: const Text('Associar'),
+                        ),
+                      ],
                     ),
-                    onPressed:
-                        (professorSelecionado != null &&
-                                materiasSelecionadas.isNotEmpty)
-                            ? _associarMaterias
-                            : null,
-                    label: const Text('Associar'),
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          // Lista de professores à direita
-          Expanded(
-            child: Container(
-              height: MediaQuery.of(context).size.height - 80,
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
-              child:
-                  isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Professores cadastrados',
-                            style: TextStyle(
-                              color: Color(0xFF297BD8),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16.0),
-                            child: TextField(
-                              decoration: InputDecoration(
-                                labelText: 'Pesquisar professor',
-                                prefixIcon: Icon(Icons.search),
-                                border: OutlineInputBorder(),
-                                filled: true,
-                                fillColor: Colors.white,
+              // Lista de professores à direita
+              Expanded(
+                child: Container(
+                  height: constraints.maxHeight - 80,
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 20,
+                  ),
+                  child:
+                      isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Professores cadastrados',
+                                style: TextStyle(
+                                  color: Color(0xFF44A301),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
                               ),
-                              onChanged: (value) {
-                                setState(() {
-                                  filtroProfessor = value.toLowerCase();
-                                });
-                              },
-                            ),
-                          ),
-                          Expanded(
-                            child:
-                                professores.isEmpty
-                                    ? const Center(
-                                      child: Text(
-                                        'Nenhum professor cadastrado.',
-                                        style: TextStyle(
-                                          color: Colors.black54,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    )
-                                    : ListView.separated(
-                                      itemCount:
-                                          professores
-                                              .where(
-                                                (p) =>
-                                                    filtroProfessor.isEmpty ||
-                                                    (p['nome_professor'] ?? '')
-                                                        .toLowerCase()
-                                                        .contains(
-                                                          filtroProfessor,
-                                                        ),
-                                              )
-                                              .length,
-                                      separatorBuilder:
-                                          (_, __) => const SizedBox(height: 12),
-                                      itemBuilder: (context, index) {
-                                        final listaFiltrada =
-                                            professores
-                                                .where(
-                                                  (p) =>
-                                                      filtroProfessor.isEmpty ||
-                                                      (p['nome_professor'] ??
-                                                              '')
-                                                          .toLowerCase()
-                                                          .contains(
-                                                            filtroProfessor,
-                                                          ),
-                                                )
-                                                .toList();
-                                        final p = listaFiltrada[index];
-                                        final materiasList =
-                                            (p['professor_materias'] as List?)
-                                                ?.map(
-                                                  (e) => {
-                                                    'id': e['materias']?['id'],
-                                                    'nome':
-                                                        e['materias']?['nome'],
-                                                    'associacaoId':
-                                                        e['id'], // id da associação, se existir
-                                                  },
-                                                )
-                                                .where(
-                                                  (m) =>
-                                                      m['id'] != null &&
-                                                      m['nome'] != null,
-                                                )
-                                                .toList() ??
-                                            [];
+                              const SizedBox(height: 18),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: TextField(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Pesquisar professor',
+                                    prefixIcon: Icon(Icons.search),
+                                    border: OutlineInputBorder(),
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                  ),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      filtroProfessor = value.toLowerCase();
+                                    });
+                                  },
+                                ),
+                              ),
+                              Expanded(
+                                child:
+                                    professores.isEmpty
+                                        ? const Center(
+                                          child: Text(
+                                            'Nenhum professor cadastrado.',
+                                            style: TextStyle(
+                                              color: Colors.black54,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        )
+                                        : ListView.separated(
+                                          itemCount:
+                                              professores
+                                                  .where(
+                                                    (p) =>
+                                                        filtroProfessor
+                                                            .isEmpty ||
+                                                        (p['nome_professor'] ??
+                                                                '')
+                                                            .toLowerCase()
+                                                            .contains(
+                                                              filtroProfessor,
+                                                            ),
+                                                  )
+                                                  .length,
+                                          separatorBuilder:
+                                              (_, __) =>
+                                                  const SizedBox(height: 12),
+                                          itemBuilder: (context, index) {
+                                            final listaFiltrada =
+                                                professores
+                                                    .where(
+                                                      (p) =>
+                                                          filtroProfessor
+                                                              .isEmpty ||
+                                                          (p['nome_professor'] ??
+                                                                  '')
+                                                              .toLowerCase()
+                                                              .contains(
+                                                                filtroProfessor,
+                                                              ),
+                                                    )
+                                                    .toList();
+                                            final p = listaFiltrada[index];
+                                            final materiasList =
+                                                (p['professor_materias']
+                                                        as List?)
+                                                    ?.map(
+                                                      (e) => {
+                                                        'id':
+                                                            e['materias']?['id'],
+                                                        'nome':
+                                                            e['materias']?['nome'],
+                                                        'associacaoId':
+                                                            e['id'], // id da associação, se existir
+                                                      },
+                                                    )
+                                                    .where(
+                                                      (m) =>
+                                                          m['id'] != null &&
+                                                          m['nome'] != null,
+                                                    )
+                                                    .toList() ??
+                                                [];
 
-                                        bool isExpanded =
-                                            p['isExpanded'] == true;
+                                            bool isExpanded =
+                                                p['isExpanded'] == true;
 
-                                        return StatefulBuilder(
-                                          builder: (context, setTileState) {
-                                            return Card(
-                                              color: Colors.grey[100],
-                                              elevation: 1,
-                                              child: Column(
-                                                children: [
-                                                  ListTile(
-                                                    title: Text(
-                                                      p['nome_professor'] ?? '',
-                                                      style: const TextStyle(
-                                                        color: Colors.black87,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        fontSize: 16,
-                                                      ),
-                                                    ),
-                                                    trailing: Row(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        IconButton(
-                                                          icon: Icon(
-                                                            isExpanded
-                                                                ? Icons
-                                                                    .expand_less
-                                                                : Icons
-                                                                    .expand_more,
+                                            return StatefulBuilder(
+                                              builder: (context, setTileState) {
+                                                return Card(
+                                                  color: Colors.grey[100],
+                                                  elevation: 1,
+                                                  child: Column(
+                                                    children: [
+                                                      ListTile(
+                                                        title: Text(
+                                                          p['nome_professor'] ??
+                                                              '',
+                                                          style: const TextStyle(
+                                                            color:
+                                                                Colors.black87,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            fontSize: 16,
                                                           ),
-                                                          onPressed: () {
-                                                            setState(() {
-                                                              professores[index]['isExpanded'] =
-                                                                  !isExpanded;
-                                                            });
-                                                          },
+                                                          overflow:
+                                                              TextOverflow
+                                                                  .ellipsis,
                                                         ),
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                            Icons.delete,
-                                                            color: Colors.red,
-                                                          ),
-                                                          onPressed:
-                                                              () =>
-                                                                  _excluirProfessor(
-                                                                    p['id']
-                                                                        as int,
-                                                                  ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  if (isExpanded)
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                            left: 16,
-                                                            right: 16,
-                                                            bottom: 12,
-                                                          ),
-                                                      child:
-                                                          materiasList
-                                                                  .isNotEmpty
-                                                              ? Column(
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                children:
-                                                                    materiasList.map((
-                                                                      m,
-                                                                    ) {
-                                                                      return Row(
-                                                                        mainAxisAlignment:
-                                                                            MainAxisAlignment.spaceBetween,
-                                                                        children: [
-                                                                          Text(
-                                                                            m['nome'] ??
-                                                                                '',
-                                                                            style: const TextStyle(
-                                                                              color:
-                                                                                  Colors.black54,
-                                                                              fontSize:
-                                                                                  14,
-                                                                            ),
-                                                                          ),
-                                                                          IconButton(
-                                                                            icon: const Icon(
-                                                                              Icons.close,
-                                                                              color:
-                                                                                  Colors.red,
-                                                                              size:
-                                                                                  18,
-                                                                            ),
-                                                                            tooltip:
-                                                                                'Remover associação',
-                                                                            onPressed: () async {
-                                                                              // Remove associação professor-matéria
-                                                                              await supabase
-                                                                                  .from(
-                                                                                    'professor_materias',
-                                                                                  )
-                                                                                  .delete()
-                                                                                  .eq(
-                                                                                    'professor_id',
-                                                                                    p['id'],
-                                                                                  )
-                                                                                  .eq(
-                                                                                    'materia_id',
-                                                                                    m['id'],
-                                                                                  );
-                                                                              await _carregarProfessores();
-                                                                              setState(
-                                                                                () {},
-                                                                              );
-                                                                            },
-                                                                          ),
-                                                                        ],
-                                                                      );
-                                                                    }).toList(),
-                                                              )
-                                                              : const Text(
-                                                                'Nenhuma matéria associada',
-                                                                style: TextStyle(
+                                                        trailing: SizedBox(
+                                                          width: 80,
+                                                          child: Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              IconButton(
+                                                                icon: Icon(
+                                                                  isExpanded
+                                                                      ? Icons
+                                                                          .expand_less
+                                                                      : Icons
+                                                                          .expand_more,
+                                                                  size: 20,
+                                                                ),
+                                                                onPressed: () {
+                                                                  setState(() {
+                                                                    professores[index]['isExpanded'] =
+                                                                        !isExpanded;
+                                                                  });
+                                                                },
+                                                              ),
+                                                              IconButton(
+                                                                icon: const Icon(
+                                                                  Icons.delete,
                                                                   color:
                                                                       Colors
-                                                                          .black54,
-                                                                  fontSize: 14,
+                                                                          .red,
+                                                                  size: 20,
                                                                 ),
+                                                                onPressed:
+                                                                    () => _excluirProfessor(
+                                                                      p['id']
+                                                                          as int,
+                                                                    ),
                                                               ),
-                                                    ),
-                                                ],
-                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      if (isExpanded)
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets.only(
+                                                                left: 12,
+                                                                right: 12,
+                                                                bottom: 8,
+                                                              ),
+                                                          child:
+                                                              materiasList
+                                                                      .isNotEmpty
+                                                                  ? Column(
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .start,
+                                                                    children:
+                                                                        materiasList.map((
+                                                                          m,
+                                                                        ) {
+                                                                          return Padding(
+                                                                            padding: const EdgeInsets.symmetric(
+                                                                              vertical:
+                                                                                  2.0,
+                                                                            ),
+                                                                            child: Row(
+                                                                              children: [
+                                                                                Expanded(
+                                                                                  child: Text(
+                                                                                    m['nome'] ??
+                                                                                        '',
+                                                                                    style: const TextStyle(
+                                                                                      color:
+                                                                                          Colors.black54,
+                                                                                      fontSize:
+                                                                                          13,
+                                                                                    ),
+                                                                                    overflow:
+                                                                                        TextOverflow.ellipsis,
+                                                                                  ),
+                                                                                ),
+                                                                                IconButton(
+                                                                                  icon: const Icon(
+                                                                                    Icons.close,
+                                                                                    color:
+                                                                                        Colors.red,
+                                                                                    size:
+                                                                                        16,
+                                                                                  ),
+                                                                                  tooltip:
+                                                                                      'Remover associação',
+                                                                                  onPressed: () async {
+                                                                                    // Remove associação professor-matéria
+                                                                                    await supabase
+                                                                                        .from(
+                                                                                          'professor_materias',
+                                                                                        )
+                                                                                        .delete()
+                                                                                        .eq(
+                                                                                          'professor_id',
+                                                                                          p['id'],
+                                                                                        )
+                                                                                        .eq(
+                                                                                          'materia_id',
+                                                                                          m['id'],
+                                                                                        );
+                                                                                    await _carregarProfessores();
+                                                                                    setState(
+                                                                                      () {},
+                                                                                    );
+                                                                                  },
+                                                                                ),
+                                                                              ],
+                                                                            ),
+                                                                          );
+                                                                        }).toList(),
+                                                                  )
+                                                                  : const Text(
+                                                                    'Nenhuma matéria associada',
+                                                                    style: TextStyle(
+                                                                      color:
+                                                                          Colors
+                                                                              .black54,
+                                                                      fontSize:
+                                                                          14,
+                                                                    ),
+                                                                  ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                );
+                                              },
                                             );
                                           },
-                                        );
-                                      },
-                                    ),
+                                        ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-            ),
-          ),
-        ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -733,7 +801,7 @@ class MultiSelectChipField extends StatelessWidget {
     this.initialValue = const [],
     this.title = "",
     this.headerColor = Colors.transparent,
-    this.selectedColor = Colors.blue,
+    this.selectedColor = const Color(0xFF44A301),
     this.titleStyle,
     this.headerStyle,
     this.chipPadding,

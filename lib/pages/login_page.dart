@@ -104,7 +104,6 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           Expanded(
             flex: 3,
             child: Container(
-              height: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 40),
               decoration: const BoxDecoration(color: Colors.white),
               child: Column(
@@ -226,7 +225,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         elevation: 0,
-                        backgroundColor: const Color(0xFF1976D2),
+                        backgroundColor: const Color(0xFF44A301),
                         foregroundColor: Colors.white,
                       ),
                       onPressed: _tryLogin,
