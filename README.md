@@ -70,7 +70,7 @@ Este é um projeto web feito em **Flutter e Dart** com backend no **Supabase**, 
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/nome-do-repo.git
+   git clone https://github.com/hiinin/app_web.git
    cd nome-do-repo
    
 2. Instale as dependências:
