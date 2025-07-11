@@ -22,6 +22,15 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   Map<String, dynamic>? materiaSelecionada;
   Map<String, dynamic>? professorSelecionado;
 
+  // NOVO: Lista para múltiplos cursos
+  List<curso_model.Curso> cursosSelecionados = [];
+
+  // NOVO: Estrutura para armazenar matéria e professor por curso
+  Map<int, Map<String, dynamic>?> materiasPorCurso = {};
+  Map<int, Map<String, dynamic>?> professoresPorCurso = {};
+  Map<int, List<Map<String, dynamic>>> materiasDisponiveisPorCurso = {};
+  Map<int, List<Map<String, dynamic>>> professoresDisponiveisPorCurso = {};
+
   bool isLoading = false;
 
   DateTime? dia;
@@ -40,6 +49,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   String cursoSearchText = '';
   String materiaSearchText = '';
   String professorSearchText = '';
+
+  // NOVO: Controles para dropdowns de matéria e professor por curso
+  Map<String, bool> dropdownsAbertos = {};
+  Map<String, String> textosPesquisa = {};
 
   // Overlay entries para dropdowns
   OverlayEntry? _overlayEntry;
@@ -95,9 +108,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         cursos.sort(
           (a, b) => a.curso.toLowerCase().compareTo(b.curso.toLowerCase()),
         );
-        materias = [];
-        materiaSelecionada = null;
-        professorSelecionado = null;
+        // NOVO: Limpar dados de múltiplos cursos
+        cursosSelecionados.clear();
       });
     } catch (e) {
       if (!mounted) return;
@@ -111,10 +123,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
   Future<void> carregarMateriasPorCurso(int cursoId) async {
     setState(() {
-      materias = [];
-      materiaSelecionada = null;
-      professores = [];
-      professorSelecionado = null;
       isLoading = true;
     });
     try {
@@ -123,7 +131,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           .select()
           .eq('curso_id', cursoId);
       setState(() {
-        materias = List<Map<String, dynamic>>.from(response as List);
+        materiasDisponiveisPorCurso[cursoId] = List<Map<String, dynamic>>.from(
+          response as List,
+        );
       });
     } catch (e) {
       ScaffoldMessenger.of(
@@ -134,10 +144,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     }
   }
 
-  Future<void> carregarProfessoresPorMateria(int materiaId) async {
+  Future<void> carregarProfessoresPorMateria(int materiaId, int cursoId) async {
     setState(() {
-      professores = [];
-      professorSelecionado = null;
       isLoading = true;
     });
     try {
@@ -148,7 +156,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           .eq('materia_id', materiaId);
 
       setState(() {
-        professores =
+        professoresDisponiveisPorCurso[cursoId] =
             (response as List).map((item) {
               // Extrai os dados do professor do resultado da join
               return item['professores'] as Map<String, dynamic>;
@@ -163,6 +171,257 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     }
   }
 
+  // NOVO: Adicionar curso à lista de selecionados
+  void adicionarCurso(curso_model.Curso curso) {
+    if (!cursosSelecionados.any((c) => c.id == curso.id)) {
+      setState(() {
+        cursosSelecionados.add(curso);
+        // Inicializa as seleções para este curso
+        materiasPorCurso[curso.id] = null;
+        professoresPorCurso[curso.id] = null;
+      });
+      // Carrega as matérias para este curso específico
+      carregarMateriasPorCurso(curso.id);
+    }
+  }
+
+  // NOVO: Remover curso da lista de selecionados
+  void removerCurso(int cursoId) {
+    setState(() {
+      cursosSelecionados.removeWhere((c) => c.id == cursoId);
+      // Remove os dados do curso
+      materiasPorCurso.remove(cursoId);
+      professoresPorCurso.remove(cursoId);
+      materiasDisponiveisPorCurso.remove(cursoId);
+      professoresDisponiveisPorCurso.remove(cursoId);
+      dropdownsAbertos.remove('materia_$cursoId');
+      dropdownsAbertos.remove('professor_$cursoId');
+      textosPesquisa.remove('materia_$cursoId');
+      textosPesquisa.remove('professor_$cursoId');
+    });
+  }
+
+  // NOVO: Widget para exibir cursos selecionados
+  Widget _buildCursosSelecionados() {
+    if (cursosSelecionados.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF44A301).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF44A301).withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.school, color: Color(0xFF44A301), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Cursos Selecionados (${cursosSelecionados.length})',
+                style: const TextStyle(
+                  color: Color(0xFF44A301),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...cursosSelecionados.map((curso) => _buildCursoItem(curso)),
+        ],
+      ),
+    );
+  }
+
+  // NOVO: Widget para exibir item de curso selecionado
+  Widget _buildCursoItem(curso_model.Curso curso) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFF44A301).withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          curso.curso,
+                          style: const TextStyle(
+                            color: Color(0xFF44A301),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Indicador de status
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (materiasPorCurso[curso.id] != null &&
+                                        professoresPorCurso[curso.id] != null)
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.orange.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color:
+                                  (materiasPorCurso[curso.id] != null &&
+                                          professoresPorCurso[curso.id] != null)
+                                      ? Colors.green
+                                      : Colors.orange,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            (materiasPorCurso[curso.id] != null &&
+                                    professoresPorCurso[curso.id] != null)
+                                ? '✓ Completo'
+                                : '⚠ Pendente',
+                            style: TextStyle(
+                              color:
+                                  (materiasPorCurso[curso.id] != null &&
+                                          professoresPorCurso[curso.id] != null)
+                                      ? Colors.green
+                                      : Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      'Semestre: ${curso.semestre ?? "Não informado"} - Período: ${periodoToString(curso.periodo)}',
+                      style: const TextStyle(
+                        color: Color(0xFF44A301),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => removerCurso(curso.id),
+                icon: const Icon(
+                  Icons.remove_circle,
+                  color: Colors.red,
+                  size: 20,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Campo de matéria para este curso
+          Row(
+            children: [
+              Expanded(
+                child: _buildSearchableDropdown<Map<String, dynamic>>(
+                  value: materiasPorCurso[curso.id],
+                  labelText: 'Selecione a Matéria',
+                  items: materiasDisponiveisPorCurso[curso.id] ?? [],
+                  displayText: (materia) => materia['nome'] ?? '',
+                  onChanged: (value) {
+                    setState(() {
+                      materiasPorCurso[curso.id] = value;
+                      professoresPorCurso[curso.id] =
+                          null; // Limpa professor quando muda matéria
+                    });
+                    // Carrega os professores para esta matéria
+                    if (value != null) {
+                      carregarProfessoresPorMateria(value['id'], curso.id);
+                    }
+                  },
+                  validator:
+                      (value) => value == null ? 'Selecione uma matéria' : null,
+                  fieldKey: GlobalKey(),
+                  dropdownId: 'materia_${curso.id}',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF44A301),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: IconButton(
+                  onPressed:
+                      () => Navigator.pushNamed(context, '/criarmateria'),
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  tooltip: 'Criar nova matéria',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Campo de professor para este curso
+          Row(
+            children: [
+              Expanded(
+                child: _buildSearchableDropdown<Map<String, dynamic>>(
+                  value: professoresPorCurso[curso.id],
+                  labelText: 'Selecione o Professor',
+                  items: professoresDisponiveisPorCurso[curso.id] ?? [],
+                  displayText: (professor) => professor['nome_professor'] ?? '',
+                  onChanged: (value) {
+                    setState(() {
+                      professoresPorCurso[curso.id] = value;
+                    });
+                  },
+                  validator:
+                      (value) =>
+                          value == null ? 'Selecione um professor' : null,
+                  fieldKey: GlobalKey(),
+                  dropdownId: 'professor_${curso.id}',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF44A301),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: IconButton(
+                  onPressed:
+                      () => Navigator.pushNamed(context, '/criarprofessor'),
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  tooltip: 'Criar novo professor',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSearchableDropdown<T>({
     required T? value,
     required String labelText,
@@ -171,6 +430,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     required Function(T?) onChanged,
     required String? Function(T?) validator,
     required GlobalKey fieldKey,
+    String? dropdownId, // NOVO: ID único para cada dropdown
   }) {
     bool isOpen = false;
     String searchText = '';
@@ -182,13 +442,19 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       isOpen = isCursoDropdownOpen;
       searchText = cursoSearchText;
     } else if (T == Map<String, dynamic>) {
-      // Verifica se é matéria ou professor baseado no campo
-      if (fieldKey == _materiaFieldKey) {
-        isOpen = isMateriaDropdownOpen;
-        searchText = materiaSearchText;
-      } else if (fieldKey == _professorFieldKey) {
-        isOpen = isProfessorDropdownOpen;
-        searchText = professorSearchText;
+      // NOVO: Usa o ID do dropdown para controle individual
+      if (dropdownId != null) {
+        isOpen = dropdownsAbertos[dropdownId] ?? false;
+        searchText = textosPesquisa[dropdownId] ?? '';
+      } else {
+        // Fallback para campos globais
+        if (fieldKey == _materiaFieldKey) {
+          isOpen = isMateriaDropdownOpen;
+          searchText = materiaSearchText;
+        } else if (fieldKey == _professorFieldKey) {
+          isOpen = isProfessorDropdownOpen;
+          searchText = professorSearchText;
+        }
       }
     }
 
@@ -291,12 +557,21 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                             } else if (T == curso_model.Curso) {
                               isCursoDropdownOpen = false;
                               cursoSearchText = '';
-                            } else if (fieldKey == _materiaFieldKey) {
-                              isMateriaDropdownOpen = false;
-                              materiaSearchText = '';
-                            } else if (fieldKey == _professorFieldKey) {
-                              isProfessorDropdownOpen = false;
-                              professorSearchText = '';
+                            } else if (T == Map<String, dynamic>) {
+                              // NOVO: Controle individual para dropdowns
+                              if (dropdownId != null) {
+                                dropdownsAbertos[dropdownId] = false;
+                                textosPesquisa[dropdownId] = '';
+                              } else {
+                                // Fallback para campos globais
+                                if (fieldKey == _materiaFieldKey) {
+                                  isMateriaDropdownOpen = false;
+                                  materiaSearchText = '';
+                                } else if (fieldKey == _professorFieldKey) {
+                                  isProfessorDropdownOpen = false;
+                                  professorSearchText = '';
+                                }
+                              }
                             }
                           });
                           _overlayEntry?.remove();
@@ -338,21 +613,36 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
             } else {
               _showOverlay();
             }
-          } else if (fieldKey == _materiaFieldKey) {
-            isMateriaDropdownOpen = !isMateriaDropdownOpen;
-            if (!isMateriaDropdownOpen) {
-              materiaSearchText = '';
-              _hideOverlay();
+          } else if (T == Map<String, dynamic>) {
+            // NOVO: Controle individual para dropdowns de matéria e professor
+            if (dropdownId != null) {
+              dropdownsAbertos[dropdownId] =
+                  !(dropdownsAbertos[dropdownId] ?? false);
+              if (!(dropdownsAbertos[dropdownId] ?? false)) {
+                textosPesquisa[dropdownId] = '';
+                _hideOverlay();
+              } else {
+                _showOverlay();
+              }
             } else {
-              _showOverlay();
-            }
-          } else if (fieldKey == _professorFieldKey) {
-            isProfessorDropdownOpen = !isProfessorDropdownOpen;
-            if (!isProfessorDropdownOpen) {
-              professorSearchText = '';
-              _hideOverlay();
-            } else {
-              _showOverlay();
+              // Fallback para campos globais
+              if (fieldKey == _materiaFieldKey) {
+                isMateriaDropdownOpen = !isMateriaDropdownOpen;
+                if (!isMateriaDropdownOpen) {
+                  materiaSearchText = '';
+                  _hideOverlay();
+                } else {
+                  _showOverlay();
+                }
+              } else if (fieldKey == _professorFieldKey) {
+                isProfessorDropdownOpen = !isProfessorDropdownOpen;
+                if (!isProfessorDropdownOpen) {
+                  professorSearchText = '';
+                  _hideOverlay();
+                } else {
+                  _showOverlay();
+                }
+              }
             }
           }
         });
@@ -387,10 +677,18 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                               salaSearchText = text;
                             } else if (T == curso_model.Curso) {
                               cursoSearchText = text;
-                            } else if (fieldKey == _materiaFieldKey) {
-                              materiaSearchText = text;
-                            } else if (fieldKey == _professorFieldKey) {
-                              professorSearchText = text;
+                            } else if (T == Map<String, dynamic>) {
+                              // NOVO: Controle individual para dropdowns
+                              if (dropdownId != null) {
+                                textosPesquisa[dropdownId] = text;
+                              } else {
+                                // Fallback para campos globais
+                                if (fieldKey == _materiaFieldKey) {
+                                  materiaSearchText = text;
+                                } else if (fieldKey == _professorFieldKey) {
+                                  professorSearchText = text;
+                                }
+                              }
                             }
                           });
                           // Atualiza o overlay com a nova filtragem
@@ -865,7 +1163,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
     print(
       'Chamou salvarLocacao para: '
-      'curso=${cursoSelecionado?.id}, '
+      'cursos=${cursosSelecionados.length}, '
       'sala=${salaSelecionada?.id}, '
       'aula=$periodoAulaSelecionado',
     );
@@ -873,12 +1171,11 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     final bool temDiasSelecionados =
         modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
 
+    // NOVO: Verificar se há cursos selecionados
     if (!temDiasSelecionados ||
         salaSelecionada == null ||
-        cursoSelecionado == null ||
-        periodoAulaSelecionado == null ||
-        materiaSelecionada == null ||
-        professorSelecionado == null) {
+        cursosSelecionados.isEmpty ||
+        periodoAulaSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor, preencha todos os campos obrigatórios'),
@@ -887,10 +1184,27 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       return;
     }
 
+    // Verificar se cada curso tem matéria e professor selecionados
+    for (final curso in cursosSelecionados) {
+      if (materiasPorCurso[curso.id] == null ||
+          professoresPorCurso[curso.id] == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Por favor, selecione matéria e professor para o curso "${curso.curso}"',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => isLoading = true);
 
+    // Para múltiplos cursos, vamos usar o período do primeiro curso como referência
+    // ou implementar uma lógica mais complexa se necessário
     final periodoCurso =
-        cursoSelecionado!.periodo; // 1=Matutino, 2=Vespertino, 3=Noturno
+        cursosSelecionados.first.periodo; // 1=Matutino, 2=Vespertino, 3=Noturno
 
     // Lista de dias para processar
     List<DateTime> diasParaProcessar = [];
@@ -905,18 +1219,34 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       final dataFormatada =
           '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
-      // 1. Verifica quantos agendamentos já existem para a sala nesse dia e período
-      final agendamentosSala = await supabase
+      // 1. Verifica quantos agendamentos já existem para a sala nesse dia e período (NOVA REGRA: 4 agendamentos por período)
+      final agendamentosSalaPeriodo = await supabase
           .from('agendamento')
           .select()
           .eq('sala_id', salaSelecionada!.id)
-          .eq('dia', dataFormatada);
+          .eq('dia', dataFormatada)
+          .eq('periodo', periodoCurso);
 
-      if (agendamentosSala.length >= 6) {
+      if (agendamentosSalaPeriodo.length >= 4) {
+        String periodoNome = '';
+        switch (periodoCurso) {
+          case 1:
+            periodoNome = 'Matutino';
+            break;
+          case 2:
+            periodoNome = 'Vespertino';
+            break;
+          case 3:
+            periodoNome = 'Noturno';
+            break;
+          default:
+            periodoNome = 'Desconhecido';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Essa sala já atingiu o limite de 6 agendamentos para o dia ${dataFormatada.split('-').reversed.join('/')}.',
+              'Essa sala já atingiu o limite de 4 agendamentos para o período $periodoNome no dia ${dataFormatada.split('-').reversed.join('/')}.',
             ),
             backgroundColor: Colors.red,
           ),
@@ -937,11 +1267,13 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
             'A',
           ); // Verifica apenas agendamentos do tipo Aula
 
-      if (agendamentosSalaPeriodoTipo.length >= 2) {
+      // NOVO: Verifica se há espaço suficiente para todos os cursos selecionados
+      final espacoDisponivel = 2 - agendamentosSalaPeriodoTipo.length;
+      if (espacoDisponivel < cursosSelecionados.length) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Essa sala já atingiu o limite de 2 aulas para o período "${periodoAulaSelecionado}" no dia ${dataFormatada.split('-').reversed.join('/')}.',
+              'Essa sala só tem espaço para $espacoDisponivel aula(s) no período "${periodoAulaSelecionado}" no dia ${dataFormatada.split('-').reversed.join('/')}. Você selecionou ${cursosSelecionados.length} curso(s).',
             ),
             backgroundColor: Colors.red,
           ),
@@ -950,48 +1282,52 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         return;
       }
 
-      // 3. Verifica quantos agendamentos já existem para este curso nesse dia
-      final agendamentosCurso = await supabase
-          .from('agendamento')
-          .select()
-          .eq('curso_id', cursoSelecionado!.id)
-          .eq('dia', dataFormatada);
+      // 3. Verifica quantos agendamentos já existem para cada curso nesse dia
+      for (final curso in cursosSelecionados) {
+        final agendamentosCurso = await supabase
+            .from('agendamento')
+            .select()
+            .eq('curso_id', curso.id)
+            .eq('dia', dataFormatada);
 
-      if (agendamentosCurso.length >= 2) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Este curso já atingiu o limite de 2 agendamentos para o dia ${dataFormatada.split('-').reversed.join('/')}.',
+        if (agendamentosCurso.length >= 2) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'O curso "${curso.curso}" já atingiu o limite de 2 agendamentos para o dia ${dataFormatada.split('-').reversed.join('/')}.',
+              ),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => isLoading = false);
-        return;
+          );
+          setState(() => isLoading = false);
+          return;
+        }
       }
 
-      // 4. Verifica se já existe um agendamento igual para este curso, sala, dia, período e aula
-      final agendamentoExistente =
-          await supabase
-              .from('agendamento')
-              .select()
-              .eq('sala_id', salaSelecionada!.id)
-              .eq('curso_id', cursoSelecionado!.id)
-              .eq('dia', dataFormatada)
-              .eq('aula_periodo', periodoAulaSelecionado!)
-              .maybeSingle();
+      // 4. Verifica se já existe um agendamento igual para cada curso, sala, dia, período e aula
+      for (final curso in cursosSelecionados) {
+        final agendamentoExistente =
+            await supabase
+                .from('agendamento')
+                .select()
+                .eq('sala_id', salaSelecionada!.id)
+                .eq('curso_id', curso.id)
+                .eq('dia', dataFormatada)
+                .eq('aula_periodo', periodoAulaSelecionado!)
+                .maybeSingle();
 
-      if (agendamentoExistente != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Já existe um agendamento igual para o dia ${dataFormatada.split('-').reversed.join('/')}!',
+        if (agendamentoExistente != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Já existe um agendamento igual para o curso "${curso.curso}" no dia ${dataFormatada.split('-').reversed.join('/')}!',
+              ),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => isLoading = false);
-        return;
+          );
+          setState(() => isLoading = false);
+          return;
+        }
       }
 
       // 5. Verifica se há conflito de horário com outros tipos de agendamento (aula, prova, evento)
@@ -1007,15 +1343,47 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         final tiposExistentes =
             conflitosHorario.map((a) => a['tipo_agendamento']).toSet();
 
+        // NOVA REGRA: Para aulas, verificar se já existem 2 aulas no mesmo horário
         if (tiposExistentes.contains('A')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Já existe uma aula agendada para este horário.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          setState(() => isLoading = false);
-          return;
+          final aulasMesmoHorario =
+              conflitosHorario
+                  .where((a) => a['tipo_agendamento'] == 'A')
+                  .toList();
+
+          // NOVO: Verifica se há espaço suficiente para todos os cursos selecionados
+          final espacoDisponivelHorario = 2 - aulasMesmoHorario.length;
+          if (espacoDisponivelHorario < cursosSelecionados.length) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Já existem ${aulasMesmoHorario.length} aula(s) agendadas para este horário. Só há espaço para $espacoDisponivelHorario aula(s) adicional(is).',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+            setState(() => isLoading = false);
+            return;
+          }
+
+          // Verificar se algum dos cursos já está agendado neste horário
+          for (final curso in cursosSelecionados) {
+            final cursoJaAgendado = aulasMesmoHorario.any(
+              (a) => a['curso_id'] == curso.id,
+            );
+
+            if (cursoJaAgendado) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'O curso "${curso.curso}" já está agendado para este horário.',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              setState(() => isLoading = false);
+              return;
+            }
+          }
         }
 
         // Verifica se já existe qualquer tipo de agendamento no mesmo horário
@@ -1052,28 +1420,60 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       List<int> idsAgendamentosCriados = [];
       final timestampCriacao = DateTime.now();
 
-      // Salva agendamentos para todos os dias selecionados
+      print(
+        'DEBUG - Iniciando salvamento de ${cursosSelecionados.length} cursos',
+      );
+      print(
+        'DEBUG - Cursos selecionados: ${cursosSelecionados.map((c) => '${c.curso} (ID: ${c.id})').join(', ')}',
+      );
+
+      // NOVO: Salva agendamentos para todos os cursos e dias selecionados
       for (DateTime diaProcessar in diasParaProcessar) {
         final dataFormatada =
             '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
-        final response =
-            await supabase.from('agendamento').insert({
-              'aula_periodo': periodoAulaSelecionado!,
-              'sala_id': salaSelecionada!.id,
-              'curso_id': cursoSelecionado!.id,
-              'materia_id': materiaSelecionada!['id'],
-              'professor_id': professorSelecionado!['id'],
-              'dia': dataFormatada,
-              'periodo': periodoCurso,
-              'tipo_agendamento': 'A', // A=Aula
-            }).select();
+        print('DEBUG - Processando dia: $dataFormatada');
 
-        // Captura o ID do agendamento criado
-        if (response != null && response.isNotEmpty) {
-          idsAgendamentosCriados.add(response[0]['id']);
+        // Para cada curso selecionado
+        for (final curso in cursosSelecionados) {
+          final periodoCurso = curso.periodo;
+          final materia = materiasPorCurso[curso.id];
+          final professor = professoresPorCurso[curso.id];
+
+          print('DEBUG - Salvando curso: ${curso.curso} (ID: ${curso.id})');
+          print('DEBUG - Matéria: ${materia?['nome']} (ID: ${materia?['id']})');
+          print(
+            'DEBUG - Professor: ${professor?['nome_professor']} (ID: ${professor?['id']})',
+          );
+
+          final response =
+              await supabase.from('agendamento').insert({
+                'aula_periodo': periodoAulaSelecionado!,
+                'sala_id': salaSelecionada!.id,
+                'curso_id': curso.id,
+                'materia_id': materia!['id'],
+                'professor_id': professor!['id'],
+                'dia': dataFormatada,
+                'periodo': periodoCurso,
+                'tipo_agendamento': 'A', // A=Aula
+              }).select();
+
+          // Captura o ID do agendamento criado
+          if (response != null && response.isNotEmpty) {
+            idsAgendamentosCriados.add(response[0]['id']);
+            print('DEBUG - Agendamento criado com ID: ${response[0]['id']}');
+          } else {
+            print(
+              'DEBUG - ERRO: Falha ao criar agendamento para curso ${curso.curso}',
+            );
+          }
         }
       }
+
+      print(
+        'DEBUG - Total de agendamentos criados: ${idsAgendamentosCriados.length}',
+      );
+      print('DEBUG - IDs dos agendamentos: $idsAgendamentosCriados');
 
       // Se foram criados múltiplos agendamentos, aguarda um pouco e então
       // remove os registros individuais do histórico e cria um registro múltiplo
@@ -1122,9 +1522,22 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
             'quantidade_dias': diasParaProcessar.length,
             'datas': datasFormatadas,
             'sala_id': salaSelecionada!.id,
-            'curso_id': cursoSelecionado!.id,
-            'materia_id': materiaSelecionada!['id'],
-            'professor_id': professorSelecionado!['id'],
+            'cursos_ids': cursosSelecionados.map((c) => c.id).toList(),
+            'cursos_nomes': cursosSelecionados.map((c) => c.curso).toList(),
+            'materias_professores':
+                cursosSelecionados
+                    .map(
+                      (c) => {
+                        'curso_id': c.id,
+                        'curso_nome': c.curso,
+                        'materia_id': materiasPorCurso[c.id]!['id'],
+                        'materia_nome': materiasPorCurso[c.id]!['nome'],
+                        'professor_id': professoresPorCurso[c.id]!['id'],
+                        'professor_nome':
+                            professoresPorCurso[c.id]!['nome_professor'],
+                      },
+                    )
+                    .toList(),
             'periodo': periodoCurso,
             'aula_periodo': periodoAulaSelecionado,
             'tipo_agendamento': 'A',
@@ -1136,9 +1549,14 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
       setState(() {
         salaSelecionada = null;
-        cursoSelecionado = null;
-        materiaSelecionada = null;
-        professorSelecionado = null;
+        // NOVO: Limpar dados de múltiplos cursos
+        cursosSelecionados.clear();
+        materiasPorCurso.clear();
+        professoresPorCurso.clear();
+        materiasDisponiveisPorCurso.clear();
+        professoresDisponiveisPorCurso.clear();
+        dropdownsAbertos.clear();
+        textosPesquisa.clear();
         periodoAulaSelecionado = null;
         horaInicio = null;
         horaFim = null;
@@ -1150,8 +1568,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         SnackBar(
           content: Text(
             modoMultiplo
-                ? 'Agendamento para ${diasParaProcessar.length} dias salvo com sucesso'
-                : 'Agendamento salvo com sucesso',
+                ? 'Agendamento para ${cursosSelecionados.length} curso(s) em ${diasParaProcessar.length} dia(s) salvo com sucesso'
+                : 'Agendamento para ${cursosSelecionados.length} curso(s) salvo com sucesso',
           ),
         ),
       );
@@ -1517,110 +1935,143 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                 ],
                               ),
                               const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildSearchableDropdown<
-                                      curso_model.Curso
-                                    >(
-                                      value: cursoSelecionado,
-                                      labelText: 'Selecione o Curso',
-                                      items: cursos,
-                                      displayText:
-                                          (curso) =>
-                                              '${curso.curso} - ${curso.semestre ?? "Semestre?"} - ${curso.periodo != null ? periodoToString(curso.periodo) : "Período?"}',
-                                      onChanged: (value) {
-                                        setState(() {
-                                          cursoSelecionado = value;
-                                          materiaSelecionada = null;
-                                          materias = [];
-                                        });
-                                        if (value != null) {
-                                          carregarMateriasPorCurso(value.id);
-                                        }
-                                      },
-                                      validator:
-                                          (value) =>
-                                              value == null
-                                                  ? 'Selecione um curso'
-                                                  : null,
-                                      fieldKey: _cursoFieldKey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF44A301),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      onPressed:
-                                          () => Navigator.pushNamed(
-                                            context,
-                                            '/criarcurso',
-                                          ),
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                      tooltip: 'Criar novo curso',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              if (cursoSelecionado != null) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  margin: const EdgeInsets.only(bottom: 20),
-                                  decoration: BoxDecoration(
+                              // NOVO: Seção de múltiplos cursos
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF44A301,
+                                  ).withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
                                     color: const Color(
                                       0xFF44A301,
-                                    ).withOpacity(0.1),
+                                    ).withOpacity(0.3),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.school,
+                                          color: Color(0xFF44A301),
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Text(
+                                          'Selecionar Cursos',
+                                          style: TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${cursosSelecionados.length} curso(s) selecionado(s)',
+                                          style: const TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildSearchableDropdown<
+                                            curso_model.Curso
+                                          >(
+                                            value:
+                                                null, // Sempre vazio para adicionar novos
+                                            labelText: 'Adicionar Curso',
+                                            items:
+                                                cursos
+                                                    .where(
+                                                      (curso) =>
+                                                          !cursosSelecionados
+                                                              .any(
+                                                                (c) =>
+                                                                    c.id ==
+                                                                    curso.id,
+                                                              ),
+                                                    )
+                                                    .toList(),
+                                            displayText:
+                                                (curso) =>
+                                                    '${curso.curso} - ${curso.semestre ?? "Semestre?"} - ${curso.periodo != null ? periodoToString(curso.periodo) : "Período?"}',
+                                            onChanged: (value) {
+                                              if (value != null) {
+                                                adicionarCurso(value);
+                                                // Limpar o dropdown
+                                                setState(() {
+                                                  cursoSearchText = '';
+                                                  isCursoDropdownOpen = false;
+                                                });
+                                              }
+                                            },
+                                            validator:
+                                                (value) =>
+                                                    null, // Sem validação aqui
+                                            fieldKey: _cursoFieldKey,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF44A301),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: IconButton(
+                                            onPressed:
+                                                () => Navigator.pushNamed(
+                                                  context,
+                                                  '/criarcurso',
+                                                ),
+                                            icon: const Icon(
+                                              Icons.add,
+                                              color: Colors.white,
+                                            ),
+                                            tooltip: 'Criar novo curso',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              // NOVO: Exibir cursos selecionados
+                              _buildCursosSelecionados(),
+                              const SizedBox(height: 20),
+                              // NOVO: Verificar se há cursos selecionados
+                              if (cursosSelecionados.isEmpty) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: const Color(
-                                        0xFF44A301,
-                                      ).withOpacity(0.3),
+                                      color: Colors.orange.withOpacity(0.5),
                                     ),
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  child: const Row(
                                     children: [
-                                      Text(
-                                        'Curso: ${cursoSelecionado!.curso}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF44A301),
-                                          fontSize: 15,
-                                        ),
+                                      Icon(
+                                        Icons.warning,
+                                        color: Colors.orange,
+                                        size: 20,
                                       ),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            width: 12,
-                                            height: 12,
-                                            margin: const EdgeInsets.only(
-                                              right: 8,
-                                            ),
-                                            decoration: const BoxDecoration(
-                                              color: Color(0xFF44A301),
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          Text(
-                                            'Semestre: ${cursoSelecionado!.semestre ?? "Não informado"}',
-                                            style: const TextStyle(
-                                              color: Color(0xFF44A301),
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      SizedBox(width: 8),
                                       Text(
-                                        'Período: ${periodoToString(cursoSelecionado!.periodo)}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF44A301),
+                                        'Selecione pelo menos um curso para continuar',
+                                        style: TextStyle(
+                                          color: Colors.orange,
                                           fontSize: 14,
                                         ),
                                       ),
@@ -1629,104 +2080,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                 ),
                               ],
                               const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildSearchableDropdown<
-                                      Map<String, dynamic>
-                                    >(
-                                      value: materiaSelecionada,
-                                      labelText: 'Selecione a Matéria',
-                                      items: materias,
-                                      displayText:
-                                          (materia) => materia['nome'] ?? '',
-                                      onChanged: (value) {
-                                        setState(() {
-                                          materiaSelecionada = value;
-                                        });
-                                        // Carrega os professores associados à matéria selecionada
-                                        if (value != null) {
-                                          carregarProfessoresPorMateria(
-                                            value['id'],
-                                          );
-                                        }
-                                      },
-                                      validator:
-                                          (value) =>
-                                              value == null
-                                                  ? 'Selecione uma matéria'
-                                                  : null,
-                                      fieldKey: _materiaFieldKey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF44A301),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      onPressed:
-                                          () => Navigator.pushNamed(
-                                            context,
-                                            '/criarmateria',
-                                          ),
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                      tooltip: 'Criar nova matéria',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildSearchableDropdown<
-                                      Map<String, dynamic>
-                                    >(
-                                      value: professorSelecionado,
-                                      labelText: 'Selecione o Professor',
-                                      items: professores,
-                                      displayText:
-                                          (professor) =>
-                                              professor['nome_professor'] ?? '',
-                                      onChanged: (value) {
-                                        setState(() {
-                                          professorSelecionado = value;
-                                        });
-                                      },
-                                      validator:
-                                          (value) =>
-                                              value == null
-                                                  ? 'Selecione um professor'
-                                                  : null,
-                                      fieldKey: _professorFieldKey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF44A301),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      onPressed:
-                                          () => Navigator.pushNamed(
-                                            context,
-                                            '/criarprofessor',
-                                          ),
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                      tooltip: 'Criar novo professor',
-                                    ),
-                                  ),
-                                ],
-                              ),
                               const SizedBox(height: 28),
                               Row(
                                 children: [
@@ -1798,7 +2151,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                       ),
                                       onPressed:
                                           isLoading ? null : salvarLocacao,
-                                      label: const Text('Agendar aula'),
+                                      label: Text(
+                                        'Agendar ${cursosSelecionados.length} curso(s)',
+                                      ),
                                     ),
                                   ),
                                 ],
