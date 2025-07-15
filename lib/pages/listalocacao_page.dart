@@ -11,7 +11,9 @@ class ListaLocacaoPage extends StatefulWidget {
 
 // No início do _ListaLocacaoPageState
 final TextEditingController pesquisaController = TextEditingController();
+final TextEditingController pesquisaSalaController = TextEditingController();
 String filtroCurso = '';
+String filtroSala = '';
 
 // Filtro para tipo de agendamento
 String filtroTipo = 'Todos'; // 'Todos', 'Aulas', 'Eventos'
@@ -22,6 +24,7 @@ String filtroPeriodo = 'Todos'; // 'Todos', 'Manhã', 'Vespertino', 'Noturno'
 @override
 void dispose() {
   pesquisaController.dispose();
+  pesquisaSalaController.dispose();
 }
 
 class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
@@ -1353,9 +1356,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 400, child: _buildCustomCalendar()),
+                SizedBox(height: 350, child: _buildCustomCalendar()),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -1375,6 +1378,26 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                         onChanged: (value) {
                           setState(() {
                             filtroCurso = value.toLowerCase();
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: pesquisaSalaController,
+                        decoration: InputDecoration(
+                          hintText: 'Pesquisar sala...',
+                          prefixIcon: const Icon(Icons.meeting_room),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 0,
+                            horizontal: 16,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            filtroSala = value.toLowerCase();
                           });
                         },
                       ),
@@ -1490,9 +1513,11 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                         onPressed: () {
                           setState(() {
                             filtroCurso = '';
+                            filtroSala = '';
                             filtroTipo = 'Todos';
                             filtroPeriodo = 'Todos';
                             pesquisaController.clear();
+                            pesquisaSalaController.clear();
                           });
                         },
                       ),
@@ -1690,7 +1715,15 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                             (filtroTipo ==
                                                                     'Provas' &&
                                                                 ag['tipo_agendamento'] ==
-                                                                    'M')),
+                                                                    'M')) &&
+                                                        (filtroSala.isEmpty ||
+                                                            (ag['salas']?['numero_sala']
+                                                                        ?.toString() ??
+                                                                    '')
+                                                                .toLowerCase()
+                                                                .contains(
+                                                                  filtroSala,
+                                                                )),
                                                   )
                                                   .toList();
 
@@ -1716,7 +1749,15 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                             (filtroTipo ==
                                                                     'Provas' &&
                                                                 ag['tipo_agendamento'] ==
-                                                                    'M')),
+                                                                    'M')) &&
+                                                        (filtroSala.isEmpty ||
+                                                            (ag['salas']?['numero_sala']
+                                                                        ?.toString() ??
+                                                                    '')
+                                                                .toLowerCase()
+                                                                .contains(
+                                                                  filtroSala,
+                                                                )),
                                                   )
                                                   .toList();
 

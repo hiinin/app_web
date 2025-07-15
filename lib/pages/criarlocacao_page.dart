@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/sala.dart' as sala_model;
 import '../models/curso.dart' as curso_model;
+import '../functions/criarlocacao_functions.dart';
 
 class CriarLocacaoPage extends StatefulWidget {
   const CriarLocacaoPage({super.key});
@@ -11,6 +12,7 @@ class CriarLocacaoPage extends StatefulWidget {
 }
 
 class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
+  final CriarLocacaoFunctions functions = CriarLocacaoFunctions();
   final supabase = Supabase.instance.client;
 
   List<sala_model.Sala> salas = [];
@@ -21,6 +23,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   curso_model.Curso? cursoSelecionado;
   Map<String, dynamic>? materiaSelecionada;
   Map<String, dynamic>? professorSelecionado;
+
+  // NOVO: Lista de salas filtradas baseada nos critérios
+  List<Map<String, dynamic>> salasFiltradas = [];
+  bool isLoadingSalas = false;
 
   // NOVO: Lista para múltiplos cursos
   List<curso_model.Curso> cursosSelecionados = [];
@@ -67,12 +73,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   bool modoMultiplo = false;
   Set<DateTime> diasMultiplosSelecionados = {};
 
-  String formatHora(TimeOfDay hora) {
-    final horaFormatada = hora.hour.toString().padLeft(2, '0');
-    final minutoFormatado = hora.minute.toString().padLeft(2, '0');
-    return '$horaFormatada:$minutoFormatado';
-  }
-
   final List<String> periodosAula = ['Matutino', 'Vespertino', 'Noturno'];
 
   @override
@@ -90,24 +90,11 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   Future<void> carregarDados() async {
     setState(() => isLoading = true);
     try {
-      final responseSalas = await supabase.from('salas').select();
-      final responseCursos = await supabase.from('cursos').select();
-      final responseProfessores = await supabase.from('professores').select();
+      final dados = await functions.carregarDados();
       setState(() {
-        salas =
-            (responseSalas as List)
-                .map((e) => sala_model.Sala.fromMap(e))
-                .toList();
-        cursos =
-            (responseCursos as List)
-                .map((e) => curso_model.Curso.fromMap(e))
-                .toList();
-        professores = List<Map<String, dynamic>>.from(
-          responseProfessores as List,
-        );
-        cursos.sort(
-          (a, b) => a.curso.toLowerCase().compareTo(b.curso.toLowerCase()),
-        );
+        salas = dados['salas'] as List<sala_model.Sala>;
+        cursos = dados['cursos'] as List<curso_model.Curso>;
+        professores = dados['professores'] as List<Map<String, dynamic>>;
         // NOVO: Limpar dados de múltiplos cursos
         cursosSelecionados.clear();
       });
@@ -126,14 +113,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       isLoading = true;
     });
     try {
-      final response = await supabase
-          .from('materias')
-          .select()
-          .eq('curso_id', cursoId);
+      final materias = await functions.carregarMateriasPorCurso(cursoId);
       setState(() {
-        materiasDisponiveisPorCurso[cursoId] = List<Map<String, dynamic>>.from(
-          response as List,
-        );
+        materiasDisponiveisPorCurso[cursoId] = materias;
       });
     } catch (e) {
       ScaffoldMessenger.of(
@@ -149,18 +131,12 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       isLoading = true;
     });
     try {
-      // Busca os professores associados à matéria através da tabela professor_materias
-      final response = await supabase
-          .from('professor_materias')
-          .select('professor_id, professores!inner(id, nome_professor)')
-          .eq('materia_id', materiaId);
-
+      final professores = await functions.carregarProfessoresPorMateria(
+        materiaId,
+        cursoId,
+      );
       setState(() {
-        professoresDisponiveisPorCurso[cursoId] =
-            (response as List).map((item) {
-              // Extrai os dados do professor do resultado da join
-              return item['professores'] as Map<String, dynamic>;
-            }).toList();
+        professoresDisponiveisPorCurso[cursoId] = professores;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -182,6 +158,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       });
       // Carrega as matérias para este curso específico
       carregarMateriasPorCurso(curso.id);
+      // Limpa a sala selecionada quando adiciona um novo curso
+      salaSelecionada = null;
+      salasFiltradas.clear();
     }
   }
 
@@ -198,6 +177,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       dropdownsAbertos.remove('professor_$cursoId');
       textosPesquisa.remove('materia_$cursoId');
       textosPesquisa.remove('professor_$cursoId');
+      // Limpa a sala selecionada quando remove um curso
+      salaSelecionada = null;
+      salasFiltradas.clear();
     });
   }
 
@@ -358,6 +340,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     if (value != null) {
                       carregarProfessoresPorMateria(value['id'], curso.id);
                     }
+                    // Limpa a sala selecionada quando muda matéria
+                    salaSelecionada = null;
+                    salasFiltradas.clear();
                   },
                   validator:
                       (value) => value == null ? 'Selecione uma matéria' : null,
@@ -394,6 +379,24 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     setState(() {
                       professoresPorCurso[curso.id] = value;
                     });
+                    // Verifica se todos os cursos estão completos e filtra as salas
+                    if (value != null) {
+                      bool todosCompletos = true;
+                      for (final cursoSelecionado in cursosSelecionados) {
+                        if (materiasPorCurso[cursoSelecionado.id] == null ||
+                            professoresPorCurso[cursoSelecionado.id] == null) {
+                          todosCompletos = false;
+                          break;
+                        }
+                      }
+                      if (todosCompletos &&
+                          periodoAulaSelecionado != null &&
+                          (modoMultiplo
+                              ? diasMultiplosSelecionados.isNotEmpty
+                              : dia != null)) {
+                        filtrarSalas();
+                      }
+                    }
                   },
                   validator:
                       (value) =>
@@ -476,11 +479,18 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
       // Calcula a posição baseada no campo
       double topPosition = 100;
+      double leftPosition = 50;
+      double width = 300;
+
       if (fieldKey.currentContext != null) {
         final renderBox =
             fieldKey.currentContext!.findRenderObject() as RenderBox;
         final position = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+
         topPosition = position.dy + 60;
+        leftPosition = position.dx;
+        width = size.width;
 
         // Se for o campo de matéria ou professor e não houver espaço suficiente abaixo, posiciona acima
         if (isMateriaField || isProfessorField) {
@@ -497,20 +507,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         builder:
             (context) => Positioned(
               top: topPosition,
-              left:
-                  fieldKey.currentContext != null
-                      ? (fieldKey.currentContext!.findRenderObject()
-                              as RenderBox)
-                          .localToGlobal(Offset.zero)
-                          .dx
-                      : 50,
-              width:
-                  fieldKey.currentContext != null
-                      ? (fieldKey.currentContext!.findRenderObject()
-                              as RenderBox)
-                          .size
-                          .width
-                      : 300,
+              left: leftPosition,
+              width: width,
               child: Material(
                 elevation: 20,
                 borderRadius: BorderRadius.circular(10),
@@ -1008,7 +1006,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     ),
                   ),
                   Text(
-                    '${_getMonthName((dia ?? DateTime.now()).month)} ${(dia ?? DateTime.now()).year}',
+                    '${functions.getMonthName((dia ?? DateTime.now()).month)} ${(dia ?? DateTime.now()).year}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1140,412 +1138,21 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     );
   }
 
-  String _getMonthName(int month) {
-    const months = [
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro',
-    ];
-    return months[month - 1];
-  }
-
   Future<void> salvarLocacao() async {
     if (isLoading) return; // Evita duplo clique
 
-    print(
-      'Chamou salvarLocacao para: '
-      'cursos=${cursosSelecionados.length}, '
-      'sala=${salaSelecionada?.id}, '
-      'aula=$periodoAulaSelecionado',
-    );
-
-    final bool temDiasSelecionados =
-        modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
-
-    // NOVO: Verificar se há cursos selecionados
-    if (!temDiasSelecionados ||
-        salaSelecionada == null ||
-        cursosSelecionados.isEmpty ||
-        periodoAulaSelecionado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, preencha todos os campos obrigatórios'),
-        ),
-      );
-      return;
-    }
-
-    // Verificar se cada curso tem matéria e professor selecionados
-    for (final curso in cursosSelecionados) {
-      if (materiasPorCurso[curso.id] == null ||
-          professoresPorCurso[curso.id] == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Por favor, selecione matéria e professor para o curso "${curso.curso}"',
-            ),
-          ),
-        );
-        return;
-      }
-    }
-
-    setState(() => isLoading = true);
-
-    // Para múltiplos cursos, vamos usar o período do primeiro curso como referência
-    // ou implementar uma lógica mais complexa se necessário
-    final periodoCurso =
-        cursosSelecionados.first.periodo; // 1=Matutino, 2=Vespertino, 3=Noturno
-
-    // Lista de dias para processar
-    List<DateTime> diasParaProcessar = [];
-    if (modoMultiplo) {
-      diasParaProcessar = diasMultiplosSelecionados.toList();
-    } else {
-      diasParaProcessar = [dia!];
-    }
-
-    // Verifica todos os dias antes de salvar
-    for (DateTime diaProcessar in diasParaProcessar) {
-      final dataFormatada =
-          '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
-
-      // 1. Verifica quantos agendamentos já existem para a sala nesse dia e período (NOVA REGRA: 4 agendamentos por período)
-      final agendamentosSalaPeriodo = await supabase
-          .from('agendamento')
-          .select()
-          .eq('sala_id', salaSelecionada!.id)
-          .eq('dia', dataFormatada)
-          .eq('periodo', periodoCurso);
-
-      if (agendamentosSalaPeriodo.length >= 4) {
-        String periodoNome = '';
-        switch (periodoCurso) {
-          case 1:
-            periodoNome = 'Matutino';
-            break;
-          case 2:
-            periodoNome = 'Vespertino';
-            break;
-          case 3:
-            periodoNome = 'Noturno';
-            break;
-          default:
-            periodoNome = 'Desconhecido';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Essa sala já atingiu o limite de 4 agendamentos para o período $periodoNome no dia ${dataFormatada.split('-').reversed.join('/')}.',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-
-      // 2. Verifica quantos agendamentos do mesmo tipo já existem para a sala nesse dia, período e aula_periodo específico
-      final agendamentosSalaPeriodoTipo = await supabase
-          .from('agendamento')
-          .select()
-          .eq('sala_id', salaSelecionada!.id)
-          .eq('dia', dataFormatada)
-          .eq('aula_periodo', periodoAulaSelecionado!)
-          .eq(
-            'tipo_agendamento',
-            'A',
-          ); // Verifica apenas agendamentos do tipo Aula
-
-      // NOVO: Verifica se há espaço suficiente para todos os cursos selecionados
-      final espacoDisponivel = 2 - agendamentosSalaPeriodoTipo.length;
-      if (espacoDisponivel < cursosSelecionados.length) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Essa sala só tem espaço para $espacoDisponivel aula(s) no período "${periodoAulaSelecionado}" no dia ${dataFormatada.split('-').reversed.join('/')}. Você selecionou ${cursosSelecionados.length} curso(s).',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-
-      // 3. Verifica quantos agendamentos já existem para cada curso nesse dia
-      for (final curso in cursosSelecionados) {
-        final agendamentosCurso = await supabase
-            .from('agendamento')
-            .select()
-            .eq('curso_id', curso.id)
-            .eq('dia', dataFormatada);
-
-        if (agendamentosCurso.length >= 2) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'O curso "${curso.curso}" já atingiu o limite de 2 agendamentos para o dia ${dataFormatada.split('-').reversed.join('/')}.',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
-          setState(() => isLoading = false);
-          return;
-        }
-      }
-
-      // 4. Verifica se já existe um agendamento igual para cada curso, sala, dia, período e aula
-      for (final curso in cursosSelecionados) {
-        final agendamentoExistente =
-            await supabase
-                .from('agendamento')
-                .select()
-                .eq('sala_id', salaSelecionada!.id)
-                .eq('curso_id', curso.id)
-                .eq('dia', dataFormatada)
-                .eq('aula_periodo', periodoAulaSelecionado!)
-                .maybeSingle();
-
-        if (agendamentoExistente != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Já existe um agendamento igual para o curso "${curso.curso}" no dia ${dataFormatada.split('-').reversed.join('/')}!',
-              ),
-              backgroundColor: Colors.red,
-            ),
-          );
-          setState(() => isLoading = false);
-          return;
-        }
-      }
-
-      // 5. Verifica se há conflito de horário com outros tipos de agendamento (aula, prova, evento)
-      final conflitosHorario = await supabase
-          .from('agendamento')
-          .select()
-          .eq('sala_id', salaSelecionada!.id)
-          .eq('dia', dataFormatada)
-          .eq('aula_periodo', periodoAulaSelecionado!);
-
-      if (conflitosHorario.isNotEmpty) {
-        // Verifica se já existe um agendamento do mesmo tipo (aula) no mesmo horário
-        final tiposExistentes =
-            conflitosHorario.map((a) => a['tipo_agendamento']).toSet();
-
-        // NOVA REGRA: Para aulas, verificar se já existem 2 aulas no mesmo horário
-        if (tiposExistentes.contains('A')) {
-          final aulasMesmoHorario =
-              conflitosHorario
-                  .where((a) => a['tipo_agendamento'] == 'A')
-                  .toList();
-
-          // NOVO: Verifica se há espaço suficiente para todos os cursos selecionados
-          final espacoDisponivelHorario = 2 - aulasMesmoHorario.length;
-          if (espacoDisponivelHorario < cursosSelecionados.length) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Já existem ${aulasMesmoHorario.length} aula(s) agendadas para este horário. Só há espaço para $espacoDisponivelHorario aula(s) adicional(is).',
-                ),
-                backgroundColor: Colors.red,
-              ),
-            );
-            setState(() => isLoading = false);
-            return;
-          }
-
-          // Verificar se algum dos cursos já está agendado neste horário
-          for (final curso in cursosSelecionados) {
-            final cursoJaAgendado = aulasMesmoHorario.any(
-              (a) => a['curso_id'] == curso.id,
-            );
-
-            if (cursoJaAgendado) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'O curso "${curso.curso}" já está agendado para este horário.',
-                  ),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              setState(() => isLoading = false);
-              return;
-            }
-          }
-        }
-
-        // Verifica se já existe qualquer tipo de agendamento no mesmo horário
-        // (aula, prova ou evento) - não permite conflitos de horário
-        String tipoExistente = '';
-        switch (conflitosHorario.first['tipo_agendamento']) {
-          case 'A':
-            tipoExistente = 'aula';
-            break;
-          case 'E':
-            tipoExistente = 'evento';
-            break;
-          case 'M':
-            tipoExistente = 'prova';
-            break;
-          default:
-            tipoExistente = 'agendamento';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Já existe uma $tipoExistente agendada para o horário "$periodoAulaSelecionado" neste dia.',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-    }
-
     try {
-      List<int> idsAgendamentosCriados = [];
-      final timestampCriacao = DateTime.now();
-
-      print(
-        'DEBUG - Iniciando salvamento de ${cursosSelecionados.length} cursos',
+      await functions.salvarLocacao(
+        isLoading: isLoading,
+        modoMultiplo: modoMultiplo,
+        diasMultiplosSelecionados: diasMultiplosSelecionados,
+        dia: dia,
+        salaSelecionada: salaSelecionada,
+        cursosSelecionados: cursosSelecionados,
+        periodoAulaSelecionado: periodoAulaSelecionado,
+        materiasPorCurso: materiasPorCurso,
+        professoresPorCurso: professoresPorCurso,
       );
-      print(
-        'DEBUG - Cursos selecionados: ${cursosSelecionados.map((c) => '${c.curso} (ID: ${c.id})').join(', ')}',
-      );
-
-      // NOVO: Salva agendamentos para todos os cursos e dias selecionados
-      for (DateTime diaProcessar in diasParaProcessar) {
-        final dataFormatada =
-            '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
-
-        print('DEBUG - Processando dia: $dataFormatada');
-
-        // Para cada curso selecionado
-        for (final curso in cursosSelecionados) {
-          final periodoCurso = curso.periodo;
-          final materia = materiasPorCurso[curso.id];
-          final professor = professoresPorCurso[curso.id];
-
-          print('DEBUG - Salvando curso: ${curso.curso} (ID: ${curso.id})');
-          print('DEBUG - Matéria: ${materia?['nome']} (ID: ${materia?['id']})');
-          print(
-            'DEBUG - Professor: ${professor?['nome_professor']} (ID: ${professor?['id']})',
-          );
-
-          final response =
-              await supabase.from('agendamento').insert({
-                'aula_periodo': periodoAulaSelecionado!,
-                'sala_id': salaSelecionada!.id,
-                'curso_id': curso.id,
-                'materia_id': materia!['id'],
-                'professor_id': professor!['id'],
-                'dia': dataFormatada,
-                'periodo': periodoCurso,
-                'tipo_agendamento': 'A', // A=Aula
-              }).select();
-
-          // Captura o ID do agendamento criado
-          if (response != null && response.isNotEmpty) {
-            idsAgendamentosCriados.add(response[0]['id']);
-            print('DEBUG - Agendamento criado com ID: ${response[0]['id']}');
-          } else {
-            print(
-              'DEBUG - ERRO: Falha ao criar agendamento para curso ${curso.curso}',
-            );
-          }
-        }
-      }
-
-      print(
-        'DEBUG - Total de agendamentos criados: ${idsAgendamentosCriados.length}',
-      );
-      print('DEBUG - IDs dos agendamentos: $idsAgendamentosCriados');
-
-      // Se foram criados múltiplos agendamentos, aguarda um pouco e então
-      // remove os registros individuais do histórico e cria um registro múltiplo
-      if (idsAgendamentosCriados.length > 1) {
-        // Aguarda um pouco para os triggers criarem os registros
-        await Future.delayed(const Duration(milliseconds: 1000));
-
-        // Remove os registros individuais do histórico criados pelos triggers
-        await supabase
-            .from('historico_acoes')
-            .delete()
-            .eq('tabela_afetada', 'agendamento')
-            .eq('acao', 'INSERT')
-            .in_('registro_id', idsAgendamentosCriados)
-            .gte(
-              'data_hora',
-              timestampCriacao
-                  .subtract(const Duration(seconds: 10))
-                  .toIso8601String(),
-            )
-            .lte(
-              'data_hora',
-              timestampCriacao
-                  .add(const Duration(seconds: 10))
-                  .toIso8601String(),
-            );
-
-        // Formata as datas para exibição
-        final datasFormatadas =
-            diasParaProcessar.map((data) {
-              return '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
-            }).toList();
-
-        final detalhes =
-            'Agendamento múltiplo criado para ${diasParaProcessar.length} dias: ${datasFormatadas.join(', ')}';
-
-        // Cria um registro especial no histórico que agrupa todos os agendamentos
-        await supabase.from('historico_acoes').insert({
-          'tabela_afetada': 'agendamento',
-          'acao': 'INSERT_MULTIPLE',
-          'registro_id':
-              idsAgendamentosCriados.first, // Usa o primeiro ID como referência
-          'dados_anteriores': null,
-          'dados_novos': {
-            'ids_agendamentos': idsAgendamentosCriados,
-            'quantidade_dias': diasParaProcessar.length,
-            'datas': datasFormatadas,
-            'sala_id': salaSelecionada!.id,
-            'cursos_ids': cursosSelecionados.map((c) => c.id).toList(),
-            'cursos_nomes': cursosSelecionados.map((c) => c.curso).toList(),
-            'materias_professores':
-                cursosSelecionados
-                    .map(
-                      (c) => {
-                        'curso_id': c.id,
-                        'curso_nome': c.curso,
-                        'materia_id': materiasPorCurso[c.id]!['id'],
-                        'materia_nome': materiasPorCurso[c.id]!['nome'],
-                        'professor_id': professoresPorCurso[c.id]!['id'],
-                        'professor_nome':
-                            professoresPorCurso[c.id]!['nome_professor'],
-                      },
-                    )
-                    .toList(),
-            'periodo': periodoCurso,
-            'aula_periodo': periodoAulaSelecionado,
-            'tipo_agendamento': 'A',
-          },
-          'detalhes': detalhes,
-          'data_hora': timestampCriacao.toIso8601String(),
-        });
-      }
 
       setState(() {
         salaSelecionada = null;
@@ -1568,7 +1175,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         SnackBar(
           content: Text(
             modoMultiplo
-                ? 'Agendamento para ${cursosSelecionados.length} curso(s) em ${diasParaProcessar.length} dia(s) salvo com sucesso'
+                ? 'Agendamento para ${cursosSelecionados.length} curso(s) em ${diasMultiplosSelecionados.length} dia(s) salvo com sucesso'
                 : 'Agendamento para ${cursosSelecionados.length} curso(s) salvo com sucesso',
           ),
         ),
@@ -1577,25 +1184,76 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       carregarDados();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar agendamento: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     } finally {
       setState(() => isLoading = false);
     }
   }
 
-  String periodoToString(int? periodo) {
-    switch (periodo) {
-      case 1:
-        return 'Matutino';
-      case 2:
-        return 'Vespertino';
-      case 3:
-        return 'Noturno';
-      default:
-        return 'Não informado';
+  // NOVO: Função para filtrar salas baseada nos critérios selecionados
+  Future<void> filtrarSalas() async {
+    if (periodoAulaSelecionado == null ||
+        cursosSelecionados.isEmpty ||
+        (modoMultiplo ? diasMultiplosSelecionados.isEmpty : dia == null)) {
+      setState(() {
+        salasFiltradas.clear();
+      });
+      return;
     }
+
+    setState(() {
+      isLoadingSalas = true;
+    });
+
+    try {
+      final salasFiltradasResult = await functions.filtrarSalas(
+        periodoAulaSelecionado: periodoAulaSelecionado,
+        cursosSelecionados: cursosSelecionados,
+        modoMultiplo: modoMultiplo,
+        diasMultiplosSelecionados: diasMultiplosSelecionados,
+        dia: dia,
+      );
+
+      setState(() {
+        salasFiltradas = salasFiltradasResult;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao filtrar salas: $e')));
+    } finally {
+      setState(() {
+        isLoadingSalas = false;
+      });
+    }
+  }
+
+  // NOVO: Função para verificar se todos os campos estão preenchidos
+  bool _todosCamposPreenchidos() {
+    return functions.todosCamposPreenchidos(
+      modoMultiplo: modoMultiplo,
+      diasMultiplosSelecionados: diasMultiplosSelecionados,
+      dia: dia,
+      periodoAulaSelecionado: periodoAulaSelecionado,
+      cursosSelecionados: cursosSelecionados,
+      salaSelecionada: salaSelecionada,
+    );
+  }
+
+  // NOVO: Função para gerar mensagem de validação em ordem
+  String _getMensagemValidacao() {
+    return functions.getMensagemValidacao(
+      modoMultiplo: modoMultiplo,
+      diasMultiplosSelecionados: diasMultiplosSelecionados,
+      dia: dia,
+      periodoAulaSelecionado: periodoAulaSelecionado,
+      cursosSelecionados: cursosSelecionados,
+      salaSelecionada: salaSelecionada,
+    );
+  }
+
+  String periodoToString(int? periodo) {
+    return functions.periodoToString(periodo);
   }
 
   @override
@@ -1782,6 +1440,43 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                         children: [
                           const SizedBox(height: 30),
                           Expanded(child: _buildCustomCalendar()),
+                          // Aviso de validação abaixo do calendário
+                          if (!_todosCamposPreenchidos()) ...[
+                            const SizedBox(height: 20),
+                            Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.orange.withOpacity(0.5),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.warning,
+                                    color: Colors.orange,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _getMensagemValidacao(),
+                                      style: const TextStyle(
+                                        color: Colors.orange,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
@@ -1889,51 +1584,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                       () => periodoAulaSelecionado = value,
                                     ),
                               ),
-                              const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildSearchableDropdown<
-                                      sala_model.Sala
-                                    >(
-                                      value: salaSelecionada,
-                                      labelText: 'Selecione a Sala',
-                                      items: salas,
-                                      displayText:
-                                          (sala) =>
-                                              '${sala.numeroSala} - ${sala.qtdCadeiras} cadeiras',
-                                      onChanged: (value) {
-                                        setState(() => salaSelecionada = value);
-                                      },
-                                      validator:
-                                          (value) =>
-                                              value == null
-                                                  ? 'Selecione uma sala'
-                                                  : null,
-                                      fieldKey: _salaFieldKey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 18),
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF44A301),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: IconButton(
-                                      onPressed:
-                                          () => Navigator.pushNamed(
-                                            context,
-                                            '/criarsala',
-                                          ),
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                      tooltip: 'Criar nova sala',
-                                    ),
-                                  ),
-                                ],
-                              ),
+
                               const SizedBox(height: 20),
                               // NOVO: Seção de múltiplos cursos
                               Container(
@@ -2049,36 +1700,256 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                               // NOVO: Exibir cursos selecionados
                               _buildCursosSelecionados(),
                               const SizedBox(height: 20),
-                              // NOVO: Verificar se há cursos selecionados
-                              if (cursosSelecionados.isEmpty) ...[
+                              // Seção de seleção de sala com filtro inteligente (agora por último)
+                              if (cursosSelecionados.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Colors.orange.withOpacity(0.1),
+                                    color: const Color(
+                                      0xFF44A301,
+                                    ).withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: Colors.orange.withOpacity(0.5),
+                                      color: const Color(
+                                        0xFF44A301,
+                                      ).withOpacity(0.3),
                                     ),
                                   ),
-                                  child: const Row(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Icon(
-                                        Icons.warning,
-                                        color: Colors.orange,
-                                        size: 20,
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.meeting_room,
+                                            color: Color(0xFF44A301),
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Text(
+                                            'Selecionar Sala',
+                                            style: TextStyle(
+                                              color: Color(0xFF44A301),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          if (isLoadingSalas)
+                                            const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(Color(0xFF44A301)),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Selecione pelo menos um curso para continuar',
-                                        style: TextStyle(
-                                          color: Colors.orange,
-                                          fontSize: 14,
+                                      const SizedBox(height: 12),
+                                      if (salasFiltradas.isEmpty &&
+                                          !isLoadingSalas)
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withOpacity(
+                                              0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.orange.withOpacity(
+                                                0.5,
+                                              ),
+                                            ),
+                                          ),
+                                          child: const Row(
+                                            children: [
+                                              Icon(
+                                                Icons.info_outline,
+                                                color: Colors.orange,
+                                                size: 16,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'Complete todos os campos acima para ver as salas disponíveis',
+                                                  style: TextStyle(
+                                                    color: Colors.orange,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      else if (salasFiltradas.isNotEmpty)
+                                        DropdownButtonFormField<
+                                          Map<String, dynamic>
+                                        >(
+                                          value:
+                                              salaSelecionada != null
+                                                  ? salasFiltradas.firstWhere(
+                                                    (sala) =>
+                                                        sala['sala_id'] ==
+                                                        salaSelecionada!.id,
+                                                    orElse:
+                                                        () =>
+                                                            salasFiltradas
+                                                                .first,
+                                                  )
+                                                  : null,
+                                          decoration: InputDecoration(
+                                            labelText: 'Selecione uma Sala',
+                                            labelStyle: const TextStyle(
+                                              color: Color(0xFF44A301),
+                                            ),
+                                            filled: true,
+                                            fillColor: const Color(
+                                              0xFF44A301,
+                                            ).withOpacity(0.1),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF44A301),
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF44A301),
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF44A301),
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                          dropdownColor: Colors.white,
+                                          iconEnabledColor: const Color(
+                                            0xFF44A301,
+                                          ),
+                                          style: const TextStyle(
+                                            color: Color(0xFF44A301),
+                                          ),
+                                          items:
+                                              salasFiltradas.map((sala) {
+                                                final agendamentos =
+                                                    sala['agendamentos_existentes'] ??
+                                                    0;
+                                                final emoji =
+                                                    agendamentos == 0
+                                                        ? '🟢'
+                                                        : '🟡';
+                                                final status =
+                                                    agendamentos == 0
+                                                        ? 'Livre'
+                                                        : '1 agendamento';
+
+                                                return DropdownMenuItem<
+                                                  Map<String, dynamic>
+                                                >(
+                                                  value: sala,
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        emoji,
+                                                        style: const TextStyle(
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Flexible(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            Text(
+                                                              'Sala ${sala['numero_sala']}',
+                                                              style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 14,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              '${sala['qtd_cadeiras']} cadeiras - $status',
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                color:
+                                                                    Colors
+                                                                        .grey[600],
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }).toList(),
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              setState(() {
+                                                salaSelecionada =
+                                                    sala_model.Sala(
+                                                      id: value['sala_id'],
+                                                      numeroSala:
+                                                          value['numero_sala'],
+                                                      qtdCadeiras:
+                                                          value['qtd_cadeiras'],
+                                                      disponivel: true,
+                                                    );
+                                              });
+                                            }
+                                          },
                                         ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF44A301),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: IconButton(
+                                                onPressed:
+                                                    () => Navigator.pushNamed(
+                                                      context,
+                                                      '/criarsala',
+                                                    ),
+                                                icon: const Icon(
+                                                  Icons.add,
+                                                  color: Colors.white,
+                                                ),
+                                                tooltip: 'Criar nova sala',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
-                              ],
                               const SizedBox(height: 20),
                               const SizedBox(height: 28),
                               Row(
