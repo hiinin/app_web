@@ -963,8 +963,8 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
               });
             },
             child: Container(
-              height: 36,
-              margin: const EdgeInsets.all(2),
+              height: 40, // Aumentei a altura para ocupar melhor o espaço
+              margin: const EdgeInsets.all(2), // Aumentei a margem
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color:
@@ -1004,6 +1004,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                         isSelected || isToday
                             ? FontWeight.bold
                             : FontWeight.normal,
+                    fontSize: 14, // Aumentei o tamanho da fonte
                   ),
                 ),
               ),
@@ -1019,7 +1020,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(
+        12,
+      ), // Reduzi o padding para diminuir espaço
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1032,6 +1035,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // Importante para evitar overflow
         children: [
           // Cabeçalho do mês
           Row(
@@ -1081,8 +1085,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
+          const SizedBox(height: 16), // Aumentei o espaçamento
           // Dias da semana
           Row(
             children: [
@@ -1093,7 +1096,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF44A301),
-                      fontSize: 12,
+                      fontSize: 11, // Reduzi o tamanho da fonte
                     ),
                   ),
                 ),
@@ -1105,7 +1108,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF44A301),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -1117,7 +1120,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF44A301),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -1129,7 +1132,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF44A301),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -1141,7 +1144,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF44A301),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -1153,7 +1156,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF44A301),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -1165,19 +1168,20 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF44A301),
-                      fontSize: 12,
+                      fontSize: 11,
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-
+          const SizedBox(height: 12), // Aumentei o espaçamento
           // Grade do calendário
           ...List.generate((calendarDays.length / 7).ceil(), (weekIndex) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
+              padding: const EdgeInsets.symmetric(
+                vertical: 3,
+              ), // Aumentei o padding
               child: Row(
                 children: calendarDays.skip(weekIndex * 7).take(7).toList(),
               ),
@@ -1356,239 +1360,306 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 350, child: _buildCustomCalendar()),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: pesquisaController,
-                        decoration: InputDecoration(
-                          hintText: 'Pesquisar curso...',
-                          prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 0,
-                            horizontal: 16,
-                          ),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            filtroCurso = value.toLowerCase();
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: pesquisaSalaController,
-                        decoration: InputDecoration(
-                          hintText: 'Pesquisar sala...',
-                          prefixIcon: const Icon(Icons.meeting_room),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 0,
-                            horizontal: 16,
-                          ),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            filtroSala = value.toLowerCase();
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Filtrar por tipo:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF44A301),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: filtroTipo,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Todos',
-                            child: Text('Todos'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Aulas',
-                            child: Text('Aulas'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Eventos',
-                            child: Text('Eventos'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Provas',
-                            child: Text('Provas'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            filtroTipo = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Filtrar por período:',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF44A301),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: filtroPeriodo,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Todos',
-                            child: Text('Todos'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Manhã',
-                            child: Text('Manhã'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Vespertino',
-                            child: Text('Vespertino'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Noturno',
-                            child: Text('Noturno'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            filtroPeriodo = value!;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.clear, size: 16),
-                        label: const Text('Limpar Filtros'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[600],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            filtroCurso = '';
-                            filtroSala = '';
-                            filtroTipo = 'Todos';
-                            filtroPeriodo = 'Todos';
-                            pesquisaController.clear();
-                            pesquisaSalaController.clear();
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
+                // Calendário com altura fixa
+                Container(
+                  height: 380,
+                  child: SingleChildScrollView(child: _buildCustomCalendar()),
+                ),
+                // Área de filtros com scroll
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.add_box, size: 16),
-                              label: const Text('Nova Aula'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF44A301),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 12,
+                          // Título para filtro por curso
+                          const Text(
+                            'Filtrar por curso:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF44A301),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Campo de pesquisa de curso
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF44A301),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(2),
+                            child: TextField(
+                              controller: pesquisaController,
+                              style: TextStyle(color: Colors.black87),
+                              decoration: InputDecoration(
+                                hintText: 'Pesquisar curso...',
+                                hintStyle: TextStyle(color: Colors.grey[600]),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: Color(0xFF44A301),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 0,
+                                  horizontal: 16,
                                 ),
                               ),
-                              onPressed: () {
-                                Navigator.pushNamed(context, '/criarlocacao');
+                              onChanged: (value) {
+                                setState(() {
+                                  filtroCurso = value.toLowerCase();
+                                });
                               },
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.event, size: 16),
-                              label: const Text('Novo Evento'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 12,
+                          const SizedBox(height: 16),
+                          // Título para filtro por sala
+                          const Text(
+                            'Filtrar por sala:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF44A301),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Campo de pesquisa de sala
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF44A301),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(2),
+                            child: TextField(
+                              controller: pesquisaSalaController,
+                              style: TextStyle(color: Colors.black87),
+                              decoration: InputDecoration(
+                                hintText: 'Pesquisar sala...',
+                                hintStyle: TextStyle(color: Colors.grey[600]),
+                                prefixIcon: const Icon(
+                                  Icons.meeting_room,
+                                  color: Color(0xFF44A301),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 0,
+                                  horizontal: 16,
                                 ),
                               ),
-                              onPressed: () {
-                                Navigator.pushNamed(context, '/criarevento');
+                              onChanged: (value) {
+                                setState(() {
+                                  filtroSala = value.toLowerCase();
+                                });
                               },
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.quiz, size: 16),
-                              label: const Text('Nova Prova'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Filtrar por tipo:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF44A301),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: filtroTipo,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'Todos',
+                                child: Text('Todos'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Aulas',
+                                child: Text('Aulas'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Eventos',
+                                child: Text('Eventos'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Provas',
+                                child: Text('Provas'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                filtroTipo = value!;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Filtrar por período:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF44A301),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<String>(
+                            value: filtroPeriodo,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'Todos',
+                                child: Text('Todos'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Manhã',
+                                child: Text('Manhã'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Vespertino',
+                                child: Text('Vespertino'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Noturno',
+                                child: Text('Noturno'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                filtroPeriodo = value!;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.clear, size: 16),
+                            label: const Text('Limpar Filtros'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[600],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                filtroCurso = '';
+                                filtroSala = '';
+                                filtroTipo = 'Todos';
+                                filtroPeriodo = 'Todos';
+                                pesquisaController.clear();
+                                pesquisaSalaController.clear();
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.add_box, size: 16),
+                                  label: const Text('Nova Aula'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF44A301),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/criarlocacao',
+                                    );
+                                  },
                                 ),
                               ),
-                              onPressed: () {
-                                Navigator.pushNamed(context, '/criarprova');
-                              },
-                            ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.event, size: 16),
+                                  label: const Text('Novo Evento'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/criarevento',
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.quiz, size: 16),
+                                  label: const Text('Nova Prova'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.pushNamed(context, '/criarprova');
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
