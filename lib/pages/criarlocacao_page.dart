@@ -40,6 +40,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   bool isLoading = false;
 
   DateTime? dia;
+  DateTime? mesAtual; // NOVO: Variável para controlar o mês atual do calendário
   TimeOfDay? horaSelecionada;
   String? periodoAulaSelecionado;
 
@@ -68,6 +69,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   final GlobalKey _cursoFieldKey = GlobalKey();
   final GlobalKey _materiaFieldKey = GlobalKey();
   final GlobalKey _professorFieldKey = GlobalKey();
+  final GlobalKey _aulaFieldKey =
+      GlobalKey(); // NOVO: Key para o dropdown de aula
 
   // Novo: controle de modo do calendário
   bool modoMultiplo = false;
@@ -78,12 +81,27 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   @override
   void initState() {
     super.initState();
+    print('DEBUG: Página de locação carregada - TESTE DE MUDANÇAS');
+    // Inicializa o mês atual com o mês atual
+    mesAtual = DateTime.now();
     carregarDados();
   }
 
   @override
   void dispose() {
+    // Fechar todos os dropdowns ao sair da tela
+    print('DEBUG: Fechando dropdowns ao sair da tela');
+    isCursoDropdownOpen = false;
+    isSalaDropdownOpen = false;
+    isMateriaDropdownOpen = false;
+    isProfessorDropdownOpen = false;
+    dropdownsAbertos.clear(); // Limpar todos os dropdowns (incluindo aula)
+    textosPesquisa.clear();
+
+    // Fechar overlay
     _overlayEntry?.remove();
+    _overlayEntry = null;
+
     super.dispose();
   }
 
@@ -95,7 +113,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         salas = dados['salas'] as List<sala_model.Sala>;
         cursos = dados['cursos'] as List<curso_model.Curso>;
         professores = dados['professores'] as List<Map<String, dynamic>>;
-        // NOVO: Limpar dados de múltiplos cursos
         cursosSelecionados.clear();
       });
     } catch (e) {
@@ -166,6 +183,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
   // NOVO: Remover curso da lista de selecionados
   void removerCurso(int cursoId) {
+    print('DEBUG: Removendo curso ID: $cursoId');
+    print('DEBUG: Cursos antes da remoção: ${cursosSelecionados.length}');
+
     setState(() {
       cursosSelecionados.removeWhere((c) => c.id == cursoId);
       // Remove os dados do curso
@@ -181,6 +201,19 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       salaSelecionada = null;
       salasFiltradas.clear();
     });
+
+    print('DEBUG: Cursos após a remoção: ${cursosSelecionados.length}');
+    print(
+      'DEBUG: _podeSelecionarSala() após remoção: ${_podeSelecionarSala()}',
+    );
+
+    // Verifica se ainda é possível filtrar salas após remover o curso
+    if (cursosSelecionados.isNotEmpty && _podeSelecionarSala()) {
+      print('DEBUG: Chamando filtrarSalas() após remoção do curso');
+      filtrarSalas();
+    } else {
+      print('DEBUG: Não foi possível filtrar salas após remoção do curso');
+    }
   }
 
   // NOVO: Widget para exibir cursos selecionados
@@ -190,8 +223,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFF44A301).withOpacity(0.1),
         borderRadius: BorderRadius.circular(10),
@@ -214,7 +247,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ...cursosSelecionados.map((curso) => _buildCursoItem(curso)),
         ],
       ),
@@ -224,8 +257,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   // NOVO: Widget para exibir item de curso selecionado
   Widget _buildCursoItem(curso_model.Curso curso) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -320,7 +353,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           // Campo de matéria para este curso
           Row(
             children: [
@@ -328,22 +361,31 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                 child: _buildSearchableDropdown<Map<String, dynamic>>(
                   value: materiasPorCurso[curso.id],
                   labelText: 'Selecione a Matéria',
-                  items: materiasDisponiveisPorCurso[curso.id] ?? [],
+                  items:
+                      _podeSelecionarMateria(curso.id)
+                          ? (materiasDisponiveisPorCurso[curso.id] ?? [])
+                          : [],
                   displayText: (materia) => materia['nome'] ?? '',
-                  onChanged: (value) {
-                    setState(() {
-                      materiasPorCurso[curso.id] = value;
-                      professoresPorCurso[curso.id] =
-                          null; // Limpa professor quando muda matéria
-                    });
-                    // Carrega os professores para esta matéria
-                    if (value != null) {
-                      carregarProfessoresPorMateria(value['id'], curso.id);
-                    }
-                    // Limpa a sala selecionada quando muda matéria
-                    salaSelecionada = null;
-                    salasFiltradas.clear();
-                  },
+                  onChanged:
+                      _podeSelecionarMateria(curso.id)
+                          ? (value) {
+                            setState(() {
+                              materiasPorCurso[curso.id] = value;
+                              professoresPorCurso[curso.id] =
+                                  null; // Limpa professor quando muda matéria
+                            });
+                            // Carrega os professores para esta matéria
+                            if (value != null) {
+                              carregarProfessoresPorMateria(
+                                value['id'],
+                                curso.id,
+                              );
+                            }
+                            // Limpa a sala selecionada quando muda matéria
+                            salaSelecionada = null;
+                            salasFiltradas.clear();
+                          }
+                          : (Map<String, dynamic>? value) {},
                   validator:
                       (value) => value == null ? 'Selecione uma matéria' : null,
                   fieldKey: GlobalKey(),
@@ -353,19 +395,24 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               const SizedBox(width: 12),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF44A301),
+                  color:
+                      _podeSelecionarMateria(curso.id)
+                          ? const Color(0xFF44A301)
+                          : Colors.grey,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: IconButton(
                   onPressed:
-                      () => Navigator.pushNamed(context, '/criarmateria'),
+                      _podeSelecionarMateria(curso.id)
+                          ? () => Navigator.pushNamed(context, '/criarmateria')
+                          : null,
                   icon: const Icon(Icons.add, color: Colors.white),
                   tooltip: 'Criar nova matéria',
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           // Campo de professor para este curso
           Row(
             children: [
@@ -373,31 +420,40 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                 child: _buildSearchableDropdown<Map<String, dynamic>>(
                   value: professoresPorCurso[curso.id],
                   labelText: 'Selecione o Professor',
-                  items: professoresDisponiveisPorCurso[curso.id] ?? [],
+                  items:
+                      _podeSelecionarProfessor(curso.id)
+                          ? (professoresDisponiveisPorCurso[curso.id] ?? [])
+                          : [],
                   displayText: (professor) => professor['nome_professor'] ?? '',
-                  onChanged: (value) {
-                    setState(() {
-                      professoresPorCurso[curso.id] = value;
-                    });
-                    // Verifica se todos os cursos estão completos e filtra as salas
-                    if (value != null) {
-                      bool todosCompletos = true;
-                      for (final cursoSelecionado in cursosSelecionados) {
-                        if (materiasPorCurso[cursoSelecionado.id] == null ||
-                            professoresPorCurso[cursoSelecionado.id] == null) {
-                          todosCompletos = false;
-                          break;
-                        }
-                      }
-                      if (todosCompletos &&
-                          periodoAulaSelecionado != null &&
-                          (modoMultiplo
-                              ? diasMultiplosSelecionados.isNotEmpty
-                              : dia != null)) {
-                        filtrarSalas();
-                      }
-                    }
-                  },
+                  onChanged:
+                      _podeSelecionarProfessor(curso.id)
+                          ? (value) {
+                            setState(() {
+                              professoresPorCurso[curso.id] = value;
+                            });
+                            // Verifica se todos os cursos estão completos e filtra as salas
+                            if (value != null) {
+                              bool todosCompletos = true;
+                              for (final cursoSelecionado
+                                  in cursosSelecionados) {
+                                if (materiasPorCurso[cursoSelecionado.id] ==
+                                        null ||
+                                    professoresPorCurso[cursoSelecionado.id] ==
+                                        null) {
+                                  todosCompletos = false;
+                                  break;
+                                }
+                              }
+                              if (todosCompletos &&
+                                  periodoAulaSelecionado != null &&
+                                  (modoMultiplo
+                                      ? diasMultiplosSelecionados.isNotEmpty
+                                      : dia != null)) {
+                                filtrarSalas();
+                              }
+                            }
+                          }
+                          : (Map<String, dynamic>? value) {},
                   validator:
                       (value) =>
                           value == null ? 'Selecione um professor' : null,
@@ -408,12 +464,18 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               const SizedBox(width: 12),
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF44A301),
+                  color:
+                      _podeSelecionarProfessor(curso.id)
+                          ? const Color(0xFF44A301)
+                          : Colors.grey,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: IconButton(
                   onPressed:
-                      () => Navigator.pushNamed(context, '/criarprofessor'),
+                      _podeSelecionarProfessor(curso.id)
+                          ? () =>
+                              Navigator.pushNamed(context, '/criarprofessor')
+                          : null,
                   icon: const Icon(Icons.add, color: Colors.white),
                   tooltip: 'Criar novo professor',
                 ),
@@ -457,6 +519,22 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         } else if (fieldKey == _professorFieldKey) {
           isOpen = isProfessorDropdownOpen;
           searchText = professorSearchText;
+        }
+      }
+    }
+
+    // NOVO: Determina se o dropdown está habilitado baseado no tipo
+    bool isEnabled = true;
+    if (T == curso_model.Curso) {
+      isEnabled = _podeSelecionarCurso();
+    } else if (T == Map<String, dynamic>) {
+      if (dropdownId != null) {
+        if (dropdownId.startsWith('materia_')) {
+          int cursoId = int.parse(dropdownId.split('_')[1]);
+          isEnabled = _podeSelecionarMateria(cursoId);
+        } else if (dropdownId.startsWith('professor_')) {
+          int cursoId = int.parse(dropdownId.split('_')[1]);
+          isEnabled = _podeSelecionarProfessor(cursoId);
         }
       }
     }
@@ -505,81 +583,121 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
       _overlayEntry = OverlayEntry(
         builder:
-            (context) => Positioned(
-              top: topPosition,
-              left: leftPosition,
-              width: width,
-              child: Material(
-                elevation: 20,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFF44A301),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  constraints: const BoxConstraints(maxHeight: 350),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: filteredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredItems[index];
-                      return ListTile(
-                        title: Text(
-                          displayText(item),
-                          style: const TextStyle(
-                            color: Color(0xFF44A301),
-                            fontSize: 16,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        onTap: () {
-                          onChanged(item);
-                          setState(() {
-                            if (T == sala_model.Sala) {
-                              isSalaDropdownOpen = false;
-                              salaSearchText = '';
-                            } else if (T == curso_model.Curso) {
-                              isCursoDropdownOpen = false;
-                              cursoSearchText = '';
-                            } else if (T == Map<String, dynamic>) {
-                              // NOVO: Controle individual para dropdowns
-                              if (dropdownId != null) {
-                                dropdownsAbertos[dropdownId] = false;
-                                textosPesquisa[dropdownId] = '';
-                              } else {
-                                // Fallback para campos globais
-                                if (fieldKey == _materiaFieldKey) {
-                                  isMateriaDropdownOpen = false;
-                                  materiaSearchText = '';
-                                } else if (fieldKey == _professorFieldKey) {
-                                  isProfessorDropdownOpen = false;
-                                  professorSearchText = '';
-                                }
-                              }
+            (context) => Stack(
+              children: [
+                // GestureDetector que cobre toda a tela para detectar cliques fora
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Fecha o dropdown quando clica fora
+                      setState(() {
+                        if (T == sala_model.Sala) {
+                          isSalaDropdownOpen = false;
+                          salaSearchText = '';
+                        } else if (T == curso_model.Curso) {
+                          isCursoDropdownOpen = false;
+                          cursoSearchText = '';
+                        } else if (T == Map<String, dynamic>) {
+                          // NOVO: Controle individual para dropdowns
+                          if (dropdownId != null) {
+                            dropdownsAbertos[dropdownId] = false;
+                            textosPesquisa[dropdownId] = '';
+                          } else {
+                            // Fallback para campos globais
+                            if (fieldKey == _materiaFieldKey) {
+                              isMateriaDropdownOpen = false;
+                              materiaSearchText = '';
+                            } else if (fieldKey == _professorFieldKey) {
+                              isProfessorDropdownOpen = false;
+                              professorSearchText = '';
                             }
-                          });
-                          _overlayEntry?.remove();
-                          _overlayEntry = null;
-                        },
-                      );
+                          }
+                        }
+                      });
+                      _overlayEntry?.remove();
+                      _overlayEntry = null;
                     },
+                    child: Container(color: Colors.transparent),
                   ),
                 ),
-              ),
+                // Dropdown posicionado
+                Positioned(
+                  top: topPosition,
+                  left: leftPosition,
+                  width: width,
+                  child: Material(
+                    elevation: 20,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFF44A301),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(maxHeight: 350),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = filteredItems[index];
+                          return ListTile(
+                            title: Text(
+                              displayText(item),
+                              style: const TextStyle(
+                                color: Color(0xFF44A301),
+                                fontSize: 16,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            onTap: () {
+                              onChanged(item);
+                              setState(() {
+                                if (T == sala_model.Sala) {
+                                  isSalaDropdownOpen = false;
+                                  salaSearchText = '';
+                                } else if (T == curso_model.Curso) {
+                                  isCursoDropdownOpen = false;
+                                  cursoSearchText = '';
+                                } else if (T == Map<String, dynamic>) {
+                                  // NOVO: Controle individual para dropdowns
+                                  if (dropdownId != null) {
+                                    dropdownsAbertos[dropdownId] = false;
+                                    textosPesquisa[dropdownId] = '';
+                                  } else {
+                                    // Fallback para campos globais
+                                    if (fieldKey == _materiaFieldKey) {
+                                      isMateriaDropdownOpen = false;
+                                      materiaSearchText = '';
+                                    } else if (fieldKey == _professorFieldKey) {
+                                      isProfessorDropdownOpen = false;
+                                      professorSearchText = '';
+                                    }
+                                  }
+                                }
+                              });
+                              _overlayEntry?.remove();
+                              _overlayEntry = null;
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
       );
 
@@ -593,65 +711,73 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
     return GestureDetector(
       key: fieldKey,
-      onTap: () {
-        setState(() {
-          if (T == sala_model.Sala) {
-            isSalaDropdownOpen = !isSalaDropdownOpen;
-            if (!isSalaDropdownOpen) {
-              salaSearchText = '';
-              _hideOverlay();
-            } else {
-              _showOverlay();
-            }
-          } else if (T == curso_model.Curso) {
-            isCursoDropdownOpen = !isCursoDropdownOpen;
-            if (!isCursoDropdownOpen) {
-              cursoSearchText = '';
-              _hideOverlay();
-            } else {
-              _showOverlay();
-            }
-          } else if (T == Map<String, dynamic>) {
-            // NOVO: Controle individual para dropdowns de matéria e professor
-            if (dropdownId != null) {
-              dropdownsAbertos[dropdownId] =
-                  !(dropdownsAbertos[dropdownId] ?? false);
-              if (!(dropdownsAbertos[dropdownId] ?? false)) {
-                textosPesquisa[dropdownId] = '';
-                _hideOverlay();
-              } else {
-                _showOverlay();
+      onTap:
+          isEnabled
+              ? () {
+                setState(() {
+                  if (T == sala_model.Sala) {
+                    isSalaDropdownOpen = !isSalaDropdownOpen;
+                    if (!isSalaDropdownOpen) {
+                      salaSearchText = '';
+                      _hideOverlay();
+                    } else {
+                      _showOverlay();
+                    }
+                  } else if (T == curso_model.Curso) {
+                    isCursoDropdownOpen = !isCursoDropdownOpen;
+                    if (!isCursoDropdownOpen) {
+                      cursoSearchText = '';
+                      _hideOverlay();
+                    } else {
+                      _showOverlay();
+                    }
+                  } else if (T == Map<String, dynamic>) {
+                    // NOVO: Controle individual para dropdowns de matéria e professor
+                    if (dropdownId != null) {
+                      dropdownsAbertos[dropdownId] =
+                          !(dropdownsAbertos[dropdownId] ?? false);
+                      if (!(dropdownsAbertos[dropdownId] ?? false)) {
+                        textosPesquisa[dropdownId] = '';
+                        _hideOverlay();
+                      } else {
+                        _showOverlay();
+                      }
+                    } else {
+                      // Fallback para campos globais
+                      if (fieldKey == _materiaFieldKey) {
+                        isMateriaDropdownOpen = !isMateriaDropdownOpen;
+                        if (!isMateriaDropdownOpen) {
+                          materiaSearchText = '';
+                          _hideOverlay();
+                        } else {
+                          _showOverlay();
+                        }
+                      } else if (fieldKey == _professorFieldKey) {
+                        isProfessorDropdownOpen = !isProfessorDropdownOpen;
+                        if (!isProfessorDropdownOpen) {
+                          professorSearchText = '';
+                          _hideOverlay();
+                        } else {
+                          _showOverlay();
+                        }
+                      }
+                    }
+                  }
+                });
               }
-            } else {
-              // Fallback para campos globais
-              if (fieldKey == _materiaFieldKey) {
-                isMateriaDropdownOpen = !isMateriaDropdownOpen;
-                if (!isMateriaDropdownOpen) {
-                  materiaSearchText = '';
-                  _hideOverlay();
-                } else {
-                  _showOverlay();
-                }
-              } else if (fieldKey == _professorFieldKey) {
-                isProfessorDropdownOpen = !isProfessorDropdownOpen;
-                if (!isProfessorDropdownOpen) {
-                  professorSearchText = '';
-                  _hideOverlay();
-                } else {
-                  _showOverlay();
-                }
-              }
-            }
-          }
-        });
-      },
+              : null,
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         decoration: BoxDecoration(
-          color: const Color(0xFF44A301).withOpacity(0.1),
+          color:
+              isEnabled
+                  ? const Color(0xFF44A301).withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF44A301)),
+          border: Border.all(
+            color: isEnabled ? const Color(0xFF44A301) : Colors.grey,
+          ),
         ),
         child: Row(
           children: [
@@ -665,8 +791,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        style: const TextStyle(
-                          color: Color(0xFF44A301),
+                        style: TextStyle(
+                          color:
+                              isEnabled ? const Color(0xFF44A301) : Colors.grey,
                           fontSize: 16,
                         ),
                         onChanged: (text) {
@@ -699,16 +826,20 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                         value != null ? displayText(value) : labelText,
                         style: TextStyle(
                           color:
-                              value != null
-                                  ? const Color(0xFF44A301)
-                                  : const Color(0xFF44A301).withOpacity(0.6),
+                              isEnabled
+                                  ? (value != null
+                                      ? const Color(0xFF44A301)
+                                      : const Color(
+                                        0xFF44A301,
+                                      ).withOpacity(0.6))
+                                  : Colors.grey.withOpacity(0.6),
                           fontSize: 16,
                         ),
                       ),
             ),
             Icon(
               isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-              color: const Color(0xFF44A301),
+              color: isEnabled ? const Color(0xFF44A301) : Colors.grey,
             ),
           ],
         ),
@@ -716,9 +847,212 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     );
   }
 
+  // NOVO: Widget para dropdown de seleção de aula
+  Widget _buildAulaDropdown() {
+    bool isAulaDropdownOpen = false;
+    String aulaSearchText = '';
+
+    // Controle do dropdown de aula
+    if (dropdownsAbertos['aula'] != null) {
+      isAulaDropdownOpen = dropdownsAbertos['aula']!;
+      aulaSearchText = textosPesquisa['aula'] ?? '';
+    }
+
+    final List<String> opcoesAula = ['Primeira Aula', 'Segunda Aula'];
+
+    void _showAulaOverlay() {
+      if (_overlayEntry != null) {
+        _overlayEntry!.remove();
+      }
+
+      double topPosition = 100;
+      double leftPosition = 50;
+      double width = 300;
+
+      if (_aulaFieldKey.currentContext != null) {
+        final renderBox =
+            _aulaFieldKey.currentContext!.findRenderObject() as RenderBox;
+        final position = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+
+        topPosition = position.dy + 60;
+        leftPosition = position.dx;
+        width = size.width;
+
+        final screenHeight = MediaQuery.of(context).size.height;
+        final availableSpaceBelow = screenHeight - topPosition;
+        if (availableSpaceBelow < 200) {
+          topPosition = position.dy - 200;
+        }
+      }
+
+      _overlayEntry = OverlayEntry(
+        builder:
+            (context) => Stack(
+              children: [
+                // GestureDetector que cobre toda a tela para detectar cliques fora
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Fecha o dropdown quando clica fora
+                      setState(() {
+                        dropdownsAbertos['aula'] = false;
+                        textosPesquisa['aula'] = '';
+                      });
+                      _overlayEntry?.remove();
+                      _overlayEntry = null;
+                    },
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+                // Dropdown posicionado
+                Positioned(
+                  top: topPosition,
+                  left: leftPosition,
+                  width: width,
+                  child: Material(
+                    elevation: 20,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFF44A301),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: opcoesAula.length,
+                        itemBuilder: (context, index) {
+                          final opcao = opcoesAula[index];
+                          return ListTile(
+                            title: Text(
+                              opcao,
+                              style: const TextStyle(
+                                color: Color(0xFF44A301),
+                                fontSize: 16,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            onTap: () {
+                              setState(() {
+                                periodoAulaSelecionado = opcao;
+                                dropdownsAbertos['aula'] = false;
+                                textosPesquisa['aula'] = '';
+                              });
+                              _overlayEntry?.remove();
+                              _overlayEntry = null;
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+      );
+
+      Overlay.of(context).insert(_overlayEntry!);
+    }
+
+    void _hideAulaOverlay() {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+
+    return GestureDetector(
+      key: _aulaFieldKey,
+      onTap:
+          _podeSelecionarAula()
+              ? () {
+                setState(() {
+                  dropdownsAbertos['aula'] =
+                      !(dropdownsAbertos['aula'] ?? false);
+                  if (!(dropdownsAbertos['aula'] ?? false)) {
+                    textosPesquisa['aula'] = '';
+                    _hideAulaOverlay();
+                  } else {
+                    _showAulaOverlay();
+                  }
+                });
+              }
+              : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color:
+              _podeSelecionarAula()
+                  ? const Color(0xFF44A301).withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color:
+                _podeSelecionarAula() ? const Color(0xFF44A301) : Colors.grey,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Selecione a Aula (Período)',
+                    style: TextStyle(
+                      color:
+                          _podeSelecionarAula()
+                              ? const Color(0xFF44A301).withOpacity(0.7)
+                              : Colors.grey.withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    periodoAulaSelecionado ?? 'Selecione uma opção',
+                    style: TextStyle(
+                      color:
+                          _podeSelecionarAula()
+                              ? (periodoAulaSelecionado != null
+                                  ? const Color(0xFF44A301)
+                                  : const Color(0xFF44A301).withOpacity(0.5))
+                              : Colors.grey.withOpacity(0.5),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isAulaDropdownOpen
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+              color:
+                  _podeSelecionarAula() ? const Color(0xFF44A301) : Colors.grey,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NOVO: Widget para exibir cursos selecionados
   Widget _buildCustomCalendar() {
     final now = DateTime.now();
-    final currentMonth = dia ?? now;
+    final currentMonth = mesAtual ?? now; // Usa mesAtual em vez de dia
     final firstDayOfMonth = DateTime(currentMonth.year, currentMonth.month, 1);
     final lastDayOfMonth = DateTime(
       currentMonth.year,
@@ -878,6 +1212,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                   onTap:
                       () => setState(() {
                         modoMultiplo = false;
+                        // Limpa dados do modo múltiplo quando muda para único
+                        diasMultiplosSelecionados.clear();
                       }),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -920,6 +1256,8 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                   onTap:
                       () => setState(() {
                         modoMultiplo = true;
+                        // Limpa dados do modo único quando muda para múltiplo
+                        dia = null;
                       }),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -993,11 +1331,16 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                         } else {
                           dia = null;
                         }
-                        dia = DateTime(
-                          (dia ?? DateTime.now()).year,
-                          (dia ?? DateTime.now()).month - 1,
+                        // Atualiza apenas o mês atual, não o dia selecionado
+                        final mesAtualTemp = mesAtual ?? DateTime.now();
+                        final novoMes = DateTime(
+                          mesAtualTemp.month == 1
+                              ? mesAtualTemp.year - 1
+                              : mesAtualTemp.year,
+                          mesAtualTemp.month == 1 ? 12 : mesAtualTemp.month - 1,
                           1,
                         );
+                        mesAtual = novoMes;
                       });
                     },
                     icon: const Icon(
@@ -1006,7 +1349,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     ),
                   ),
                   Text(
-                    '${functions.getMonthName((dia ?? DateTime.now()).month)} ${(dia ?? DateTime.now()).year}',
+                    '${functions.getMonthName((mesAtual ?? DateTime.now()).month)} ${(mesAtual ?? DateTime.now()).year}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1022,11 +1365,16 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                         } else {
                           dia = null;
                         }
-                        dia = DateTime(
-                          (dia ?? DateTime.now()).year,
-                          (dia ?? DateTime.now()).month + 1,
+                        // Atualiza apenas o mês atual, não o dia selecionado
+                        final mesAtualTemp = mesAtual ?? DateTime.now();
+                        final novoMes = DateTime(
+                          mesAtualTemp.month == 12
+                              ? mesAtualTemp.year + 1
+                              : mesAtualTemp.year,
+                          mesAtualTemp.month == 12 ? 1 : mesAtualTemp.month + 1,
                           1,
                         );
+                        mesAtual = novoMes;
                       });
                     },
                     icon: const Icon(
@@ -1156,7 +1504,6 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
       setState(() {
         salaSelecionada = null;
-        // NOVO: Limpar dados de múltiplos cursos
         cursosSelecionados.clear();
         materiasPorCurso.clear();
         professoresPorCurso.clear();
@@ -1168,6 +1515,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         horaInicio = null;
         horaFim = null;
         dia = null;
+        mesAtual = DateTime.now();
         diasMultiplosSelecionados.clear();
       });
 
@@ -1249,6 +1597,107 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       periodoAulaSelecionado: periodoAulaSelecionado,
       cursosSelecionados: cursosSelecionados,
       salaSelecionada: salaSelecionada,
+    );
+  }
+
+  // NOVO: Controles para validação sequencial
+  bool _podeSelecionarAula() {
+    return modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
+  }
+
+  bool _podeSelecionarCurso() {
+    return _podeSelecionarAula() && periodoAulaSelecionado != null;
+  }
+
+  bool _podeSelecionarMateria(int cursoId) {
+    return _podeSelecionarCurso() && cursosSelecionados.isNotEmpty;
+  }
+
+  bool _podeSelecionarProfessor(int cursoId) {
+    return _podeSelecionarMateria(cursoId) && materiasPorCurso[cursoId] != null;
+  }
+
+  bool _podeSelecionarSala() {
+    if (!_podeSelecionarCurso() || cursosSelecionados.isEmpty) {
+      return false;
+    }
+
+    // Verifica se todos os cursos têm matéria e professor selecionados
+    for (final curso in cursosSelecionados) {
+      if (materiasPorCurso[curso.id] == null ||
+          professoresPorCurso[curso.id] == null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // NOVO: Função para obter mensagem de validação sequencial
+  String _getMensagemValidacaoSequencial() {
+    if (!_podeSelecionarAula()) {
+      return '⚠️ Primeiro selecione o(s) dia(s) no calendário';
+    }
+    if (!_podeSelecionarCurso()) {
+      return '⚠️ Agora selecione o período da aula';
+    }
+    if (!_podeSelecionarMateria(0)) {
+      return '⚠️ Adicione pelo menos um curso';
+    }
+
+    // Verifica se todos os cursos têm matéria selecionada
+    for (final curso in cursosSelecionados) {
+      if (materiasPorCurso[curso.id] == null) {
+        return '⚠️ Selecione a matéria para o curso ${curso.curso}';
+      }
+    }
+
+    // Verifica se todos os cursos têm professor selecionado
+    for (final curso in cursosSelecionados) {
+      if (professoresPorCurso[curso.id] == null) {
+        return '⚠️ Selecione o professor para o curso ${curso.curso}';
+      }
+    }
+
+    return '✅ Todos os campos preenchidos! Agora selecione a sala.';
+  }
+
+  // NOVO: Widget para exibir mensagem de validação sequencial
+  Widget _buildMensagemValidacaoSequencial() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:
+            _podeSelecionarSala()
+                ? Colors.green.withOpacity(0.1)
+                : Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color:
+              _podeSelecionarSala()
+                  ? Colors.green.withOpacity(0.5)
+                  : Colors.orange.withOpacity(0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _podeSelecionarSala() ? Icons.check_circle : Icons.warning,
+            color: _podeSelecionarSala() ? Colors.green : Colors.orange,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _getMensagemValidacaoSequencial(),
+              style: TextStyle(
+                color: _podeSelecionarSala() ? Colors.green : Colors.orange,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1418,66 +1867,42 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
             isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : Row(
+                  mainAxisSize: MainAxisSize.max,
                   children: [
                     // Calendário à esquerda (agora 45% da tela)
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.45,
-                      height: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: const Color(0xFFE8F5E8),
-                        borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(0),
-                          bottomRight: Radius.circular(0),
+                    Expanded(
+                      flex: 45,
+                      child: Container(
+                        height: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: const Color(0xFFE8F5E8),
+                          borderRadius: BorderRadius.only(
+                            topRight: Radius.circular(0),
+                            bottomRight: Radius.circular(0),
+                          ),
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 0,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 30),
-                          Expanded(child: _buildCustomCalendar()),
-                          // Aviso de validação abaixo do calendário
-                          if (!_todosCamposPreenchidos()) ...[
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 0,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                             const SizedBox(height: 20),
-                            Container(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.orange.withOpacity(0.5),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.warning,
-                                    color: Colors.orange,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _getMensagemValidacao(),
-                                      style: const TextStyle(
-                                        color: Colors.orange,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: _buildCustomCalendar(),
                               ),
                             ),
+                            // Aviso de validação mais próximo do agendamento
+                            if (!_todosCamposPreenchidos()) ...[
+                              const SizedBox(height: 16),
+                              _buildMensagemValidacaoSequencial(),
+                            ],
+                            const SizedBox(height: 16),
                           ],
-                          const SizedBox(height: 20),
-                        ],
+                        ),
                       ),
                     ),
                     // Linha separadora
@@ -1487,232 +1912,64 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                       color: const Color(0xFF44A301).withOpacity(0.2),
                     ),
                     // Formulário à direita (agora 53% da tela)
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.53,
-                      height: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Color.fromARGB(255, 255, 255, 255),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(0),
-                          bottomLeft: Radius.circular(0),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 0,
-                        vertical: 0,
-                      ),
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 48,
-                            vertical: 32,
+                    Expanded(
+                      flex: 53,
+                      child: Container(
+                        height: double.infinity,
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(255, 255, 255, 255),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(0),
+                            bottomLeft: Radius.circular(0),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 20),
-                              const Text(
-                                'Preencha os dados para realizar um agendamento',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF44A301),
-                                  letterSpacing: 1.1,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 0,
+                          vertical: 0,
+                        ),
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 48,
+                              vertical: 24,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Preencha os dados para realizar um agendamento',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF44A301),
+                                    letterSpacing: 1.1,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 20),
-                              DropdownButtonFormField<String>(
-                                value: periodoAulaSelecionado,
-                                decoration: InputDecoration(
-                                  labelText: 'Selecione a Aula (Período)',
-                                  labelStyle: const TextStyle(
-                                    color: Color(0xFF44A301),
-                                  ),
-                                  filled: true,
-                                  fillColor: const Color(
-                                    0xFF44A301,
-                                  ).withOpacity(0.1),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF44A301),
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF44A301),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF44A301),
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                dropdownColor: Colors.white,
-                                iconEnabledColor: const Color(0xFF44A301),
-                                style: const TextStyle(
-                                  color: Color(0xFF44A301),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'Primeira Aula',
-                                    child: Text(
-                                      'Primeira Aula',
-                                      style: TextStyle(
-                                        color: Color(0xFF44A301),
-                                      ),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Segunda Aula',
-                                    child: Text(
-                                      'Segunda Aula',
-                                      style: TextStyle(
-                                        color: Color(0xFF44A301),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                onChanged:
-                                    (value) => setState(
-                                      () => periodoAulaSelecionado = value,
-                                    ),
-                              ),
+                                const SizedBox(height: 16),
+                                _buildAulaDropdown(),
 
-                              const SizedBox(height: 20),
-                              // NOVO: Seção de múltiplos cursos
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF44A301,
-                                  ).withOpacity(0.05),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(
-                                      0xFF44A301,
-                                    ).withOpacity(0.3),
-                                  ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.school,
-                                          color: Color(0xFF44A301),
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Text(
-                                          'Selecionar Cursos',
-                                          style: TextStyle(
-                                            color: Color(0xFF44A301),
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          '${cursosSelecionados.length} curso(s) selecionado(s)',
-                                          style: const TextStyle(
-                                            color: Color(0xFF44A301),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _buildSearchableDropdown<
-                                            curso_model.Curso
-                                          >(
-                                            value:
-                                                null, // Sempre vazio para adicionar novos
-                                            labelText: 'Adicionar Curso',
-                                            items:
-                                                cursos
-                                                    .where(
-                                                      (curso) =>
-                                                          !cursosSelecionados
-                                                              .any(
-                                                                (c) =>
-                                                                    c.id ==
-                                                                    curso.id,
-                                                              ),
-                                                    )
-                                                    .toList(),
-                                            displayText:
-                                                (curso) =>
-                                                    '${curso.curso} - ${curso.semestre ?? "Semestre?"} - ${curso.periodo != null ? periodoToString(curso.periodo) : "Período?"}',
-                                            onChanged: (value) {
-                                              if (value != null) {
-                                                adicionarCurso(value);
-                                                // Limpar o dropdown
-                                                setState(() {
-                                                  cursoSearchText = '';
-                                                  isCursoDropdownOpen = false;
-                                                });
-                                              }
-                                            },
-                                            validator:
-                                                (value) =>
-                                                    null, // Sem validação aqui
-                                            fieldKey: _cursoFieldKey,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF44A301),
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          child: IconButton(
-                                            onPressed:
-                                                () => Navigator.pushNamed(
-                                                  context,
-                                                  '/criarcurso',
-                                                ),
-                                            icon: const Icon(
-                                              Icons.add,
-                                              color: Colors.white,
-                                            ),
-                                            tooltip: 'Criar novo curso',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              // NOVO: Exibir cursos selecionados
-                              _buildCursosSelecionados(),
-                              const SizedBox(height: 20),
-                              // Seção de seleção de sala com filtro inteligente (agora por último)
-                              if (cursosSelecionados.isNotEmpty)
+                                const SizedBox(height: 16),
+                                // NOVO: Seção de múltiplos cursos
                                 Container(
-                                  padding: const EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF44A301,
-                                    ).withOpacity(0.05),
+                                    color:
+                                        _podeSelecionarCurso()
+                                            ? const Color(
+                                              0xFF44A301,
+                                            ).withOpacity(0.05)
+                                            : Colors.grey.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: const Color(
-                                        0xFF44A301,
-                                      ).withOpacity(0.3),
+                                      color:
+                                          _podeSelecionarCurso()
+                                              ? const Color(
+                                                0xFF44A301,
+                                              ).withOpacity(0.3)
+                                              : Colors.grey.withOpacity(0.3),
                                     ),
                                   ),
                                   child: Column(
@@ -1721,228 +1978,118 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                     children: [
                                       Row(
                                         children: [
-                                          const Icon(
-                                            Icons.meeting_room,
-                                            color: Color(0xFF44A301),
+                                          Icon(
+                                            Icons.school,
+                                            color:
+                                                _podeSelecionarCurso()
+                                                    ? const Color(0xFF44A301)
+                                                    : Colors.grey,
                                             size: 20,
                                           ),
                                           const SizedBox(width: 8),
-                                          const Text(
-                                            'Selecionar Sala',
+                                          Text(
+                                            'Selecionar Cursos',
                                             style: TextStyle(
-                                              color: Color(0xFF44A301),
+                                              color:
+                                                  _podeSelecionarCurso()
+                                                      ? const Color(0xFF44A301)
+                                                      : Colors.grey,
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                           const Spacer(),
-                                          if (isLoadingSalas)
-                                            const SizedBox(
-                                              width: 16,
-                                              height: 16,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                valueColor:
-                                                    AlwaysStoppedAnimation<
-                                                      Color
-                                                    >(Color(0xFF44A301)),
-                                              ),
+                                          Text(
+                                            '${cursosSelecionados.length} curso(s) selecionado(s)',
+                                            style: TextStyle(
+                                              color:
+                                                  _podeSelecionarCurso()
+                                                      ? const Color(0xFF44A301)
+                                                      : Colors.grey,
+                                              fontSize: 12,
                                             ),
+                                          ),
                                         ],
                                       ),
-                                      const SizedBox(height: 12),
-                                      if (salasFiltradas.isEmpty &&
-                                          !isLoadingSalas)
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange.withOpacity(
-                                              0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.orange.withOpacity(
-                                                0.5,
-                                              ),
-                                            ),
-                                          ),
-                                          child: const Row(
-                                            children: [
-                                              Icon(
-                                                Icons.info_outline,
-                                                color: Colors.orange,
-                                                size: 16,
-                                              ),
-                                              SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  'Complete todos os campos acima para ver as salas disponíveis',
-                                                  style: TextStyle(
-                                                    color: Colors.orange,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        )
-                                      else if (salasFiltradas.isNotEmpty)
-                                        DropdownButtonFormField<
-                                          Map<String, dynamic>
-                                        >(
-                                          value:
-                                              salaSelecionada != null
-                                                  ? salasFiltradas.firstWhere(
-                                                    (sala) =>
-                                                        sala['sala_id'] ==
-                                                        salaSelecionada!.id,
-                                                    orElse:
-                                                        () =>
-                                                            salasFiltradas
-                                                                .first,
-                                                  )
-                                                  : null,
-                                          decoration: InputDecoration(
-                                            labelText: 'Selecione uma Sala',
-                                            labelStyle: const TextStyle(
-                                              color: Color(0xFF44A301),
-                                            ),
-                                            filled: true,
-                                            fillColor: const Color(
-                                              0xFF44A301,
-                                            ).withOpacity(0.1),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              borderSide: const BorderSide(
-                                                color: Color(0xFF44A301),
-                                              ),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              borderSide: const BorderSide(
-                                                color: Color(0xFF44A301),
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              borderSide: const BorderSide(
-                                                color: Color(0xFF44A301),
-                                                width: 2,
-                                              ),
-                                            ),
-                                          ),
-                                          dropdownColor: Colors.white,
-                                          iconEnabledColor: const Color(
-                                            0xFF44A301,
-                                          ),
-                                          style: const TextStyle(
-                                            color: Color(0xFF44A301),
-                                          ),
-                                          items:
-                                              salasFiltradas.map((sala) {
-                                                final agendamentos =
-                                                    sala['agendamentos_existentes'] ??
-                                                    0;
-                                                final emoji =
-                                                    agendamentos == 0
-                                                        ? '🟢'
-                                                        : '🟡';
-                                                final status =
-                                                    agendamentos == 0
-                                                        ? 'Livre'
-                                                        : '1 agendamento';
-
-                                                return DropdownMenuItem<
-                                                  Map<String, dynamic>
-                                                >(
-                                                  value: sala,
-                                                  child: Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Text(
-                                                        emoji,
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Flexible(
-                                                        child: Column(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            Text(
-                                                              'Sala ${sala['numero_sala']}',
-                                                              style: const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize: 14,
-                                                              ),
-                                                            ),
-                                                            Text(
-                                                              '${sala['qtd_cadeiras']} cadeiras - $status',
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                color:
-                                                                    Colors
-                                                                        .grey[600],
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }).toList(),
-                                          onChanged: (value) {
-                                            if (value != null) {
-                                              setState(() {
-                                                salaSelecionada =
-                                                    sala_model.Sala(
-                                                      id: value['sala_id'],
-                                                      numeroSala:
-                                                          value['numero_sala'],
-                                                      qtdCadeiras:
-                                                          value['qtd_cadeiras'],
-                                                      disponivel: true,
-                                                    );
-                                              });
-                                            }
-                                          },
-                                        ),
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: 8),
                                       Row(
                                         children: [
                                           Expanded(
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF44A301),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
+                                            child: _buildSearchableDropdown<
+                                              curso_model.Curso
+                                            >(
+                                              value:
+                                                  null, // Sempre vazio para adicionar novos
+                                              labelText: 'Adicionar Curso',
+                                              items:
+                                                  _podeSelecionarCurso()
+                                                      ? cursos
+                                                          .where(
+                                                            (curso) =>
+                                                                !cursosSelecionados
+                                                                    .any(
+                                                                      (c) =>
+                                                                          c.id ==
+                                                                          curso
+                                                                              .id,
+                                                                    ),
+                                                          )
+                                                          .toList()
+                                                      : [],
+                                              displayText:
+                                                  (curso) =>
+                                                      '${curso.curso} - ${curso.semestre ?? "Semestre?"} - ${curso.periodo != null ? periodoToString(curso.periodo) : "Período?"}',
+                                              onChanged:
+                                                  _podeSelecionarCurso()
+                                                      ? (
+                                                        curso_model.Curso?
+                                                        value,
+                                                      ) {
+                                                        if (value != null) {
+                                                          adicionarCurso(value);
+                                                          // Limpar o dropdown
+                                                          setState(() {
+                                                            cursoSearchText =
+                                                                '';
+                                                            isCursoDropdownOpen =
+                                                                false;
+                                                          });
+                                                        }
+                                                      }
+                                                      : (
+                                                        curso_model.Curso?
+                                                        value,
+                                                      ) {},
+                                              validator:
+                                                  (value) =>
+                                                      null, // Sem validação aqui
+                                              fieldKey: _cursoFieldKey,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  _podeSelecionarCurso()
+                                                      ? const Color(0xFF44A301)
+                                                      : Colors.grey,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: IconButton(
+                                              onPressed:
+                                                  _podeSelecionarCurso()
+                                                      ? () =>
+                                                          Navigator.pushNamed(
+                                                            context,
+                                                            '/criarcurso',
+                                                          )
+                                                      : null,
+                                              icon: Icon(
+                                                Icons.add,
+                                                color: Colors.white,
                                               ),
-                                              child: IconButton(
-                                                onPressed:
-                                                    () => Navigator.pushNamed(
-                                                      context,
-                                                      '/criarsala',
-                                                    ),
-                                                icon: const Icon(
-                                                  Icons.add,
-                                                  color: Colors.white,
-                                                ),
-                                                tooltip: 'Criar nova sala',
-                                              ),
+                                              tooltip: 'Criar novo curso',
                                             ),
                                           ),
                                         ],
@@ -1950,86 +2097,431 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                     ],
                                   ),
                                 ),
-                              const SizedBox(height: 20),
-                              const SizedBox(height: 28),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      icon: const Icon(
-                                        Icons.list,
-                                        color: Color.fromARGB(255, 0, 0, 0),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color.fromARGB(
-                                          255,
-                                          247,
-                                          245,
-                                          96,
-                                        ),
-                                        foregroundColor: const Color.fromARGB(
-                                          255,
-                                          0,
-                                          0,
-                                          0,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        textStyle: const TextStyle(
-                                          fontSize: 16,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        elevation: 2,
-                                      ),
-                                      onPressed: () {
-                                        Navigator.pushNamed(
-                                          context,
-                                          '/listalocacao',
-                                        );
-                                      },
-                                      label: const Text('Ver agendamentos'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      icon: const Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF44A301,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        textStyle: const TextStyle(
-                                          fontSize: 16,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        elevation: 2,
-                                      ),
-                                      onPressed:
-                                          isLoading ? null : salvarLocacao,
-                                      label: Text(
-                                        'Agendar ${cursosSelecionados.length} curso(s)',
+                                const SizedBox(height: 16),
+                                // NOVO: Exibir cursos selecionados
+                                _buildCursosSelecionados(),
+                                const SizedBox(height: 16),
+                                // Seção de seleção de sala com filtro inteligente (agora por último)
+                                if (cursosSelecionados.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          _podeSelecionarSala()
+                                              ? const Color(
+                                                0xFF44A301,
+                                              ).withOpacity(0.05)
+                                              : Colors.grey.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color:
+                                            _podeSelecionarSala()
+                                                ? const Color(
+                                                  0xFF44A301,
+                                                ).withOpacity(0.3)
+                                                : Colors.grey.withOpacity(0.3),
                                       ),
                                     ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.meeting_room,
+                                              color:
+                                                  _podeSelecionarSala()
+                                                      ? const Color(0xFF44A301)
+                                                      : Colors.grey,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Selecionar Sala',
+                                              style: TextStyle(
+                                                color:
+                                                    _podeSelecionarSala()
+                                                        ? const Color(
+                                                          0xFF44A301,
+                                                        )
+                                                        : Colors.grey,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            if (isLoadingSalas)
+                                              const SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(Color(0xFF44A301)),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        if (!_podeSelecionarSala())
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withOpacity(
+                                                0.1,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.orange
+                                                    .withOpacity(0.5),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.info_outline,
+                                                  color: Colors.orange,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    _getMensagemValidacaoSequencial(),
+                                                    style: const TextStyle(
+                                                      color: Colors.orange,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        else if (salasFiltradas.isEmpty &&
+                                            !isLoadingSalas)
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange.withOpacity(
+                                                0.1,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                color: Colors.orange
+                                                    .withOpacity(0.5),
+                                              ),
+                                            ),
+                                            child: const Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.info_outline,
+                                                  color: Colors.orange,
+                                                  size: 16,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Complete todos os campos acima para ver as salas disponíveis',
+                                                    style: TextStyle(
+                                                      color: Colors.orange,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        else if (salasFiltradas.isNotEmpty)
+                                          DropdownButtonFormField<
+                                            Map<String, dynamic>
+                                          >(
+                                            value:
+                                                salaSelecionada != null
+                                                    ? salasFiltradas.firstWhere(
+                                                      (sala) =>
+                                                          sala['sala_id'] ==
+                                                          salaSelecionada!.id,
+                                                      orElse:
+                                                          () =>
+                                                              salasFiltradas
+                                                                  .first,
+                                                    )
+                                                    : null,
+                                            decoration: InputDecoration(
+                                              labelText: 'Selecione uma Sala',
+                                              labelStyle: const TextStyle(
+                                                color: Color(0xFF44A301),
+                                              ),
+                                              filled: true,
+                                              fillColor: const Color(
+                                                0xFF44A301,
+                                              ).withOpacity(0.1),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                borderSide: const BorderSide(
+                                                  color: Color(0xFF44A301),
+                                                ),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                borderSide: const BorderSide(
+                                                  color: Color(0xFF44A301),
+                                                ),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                borderSide: const BorderSide(
+                                                  color: Color(0xFF44A301),
+                                                  width: 2,
+                                                ),
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 12,
+                                                  ),
+                                            ),
+                                            dropdownColor: Colors.white,
+                                            iconEnabledColor: const Color(
+                                              0xFF44A301,
+                                            ),
+                                            style: const TextStyle(
+                                              color: Color(0xFF44A301),
+                                            ),
+                                            isExpanded: true,
+                                            items:
+                                                salasFiltradas.map((sala) {
+                                                  final agendamentos =
+                                                      sala['agendamentos_existentes'] ??
+                                                      0;
+                                                  final emoji =
+                                                      agendamentos == 0
+                                                          ? '🟢'
+                                                          : '🟡';
+                                                  final status =
+                                                      agendamentos == 0
+                                                          ? 'Livre'
+                                                          : '1 agendamento';
+
+                                                  return DropdownMenuItem<
+                                                    Map<String, dynamic>
+                                                  >(
+                                                    value: sala,
+                                                    child: Container(
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            minHeight: 32,
+                                                            maxHeight: 40,
+                                                          ),
+                                                      child: Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Text(
+                                                            emoji,
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 12,
+                                                                ),
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 6,
+                                                          ),
+                                                          Expanded(
+                                                            child: Container(
+                                                              constraints:
+                                                                  const BoxConstraints(
+                                                                    minHeight:
+                                                                        20,
+                                                                    maxHeight:
+                                                                        24,
+                                                                  ),
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                mainAxisSize:
+                                                                    MainAxisSize
+                                                                        .min,
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .center,
+                                                                children: [
+                                                                  Text(
+                                                                    'Sala ${sala['numero_sala']}',
+                                                                    style: const TextStyle(
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      fontSize:
+                                                                          11,
+                                                                    ),
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    height: 0,
+                                                                  ),
+                                                                  Text(
+                                                                    '${sala['qtd_cadeiras']} cadeiras - $status',
+                                                                    style: TextStyle(
+                                                                      fontSize:
+                                                                          9,
+                                                                      color:
+                                                                          Colors
+                                                                              .grey[600],
+                                                                    ),
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                            onChanged: (value) {
+                                              if (value != null) {
+                                                setState(() {
+                                                  salaSelecionada =
+                                                      sala_model.Sala(
+                                                        id: value['sala_id'],
+                                                        numeroSala:
+                                                            value['numero_sala'],
+                                                        qtdCadeiras:
+                                                            value['qtd_cadeiras'],
+                                                        disponivel: true,
+                                                      );
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color:
+                                                _podeSelecionarSala()
+                                                    ? const Color(0xFF44A301)
+                                                    : Colors.grey,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: IconButton(
+                                            onPressed:
+                                                _podeSelecionarSala()
+                                                    ? () => Navigator.pushNamed(
+                                                      context,
+                                                      '/criarsala',
+                                                    )
+                                                    : null,
+                                            icon: const Icon(
+                                              Icons.add,
+                                              color: Colors.white,
+                                            ),
+                                            tooltip: 'Criar nova sala',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                const SizedBox(height: 16),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(
+                                          Icons.list,
+                                          color: Color.fromARGB(255, 0, 0, 0),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color.fromARGB(
+                                            255,
+                                            247,
+                                            245,
+                                            96,
+                                          ),
+                                          foregroundColor: const Color.fromARGB(
+                                            255,
+                                            0,
+                                            0,
+                                            0,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 16,
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          elevation: 2,
+                                        ),
+                                        onPressed: () {
+                                          Navigator.pushNamed(
+                                            context,
+                                            '/listalocacao',
+                                          );
+                                        },
+                                        label: const Text('Ver agendamentos'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Colors.white,
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF44A301,
+                                          ),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 16,
+                                          ),
+                                          textStyle: const TextStyle(
+                                            fontSize: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          elevation: 2,
+                                        ),
+                                        onPressed:
+                                            isLoading ? null : salvarLocacao,
+                                        label: Text(
+                                          'Agendar ${cursosSelecionados.length} curso(s)',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

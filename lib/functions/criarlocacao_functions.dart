@@ -49,7 +49,10 @@ class CriarLocacaoFunctions {
   // Função para carregar dados iniciais
   Future<Map<String, dynamic>> carregarDados() async {
     try {
-      final responseSalas = await supabase.from('salas').select();
+      final responseSalas = await supabase
+          .from('salas')
+          .select()
+          .eq('disponivel', true);
       final responseCursos = await supabase.from('cursos').select();
       final responseProfessores = await supabase.from('professores').select();
 
@@ -339,6 +342,7 @@ class CriarLocacaoFunctions {
           '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
       // 1. Verifica quantos agendamentos já existem para a sala nesse dia e período (NOVA REGRA: 4 agendamentos por período)
+      // IMPORTANTE: 2 cursos em 1 sala = conta como 1 utilização da sala
       final agendamentosSalaPeriodo = await supabase
           .from('agendamento')
           .select()
@@ -346,7 +350,21 @@ class CriarLocacaoFunctions {
           .eq('dia', dataFormatada)
           .eq('periodo', periodoCurso);
 
-      if (agendamentosSalaPeriodo.length >= 4) {
+      // Conta quantas vezes a sala foi utilizada (não quantos agendamentos)
+      // 2 cursos em 1 sala = 1 utilização
+      Map<String, int> utilizacoesSala = {};
+      for (final agendamento in agendamentosSalaPeriodo) {
+        final chave =
+            '${agendamento['aula_periodo']}_${agendamento['periodo']}';
+        utilizacoesSala[chave] = (utilizacoesSala[chave] ?? 0) + 1;
+      }
+
+      // Verifica se já atingiu o limite de 4 utilizações por período
+      int totalUtilizacoes = utilizacoesSala.values.fold(
+        0,
+        (sum, count) => sum + count,
+      );
+      if (totalUtilizacoes >= 4) {
         String periodoNome = '';
         switch (periodoCurso) {
           case 1:
@@ -363,17 +381,22 @@ class CriarLocacaoFunctions {
         }
 
         throw Exception(
-          'Essa sala já atingiu o limite de 4 agendamentos para o período $periodoNome no dia ${dataFormatada.split('-').reversed.join('/')}.',
+          'Essa sala já atingiu o limite de 4 utilizações para o período $periodoNome no dia ${dataFormatada.split('-').reversed.join('/')}.',
         );
       }
 
       // 2. Verifica quantos agendamentos do mesmo tipo já existem para a sala nesse dia, período e aula_periodo específico
+      // IMPORTANTE: Filtrar por período específico para permitir aulas em 3 períodos diferentes
       final agendamentosSalaPeriodoTipo = await supabase
           .from('agendamento')
           .select()
           .eq('sala_id', salaSelecionada!.id)
           .eq('dia', dataFormatada)
           .eq('aula_periodo', periodoAulaSelecionado!)
+          .eq(
+            'periodo',
+            periodoCurso,
+          ) // IMPORTANTE: Filtrar por período específico
           .eq(
             'tipo_agendamento',
             'A',
@@ -387,7 +410,7 @@ class CriarLocacaoFunctions {
         );
       }
 
-      // 3. Verifica quantos agendamentos já existem para cada curso nesse dia
+      // 3. Verifica quantos agendamentos já existem para cada curso nesse dia (máximo 2 vezes por dia)
       for (final curso in cursosSelecionados) {
         final agendamentosCurso = await supabase
             .from('agendamento')
@@ -412,40 +435,53 @@ class CriarLocacaoFunctions {
                 .eq('curso_id', curso.id)
                 .eq('dia', dataFormatada)
                 .eq('aula_periodo', periodoAulaSelecionado!)
+                .eq(
+                  'periodo',
+                  periodoCurso,
+                ) // IMPORTANTE: Filtrar por período específico
                 .maybeSingle();
 
         if (agendamentoExistente != null) {
           throw Exception(
-            'Já existe um agendamento igual para o curso "${curso.curso}" no dia ${dataFormatada.split('-').reversed.join('/')}!',
+            'Já existe um agendamento igual para o curso "${curso.curso}" no período ${periodoCurso == 1
+                ? 'Matutino'
+                : periodoCurso == 2
+                ? 'Vespertino'
+                : 'Noturno'} no dia ${dataFormatada.split('-').reversed.join('/')}!',
           );
         }
       }
 
       // 5. Verifica se há conflito de horário com outros tipos de agendamento (aula, prova, evento)
+      // IMPORTANTE: Para aulas, permitir que 1 aula aconteça em 3 períodos diferentes
+      // Só verificar conflitos no MESMO período, não em períodos diferentes
       final conflitosHorario = await supabase
           .from('agendamento')
           .select()
           .eq('sala_id', salaSelecionada!.id)
           .eq('dia', dataFormatada)
-          .eq('aula_periodo', periodoAulaSelecionado!);
+          .eq('aula_periodo', periodoAulaSelecionado!)
+          .eq(
+            'periodo',
+            periodoCurso,
+          ); // IMPORTANTE: Filtrar por período específico
 
       if (conflitosHorario.isNotEmpty) {
         // Verifica se já existe um agendamento do mesmo tipo (aula) no mesmo horário
         final tiposExistentes =
             conflitosHorario.map((a) => a['tipo_agendamento']).toSet();
 
-        // NOVA REGRA: Para aulas, verificar se já existem 2 aulas no mesmo horário
+        // NOVA REGRA: Para aulas, permitir 1 aula OU 1 aula com 2 cursos no mesmo horário
         if (tiposExistentes.contains('A')) {
           final aulasMesmoHorario =
               conflitosHorario
                   .where((a) => a['tipo_agendamento'] == 'A')
                   .toList();
 
-          // Verifica se há espaço suficiente para todos os cursos selecionados
-          final espacoDisponivelHorario = 2 - aulasMesmoHorario.length;
-          if (espacoDisponivelHorario < cursosSelecionados.length) {
+          // Verifica se já existem 2 cursos no mesmo horário
+          if (aulasMesmoHorario.length >= 2) {
             throw Exception(
-              'Já existem ${aulasMesmoHorario.length} aula(s) agendadas para este horário. Só há espaço para $espacoDisponivelHorario aula(s) adicional(is).',
+              'Já existem 2 cursos agendados para este horário. Máximo permitido: 2 cursos por horário.',
             );
           }
 
@@ -461,28 +497,33 @@ class CriarLocacaoFunctions {
               );
             }
           }
+
+          // Verifica se há espaço suficiente para todos os cursos selecionados
+          final espacoDisponivelHorario = 2 - aulasMesmoHorario.length;
+          if (espacoDisponivelHorario < cursosSelecionados.length) {
+            throw Exception(
+              'Já existem ${aulasMesmoHorario.length} curso(s) agendados para este horário. Só há espaço para $espacoDisponivelHorario curso(s) adicional(is).',
+            );
+          }
         }
 
-        // Verifica se já existe qualquer tipo de agendamento no mesmo horário
-        // (aula, prova ou evento) - não permite conflitos de horário
-        String tipoExistente = '';
-        switch (conflitosHorario.first['tipo_agendamento']) {
-          case 'A':
-            tipoExistente = 'aula';
-            break;
-          case 'E':
-            tipoExistente = 'evento';
-            break;
-          case 'M':
+        // NOVA LÓGICA: Para aulas, permitir que 1 aula aconteça em 3 períodos diferentes
+        // Só bloquear se for prova ou evento no mesmo horário
+        if (tiposExistentes.contains('M') || tiposExistentes.contains('E')) {
+          String tipoExistente = '';
+          if (tiposExistentes.contains('M')) {
             tipoExistente = 'prova';
-            break;
-          default:
-            tipoExistente = 'agendamento';
+          } else {
+            tipoExistente = 'evento';
+          }
+
+          throw Exception(
+            'Já existe uma $tipoExistente agendada para o horário "$periodoAulaSelecionado" neste dia.',
+          );
         }
 
-        throw Exception(
-          'Já existe uma $tipoExistente agendada para o horário "$periodoAulaSelecionado" neste dia.',
-        );
+        // Se chegou até aqui e há conflitos, mas são apenas aulas, permitir
+        // (pois queremos permitir 1 aula em 3 períodos diferentes)
       }
     }
 
@@ -502,19 +543,11 @@ class CriarLocacaoFunctions {
         final dataFormatada =
             '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
-        print('DEBUG - Processando dia: $dataFormatada');
-
         // Para cada curso selecionado
         for (final curso in cursosSelecionados) {
           final periodoCurso = curso.periodo;
           final materia = materiasPorCurso[curso.id];
           final professor = professoresPorCurso[curso.id];
-
-          print('DEBUG - Salvando curso: ${curso.curso} (ID: ${curso.id})');
-          print('DEBUG - Matéria: ${materia?['nome']} (ID: ${materia?['id']})');
-          print(
-            'DEBUG - Professor: ${professor?['nome_professor']} (ID: ${professor?['id']})',
-          );
 
           final response =
               await supabase.from('agendamento').insert({
@@ -531,7 +564,6 @@ class CriarLocacaoFunctions {
           // Captura o ID do agendamento criado
           if (response != null && response.isNotEmpty) {
             idsAgendamentosCriados.add(response[0]['id']);
-            print('DEBUG - Agendamento criado com ID: ${response[0]['id']}');
           } else {
             print(
               'DEBUG - ERRO: Falha ao criar agendamento para curso ${curso.curso}',
@@ -543,7 +575,6 @@ class CriarLocacaoFunctions {
       print(
         'DEBUG - Total de agendamentos criados: ${idsAgendamentosCriados.length}',
       );
-      print('DEBUG - IDs dos agendamentos: $idsAgendamentosCriados');
 
       // Se foram criados múltiplos agendamentos, aguarda um pouco e então
       // remove os registros individuais do histórico e cria um registro múltiplo

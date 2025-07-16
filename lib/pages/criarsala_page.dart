@@ -84,6 +84,9 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   }
 
   Future<void> _salvarSala() async {
+    // Força a atualização do estado antes de salvar
+    setState(() {});
+
     final numeroSala = _numeroSalaController.text.trim();
     final qtdCadeiras = int.tryParse(_qtdCadeirasController.text.trim()) ?? 0;
 
@@ -111,7 +114,8 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
 
     // Gera uma cor baseada no número da sala
     final corSala = _gerarCorSala(numeroSala);
-    await supabase.from('salas').insert({
+
+    final dadosSala = {
       'numero_sala': numeroSala,
       'qtd_cadeiras': qtdCadeiras,
       'disponivel': _disponivel,
@@ -119,7 +123,23 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
       'projetor': _projetor,
       'tv': _tv,
       'ar_condicionado': _arCondicionado,
-    });
+    };
+
+    print('Salvando sala: $dadosSala');
+    print(
+      'Valores dos switches: disponivel=$_disponivel, projetor=$_projetor, tv=$_tv, ar=$_arCondicionado',
+    );
+
+    try {
+      final resultado = await supabase.from('salas').insert(dadosSala).select();
+      print('Sala salva com sucesso: $resultado');
+    } catch (e) {
+      print('Erro ao salvar sala: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao salvar sala: $e')));
+      return;
+    }
     await _buscarSalas(); // Adicione esta linha
 
     ScaffoldMessenger.of(
@@ -136,70 +156,287 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     final cadeirasController = TextEditingController(
       text: sala['qtd_cadeiras']?.toString() ?? '',
     );
-    bool disponivel = sala['disponivel'] ?? true;
-    bool projetor = sala['projetor'] ?? false;
-    bool tv = sala['tv'] ?? false;
-    bool arCondicionado = sala['ar_condicionado'] ?? false;
+    bool disponivel = sala['disponivel'] == true;
+    bool projetor = sala['projetor'] == true;
+    bool tv = sala['tv'] == true;
+    bool arCondicionado = sala['ar_condicionado'] == true;
 
     final result = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder:
           (context) => StatefulBuilder(
             builder:
-                (context, setDialogState) => AlertDialog(
-                  title: const Text('Editar Sala'),
-                  content: SingleChildScrollView(
+                (context, setDialogState) => Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.4,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextField(
+                        // Header
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: _parseSalaColor(sala['cor']),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _parseSalaColor(
+                                      sala['cor'],
+                                    ).withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  sala['numero_sala'] ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Editar Sala',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF44A301),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Sala ${sala['numero_sala']} - ${sala['qtd_cadeiras']} cadeiras',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              icon: const Icon(Icons.close, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Campos de entrada
+                        TextFormField(
                           controller: numeroController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Número da Sala',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFF44A301),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.confirmation_number,
+                              color: Color(0xFF44A301),
+                            ),
+                            filled: true,
+                            fillColor: const Color(
+                              0xFF44A301,
+                            ).withOpacity(0.05),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                                width: 2,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        TextField(
+                        const SizedBox(height: 16),
+
+                        TextFormField(
                           controller: cadeirasController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Quantidade de Cadeiras',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFF44A301),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.chair,
+                              color: Color(0xFF44A301),
+                            ),
+                            filled: true,
+                            fillColor: const Color(
+                              0xFF44A301,
+                            ).withOpacity(0.05),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Seção de equipamentos
+                        const Text(
+                          'Equipamentos Disponíveis',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF44A301),
                           ),
                         ),
                         const SizedBox(height: 12),
-                        SwitchListTile(
-                          title: const Text('Disponível'),
-                          value: disponivel,
-                          onChanged: (v) => disponivel = v,
+
+                        // Switches com design melhorado
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildSwitchTile(
+                                'Disponível',
+                                disponivel,
+                                Icons.check_circle,
+                                (value) =>
+                                    setDialogState(() => disponivel = value),
+                              ),
+                              _buildSwitchTile(
+                                'Projetor',
+                                projetor,
+                                Icons.videocam,
+                                (value) =>
+                                    setDialogState(() => projetor = value),
+                              ),
+                              _buildSwitchTile(
+                                'TV',
+                                tv,
+                                Icons.tv,
+                                (value) => setDialogState(() => tv = value),
+                              ),
+                              _buildSwitchTile(
+                                'Ar Condicionado',
+                                arCondicionado,
+                                Icons.ac_unit,
+                                (value) => setDialogState(
+                                  () => arCondicionado = value,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        SwitchListTile(
-                          title: const Text('Projetor'),
-                          value: projetor,
-                          onChanged: (v) => projetor = v,
-                        ),
-                        SwitchListTile(
-                          title: const Text('TV'),
-                          value: tv,
-                          onChanged: (v) => tv = v,
-                        ),
-                        SwitchListTile(
-                          title: const Text('Ar Condicionado'),
-                          value: arCondicionado,
-                          onChanged: (v) => arCondicionado = v,
+                        const SizedBox(height: 24),
+
+                        // Botões de ação
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  side: const BorderSide(
+                                    color: Color(0xFF44A301),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Cancelar',
+                                  style: TextStyle(
+                                    color: Color(0xFF44A301),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF44A301),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: const Text(
+                                  'Salvar Alterações',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Salvar'),
-                    ),
-                  ],
                 ),
           ),
     );
@@ -229,23 +466,125 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   Future<void> _excluirSala(Map<String, dynamic> sala) async {
     final confirm = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Excluir sala'),
-            content: const Text('Tem certeza que deseja excluir esta sala?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.3,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  'Excluir',
-                  style: TextStyle(color: Colors.red),
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Ícone de aviso
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.warning_rounded,
+                      color: Colors.red,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Título
+                  const Text(
+                    'Excluir Sala',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Mensagem
+                  Text(
+                    'Tem certeza que deseja excluir a sala ${sala['numero_sala']}?',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Text(
+                    'Esta ação não pode ser desfeita.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Botões
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: Colors.grey[400]!),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancelar',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: const Text(
+                            'Excluir',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
     );
     if (confirm == true) {
@@ -317,6 +656,45 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     // Usa o número da sala para escolher uma cor
     final numero = int.tryParse(numeroSala) ?? 0;
     return cores[(numero - 1) % cores.length];
+  }
+
+  // Widget para criar switch tiles personalizados
+  Widget _buildSwitchTile(
+    String title,
+    bool value,
+    IconData icon,
+    Function(bool) onChanged,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color:
+            value
+                ? const Color(0xFF44A301).withOpacity(0.1)
+                : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: value ? const Color(0xFF44A301) : Colors.grey,
+          size: 24,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: value ? const Color(0xFF44A301) : Colors.grey[700],
+            fontWeight: value ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: const Color(0xFF44A301),
+          activeTrackColor: const Color(0xFF44A301).withOpacity(0.3),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+    );
   }
 
   @override
@@ -557,7 +935,10 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           ),
                           value: _projetor,
                           activeColor: const Color(0xFF44A301),
-                          onChanged: (val) => setState(() => _projetor = val),
+                          onChanged: (val) {
+                            print('Projetor alterado para: $val');
+                            setState(() => _projetor = val);
+                          },
                           contentPadding: EdgeInsets.zero,
                         ),
                         SwitchListTile(
@@ -567,7 +948,10 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           ),
                           value: _tv,
                           activeColor: const Color(0xFF44A301),
-                          onChanged: (val) => setState(() => _tv = val),
+                          onChanged: (val) {
+                            print('TV alterada para: $val');
+                            setState(() => _tv = val);
+                          },
                           contentPadding: EdgeInsets.zero,
                         ),
                         SwitchListTile(
@@ -577,8 +961,10 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           ),
                           value: _arCondicionado,
                           activeColor: const Color(0xFF44A301),
-                          onChanged:
-                              (val) => setState(() => _arCondicionado = val),
+                          onChanged: (val) {
+                            print('Ar condicionado alterado para: $val');
+                            setState(() => _arCondicionado = val);
+                          },
                           contentPadding: EdgeInsets.zero,
                         ),
                         const SizedBox(height: 32),
@@ -869,12 +1255,12 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                               flex: 1,
                                               child: Icon(
                                                 sala['projetor'] == true
-                                                    ? Icons.check
-                                                    : Icons.close,
+                                                    ? Icons.videocam
+                                                    : Icons.videocam_off,
                                                 color:
                                                     sala['projetor'] == true
                                                         ? Colors.green
-                                                        : Colors.red,
+                                                        : Colors.grey,
                                                 size: 18,
                                               ),
                                             ),
@@ -882,12 +1268,12 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                               flex: 1,
                                               child: Icon(
                                                 sala['tv'] == true
-                                                    ? Icons.check
-                                                    : Icons.close,
+                                                    ? Icons.tv
+                                                    : Icons.tv_off,
                                                 color:
                                                     sala['tv'] == true
                                                         ? Colors.green
-                                                        : Colors.red,
+                                                        : Colors.grey,
                                                 size: 18,
                                               ),
                                             ),
@@ -895,13 +1281,13 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                               flex: 1,
                                               child: Icon(
                                                 sala['ar_condicionado'] == true
-                                                    ? Icons.check
+                                                    ? Icons.ac_unit
                                                     : Icons.close,
                                                 color:
                                                     sala['ar_condicionado'] ==
                                                             true
                                                         ? Colors.green
-                                                        : Colors.red,
+                                                        : Colors.grey,
                                                 size: 18,
                                               ),
                                             ),

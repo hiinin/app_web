@@ -45,11 +45,17 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
   // Overlay entries para dropdowns
   OverlayEntry? _overlayEntry;
 
+  // NOVO: Controles para dropdowns individuais
+  Map<String, bool> dropdownsAbertos = {};
+  Map<String, String> textosPesquisa = {};
+
   // GlobalKeys para posicionamento dos dropdowns
   final GlobalKey _salaFieldKey = GlobalKey();
   final GlobalKey _cursoFieldKey = GlobalKey();
   final GlobalKey _materiaFieldKey = GlobalKey();
   final GlobalKey _professorFieldKey = GlobalKey();
+  final GlobalKey _aulaFieldKey =
+      GlobalKey(); // NOVO: Key para o dropdown de aula
 
   String formatHora(TimeOfDay hora) {
     final horaFormatada = hora.hour.toString().padLeft(2, '0');
@@ -59,15 +65,109 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
 
   final List<String> periodosAula = ['Matutino', 'Vespertino', 'Noturno'];
 
+  // NOVO: Controles para validação sequencial
+  bool _podeSelecionarAula() {
+    return dia != null;
+  }
+
+  bool _podeSelecionarCurso() {
+    return _podeSelecionarAula() && periodoAulaSelecionado != null;
+  }
+
+  bool _podeSelecionarMateria() {
+    return _podeSelecionarCurso() && cursoSelecionado != null;
+  }
+
+  bool _podeSelecionarProfessor() {
+    return _podeSelecionarMateria() && materiaSelecionada != null;
+  }
+
+  bool _podeSelecionarSala() {
+    return _podeSelecionarProfessor() && professorSelecionado != null;
+  }
+
+  // NOVO: Função para obter mensagem de validação sequencial
+  String _getMensagemValidacaoSequencial() {
+    if (!_podeSelecionarAula()) {
+      return '⚠️ Primeiro selecione o dia no calendário';
+    }
+    if (!_podeSelecionarCurso()) {
+      return '⚠️ Agora selecione o período da aula';
+    }
+    if (!_podeSelecionarMateria()) {
+      return '⚠️ Selecione um curso';
+    }
+    if (!_podeSelecionarProfessor()) {
+      return '⚠️ Selecione uma matéria';
+    }
+    if (!_podeSelecionarSala()) {
+      return '⚠️ Selecione um professor';
+    }
+    return '✅ Todos os campos preenchidos! Agora selecione a sala.';
+  }
+
+  // NOVO: Widget para exibir mensagem de validação sequencial
+  Widget _buildMensagemValidacaoSequencial() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color:
+            _podeSelecionarSala()
+                ? Colors.green.withOpacity(0.1)
+                : Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color:
+              _podeSelecionarSala()
+                  ? Colors.green.withOpacity(0.5)
+                  : Colors.orange.withOpacity(0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _podeSelecionarSala() ? Icons.check_circle : Icons.warning,
+            color: _podeSelecionarSala() ? Colors.green : Colors.orange,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _getMensagemValidacaoSequencial(),
+              style: TextStyle(
+                color: _podeSelecionarSala() ? Colors.green : Colors.orange,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    print('DEBUG: Página de prova carregada - TESTE DE MUDANÇAS');
     carregarDados();
   }
 
   @override
   void dispose() {
+    // Fechar todos os dropdowns ao sair da tela
+    print('DEBUG: Fechando dropdowns ao sair da tela - Prova');
+    isCursoDropdownOpen = false;
+    isSalaDropdownOpen = false;
+    isMateriaDropdownOpen = false;
+    isProfessorDropdownOpen = false;
+    dropdownsAbertos.clear(); // Limpar todos os dropdowns (incluindo aula)
+    textosPesquisa.clear();
+
+    // Fechar overlay
     _overlayEntry?.remove();
+    _overlayEntry = null;
+
     super.dispose();
   }
 
@@ -192,6 +292,18 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
       }
     }
 
+    // NOVO: Determina se o dropdown está habilitado baseado no tipo
+    bool isEnabled = true;
+    if (T == curso_model.Curso) {
+      isEnabled = _podeSelecionarCurso();
+    } else if (T == Map<String, dynamic>) {
+      if (fieldKey == _materiaFieldKey) {
+        isEnabled = _podeSelecionarMateria();
+      } else if (fieldKey == _professorFieldKey) {
+        isEnabled = _podeSelecionarProfessor();
+      }
+    }
+
     List<T> filteredItems =
         items.where((item) {
           return displayText(
@@ -229,90 +341,127 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
 
       _overlayEntry = OverlayEntry(
         builder:
-            (context) => Positioned(
-              top: topPosition,
-              left:
-                  fieldKey.currentContext != null
-                      ? (fieldKey.currentContext!.findRenderObject()
-                              as RenderBox)
-                          .localToGlobal(Offset.zero)
-                          .dx
-                      : 50,
-              width:
-                  fieldKey.currentContext != null
-                      ? (fieldKey.currentContext!.findRenderObject()
-                              as RenderBox)
-                          .size
-                          .width
-                      : 300,
-              child: Material(
-                elevation: 20,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFF44A301),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  constraints: const BoxConstraints(maxHeight: 350),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: filteredItems.length,
-                    itemBuilder: (context, index) {
-                      final item = filteredItems[index];
-                      return ListTile(
-                        title: Text(
-                          displayText(item),
-                          style: const TextStyle(
-                            color: Color(0xFF44A301),
-                            fontSize: 16,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        onTap: () {
-                          onChanged(item);
-                          setState(() {
-                            if (T == sala_model.Sala) {
-                              isSalaDropdownOpen = false;
-                              salaSearchText = '';
-                            } else if (T == curso_model.Curso) {
-                              isCursoDropdownOpen = false;
-                              cursoSearchText = '';
-                            } else {
-                              // Para Map<String, dynamic>, verifica se é matéria ou professor
-                              if (fieldKey == _materiaFieldKey) {
-                                isMateriaDropdownOpen = false;
-                                materiaSearchText = '';
-                              } else if (fieldKey == _professorFieldKey) {
-                                isProfessorDropdownOpen = false;
-                                professorSearchText = '';
-                              } else {
-                                isMateriaDropdownOpen = false;
-                                materiaSearchText = '';
-                              }
-                            }
-                          });
-                          _overlayEntry?.remove();
-                          _overlayEntry = null;
-                        },
-                      );
+            (context) => Stack(
+              children: [
+                // GestureDetector que cobre toda a tela para detectar cliques fora
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Fecha o dropdown quando clica fora
+                      setState(() {
+                        if (T == sala_model.Sala) {
+                          isSalaDropdownOpen = false;
+                          salaSearchText = '';
+                        } else if (T == curso_model.Curso) {
+                          isCursoDropdownOpen = false;
+                          cursoSearchText = '';
+                        } else {
+                          // Para Map<String, dynamic>, verifica se é matéria ou professor
+                          if (fieldKey == _materiaFieldKey) {
+                            isMateriaDropdownOpen = false;
+                            materiaSearchText = '';
+                          } else if (fieldKey == _professorFieldKey) {
+                            isProfessorDropdownOpen = false;
+                            professorSearchText = '';
+                          } else {
+                            isMateriaDropdownOpen = false;
+                            materiaSearchText = '';
+                          }
+                        }
+                      });
+                      _overlayEntry?.remove();
+                      _overlayEntry = null;
                     },
+                    child: Container(color: Colors.transparent),
                   ),
                 ),
-              ),
+                // Dropdown posicionado
+                Positioned(
+                  top: topPosition,
+                  left:
+                      fieldKey.currentContext != null
+                          ? (fieldKey.currentContext!.findRenderObject()
+                                  as RenderBox)
+                              .localToGlobal(Offset.zero)
+                              .dx
+                          : 50,
+                  width:
+                      fieldKey.currentContext != null
+                          ? (fieldKey.currentContext!.findRenderObject()
+                                  as RenderBox)
+                              .size
+                              .width
+                          : 300,
+                  child: Material(
+                    elevation: 20,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFF44A301),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(maxHeight: 350),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = filteredItems[index];
+                          return ListTile(
+                            title: Text(
+                              displayText(item),
+                              style: const TextStyle(
+                                color: Color(0xFF44A301),
+                                fontSize: 16,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            onTap: () {
+                              onChanged(item);
+                              setState(() {
+                                if (T == sala_model.Sala) {
+                                  isSalaDropdownOpen = false;
+                                  salaSearchText = '';
+                                } else if (T == curso_model.Curso) {
+                                  isCursoDropdownOpen = false;
+                                  cursoSearchText = '';
+                                } else {
+                                  // Para Map<String, dynamic>, verifica se é matéria ou professor
+                                  if (fieldKey == _materiaFieldKey) {
+                                    isMateriaDropdownOpen = false;
+                                    materiaSearchText = '';
+                                  } else if (fieldKey == _professorFieldKey) {
+                                    isProfessorDropdownOpen = false;
+                                    professorSearchText = '';
+                                  } else {
+                                    isMateriaDropdownOpen = false;
+                                    materiaSearchText = '';
+                                  }
+                                }
+                              });
+                              _overlayEntry?.remove();
+                              _overlayEntry = null;
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
       );
 
@@ -326,7 +475,7 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
 
     return GestureDetector(
       key: fieldKey,
-      onTap: () {
+      onTap: isEnabled ? () {
         setState(() {
           if (T == sala_model.Sala) {
             isSalaDropdownOpen = !isSalaDropdownOpen;
@@ -373,14 +522,20 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
             }
           }
         });
-      },
+      } : null,
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isEnabled 
+              ? const Color(0xFF44A301).withOpacity(0.1)
+              : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF44A301)),
+          border: Border.all(
+            color: isEnabled 
+                ? const Color(0xFF44A301)
+                : Colors.grey,
+          ),
         ),
         child: Row(
           children: [
@@ -394,8 +549,10 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        style: const TextStyle(
-                          color: Color(0xFF44A301),
+                        style: TextStyle(
+                          color: isEnabled 
+                              ? const Color(0xFF44A301)
+                              : Colors.grey,
                           fontSize: 16,
                         ),
                         onChanged: (text) {
@@ -424,16 +581,205 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                       : Text(
                         value != null ? displayText(value) : labelText,
                         style: TextStyle(
-                          color:
-                              value != null
+                          color: isEnabled
+                              ? (value != null
                                   ? const Color(0xFF44A301)
-                                  : const Color(0xFF44A301).withOpacity(0.6),
+                                  : const Color(0xFF44A301).withOpacity(0.6))
+                              : Colors.grey.withOpacity(0.6),
                           fontSize: 16,
                         ),
                       ),
             ),
             Icon(
               isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: isEnabled 
+                  ? const Color(0xFF44A301)
+                  : Colors.grey,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NOVO: Widget para dropdown de seleção de aula
+  Widget _buildAulaDropdown() {
+    bool isAulaDropdownOpen = false;
+    String aulaSearchText = '';
+
+    // Controle do dropdown de aula
+    if (dropdownsAbertos['aula'] != null) {
+      isAulaDropdownOpen = dropdownsAbertos['aula']!;
+      aulaSearchText = textosPesquisa['aula'] ?? '';
+    }
+
+    final List<String> opcoesAula = ['Primeira Aula', 'Segunda Aula'];
+
+    void _showAulaOverlay() {
+      if (_overlayEntry != null) {
+        _overlayEntry!.remove();
+      }
+
+      double topPosition = 100;
+      double leftPosition = 50;
+      double width = 300;
+
+      if (_aulaFieldKey.currentContext != null) {
+        final renderBox =
+            _aulaFieldKey.currentContext!.findRenderObject() as RenderBox;
+        final position = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+
+        topPosition = position.dy + 60;
+        leftPosition = position.dx;
+        width = size.width;
+
+        final screenHeight = MediaQuery.of(context).size.height;
+        final availableSpaceBelow = screenHeight - topPosition;
+        if (availableSpaceBelow < 200) {
+          topPosition = position.dy - 200;
+        }
+      }
+
+      _overlayEntry = OverlayEntry(
+        builder:
+            (context) => Stack(
+              children: [
+                // GestureDetector que cobre toda a tela para detectar cliques fora
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: () {
+                      // Fecha o dropdown quando clica fora
+                      setState(() {
+                        dropdownsAbertos['aula'] = false;
+                        textosPesquisa['aula'] = '';
+                      });
+                      _overlayEntry?.remove();
+                      _overlayEntry = null;
+                    },
+                    child: Container(color: Colors.transparent),
+                  ),
+                ),
+                // Dropdown posicionado
+                Positioned(
+                  top: topPosition,
+                  left: leftPosition,
+                  width: width,
+                  child: Material(
+                    elevation: 20,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFF44A301),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: opcoesAula.length,
+                        itemBuilder: (context, index) {
+                          final opcao = opcoesAula[index];
+                          return ListTile(
+                            title: Text(
+                              opcao,
+                              style: const TextStyle(
+                                color: Color(0xFF44A301),
+                                fontSize: 16,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            onTap: () {
+                              setState(() {
+                                periodoAulaSelecionado = opcao;
+                                dropdownsAbertos['aula'] = false;
+                                textosPesquisa['aula'] = '';
+                              });
+                              _overlayEntry?.remove();
+                              _overlayEntry = null;
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+      );
+
+      Overlay.of(context).insert(_overlayEntry!);
+    }
+
+    void _hideAulaOverlay() {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+
+    return GestureDetector(
+      key: _aulaFieldKey,
+      onTap: () {
+        setState(() {
+          dropdownsAbertos['aula'] = !(dropdownsAbertos['aula'] ?? false);
+          if (!(dropdownsAbertos['aula'] ?? false)) {
+            textosPesquisa['aula'] = '';
+            _hideAulaOverlay();
+          } else {
+            _showAulaOverlay();
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF44A301)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Selecione a Aula (Período)',
+                    style: TextStyle(
+                      color: const Color(0xFF44A301).withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    periodoAulaSelecionado ?? 'Selecione uma opção',
+                    style: TextStyle(
+                      color:
+                          periodoAulaSelecionado != null
+                              ? const Color(0xFF44A301)
+                              : const Color(0xFF44A301).withOpacity(0.5),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isAulaDropdownOpen
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
               color: const Color(0xFF44A301),
             ),
           ],
@@ -1018,6 +1364,15 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
     }
   }
 
+  bool _todosCamposPreenchidos() {
+    return dia != null &&
+        periodoAulaSelecionado != null &&
+        salaSelecionada != null &&
+        cursoSelecionado != null &&
+        materiaSelecionada != null &&
+        professorSelecionado != null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1203,6 +1558,12 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                           const SizedBox(height: 30),
                           const SizedBox(height: 30),
                           Expanded(child: _buildCustomCalendar()),
+                          // Aviso de validação próximo ao calendário
+                          if (!_todosCamposPreenchidos()) ...[
+                            const SizedBox(height: 20),
+                            _buildMensagemValidacaoSequencial(),
+                          ],
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
@@ -1249,65 +1610,7 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 20),
-                              DropdownButtonFormField<String>(
-                                value: periodoAulaSelecionado,
-                                decoration: InputDecoration(
-                                  labelText: 'Selecione a Aula (Período)',
-                                  labelStyle: const TextStyle(
-                                    color: Color(0xFF44A301),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF44A301),
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF44A301),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF44A301),
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                dropdownColor: Colors.white,
-                                iconEnabledColor: const Color(0xFF44A301),
-                                style: const TextStyle(
-                                  color: Color(0xFF44A301),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'Primeira Aula',
-                                    child: Text(
-                                      'Primeira Aula',
-                                      style: TextStyle(
-                                        color: Color(0xFF44A301),
-                                      ),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'Segunda Aula',
-                                    child: Text(
-                                      'Segunda Aula',
-                                      style: TextStyle(
-                                        color: Color(0xFF44A301),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                onChanged:
-                                    (value) => setState(
-                                      () => periodoAulaSelecionado = value,
-                                    ),
-                              ),
+                              _buildAulaDropdown(),
                               const SizedBox(height: 20),
                               Row(
                                 children: [
