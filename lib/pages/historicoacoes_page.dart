@@ -538,18 +538,21 @@ class _HistoricoAcoesPageState extends State<HistoricoAcoesPage> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF44A301), Color(0xFF66BB6A)],
+                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
                 ),
               ),
               child: Row(
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(left: 16.0),
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.contain,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/UniCV-Variacoes-07.png',
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 24),

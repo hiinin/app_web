@@ -114,11 +114,14 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   Center(
                     child: Column(
                       children: [
-                        Image.asset(
-                          'assets/images/logocampusmap.png', // ajuste o caminho se necessário
-                          width: 350,
-                          height: 350,
-                          fit: BoxFit.contain,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/images/UniCV-Variacoes-07.png', // ajuste o caminho se necessário
+                            width: 350,
+                            height: 350,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ],
                     ),

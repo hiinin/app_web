@@ -475,66 +475,68 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
 
     return GestureDetector(
       key: fieldKey,
-      onTap: isEnabled ? () {
-        setState(() {
-          if (T == sala_model.Sala) {
-            isSalaDropdownOpen = !isSalaDropdownOpen;
-            if (!isSalaDropdownOpen) {
-              salaSearchText = '';
-              _hideOverlay();
-            } else {
-              _showOverlay();
-            }
-          } else if (T == curso_model.Curso) {
-            isCursoDropdownOpen = !isCursoDropdownOpen;
-            if (!isCursoDropdownOpen) {
-              cursoSearchText = '';
-              _hideOverlay();
-            } else {
-              _showOverlay();
-            }
-          } else {
-            // Para Map<String, dynamic>, verifica se é matéria ou professor
-            if (fieldKey == _materiaFieldKey) {
-              isMateriaDropdownOpen = !isMateriaDropdownOpen;
-              if (!isMateriaDropdownOpen) {
-                materiaSearchText = '';
-                _hideOverlay();
-              } else {
-                _showOverlay();
+      onTap:
+          isEnabled
+              ? () {
+                setState(() {
+                  if (T == sala_model.Sala) {
+                    isSalaDropdownOpen = !isSalaDropdownOpen;
+                    if (!isSalaDropdownOpen) {
+                      salaSearchText = '';
+                      _hideOverlay();
+                    } else {
+                      _showOverlay();
+                    }
+                  } else if (T == curso_model.Curso) {
+                    isCursoDropdownOpen = !isCursoDropdownOpen;
+                    if (!isCursoDropdownOpen) {
+                      cursoSearchText = '';
+                      _hideOverlay();
+                    } else {
+                      _showOverlay();
+                    }
+                  } else {
+                    // Para Map<String, dynamic>, verifica se é matéria ou professor
+                    if (fieldKey == _materiaFieldKey) {
+                      isMateriaDropdownOpen = !isMateriaDropdownOpen;
+                      if (!isMateriaDropdownOpen) {
+                        materiaSearchText = '';
+                        _hideOverlay();
+                      } else {
+                        _showOverlay();
+                      }
+                    } else if (fieldKey == _professorFieldKey) {
+                      isProfessorDropdownOpen = !isProfessorDropdownOpen;
+                      if (!isProfessorDropdownOpen) {
+                        professorSearchText = '';
+                        _hideOverlay();
+                      } else {
+                        _showOverlay();
+                      }
+                    } else {
+                      isMateriaDropdownOpen = !isMateriaDropdownOpen;
+                      if (!isMateriaDropdownOpen) {
+                        materiaSearchText = '';
+                        _hideOverlay();
+                      } else {
+                        _showOverlay();
+                      }
+                    }
+                  }
+                });
               }
-            } else if (fieldKey == _professorFieldKey) {
-              isProfessorDropdownOpen = !isProfessorDropdownOpen;
-              if (!isProfessorDropdownOpen) {
-                professorSearchText = '';
-                _hideOverlay();
-              } else {
-                _showOverlay();
-              }
-            } else {
-              isMateriaDropdownOpen = !isMateriaDropdownOpen;
-              if (!isMateriaDropdownOpen) {
-                materiaSearchText = '';
-                _hideOverlay();
-              } else {
-                _showOverlay();
-              }
-            }
-          }
-        });
-      } : null,
+              : null,
       child: Container(
         height: 48,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         decoration: BoxDecoration(
-          color: isEnabled 
-              ? const Color(0xFF44A301).withOpacity(0.1)
-              : Colors.grey.withOpacity(0.1),
+          color:
+              isEnabled
+                  ? const Color(0xFF44A301).withOpacity(0.1)
+                  : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isEnabled 
-                ? const Color(0xFF44A301)
-                : Colors.grey,
+            color: isEnabled ? const Color(0xFF44A301) : Colors.grey,
           ),
         ),
         child: Row(
@@ -550,9 +552,8 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                           contentPadding: EdgeInsets.zero,
                         ),
                         style: TextStyle(
-                          color: isEnabled 
-                              ? const Color(0xFF44A301)
-                              : Colors.grey,
+                          color:
+                              isEnabled ? const Color(0xFF44A301) : Colors.grey,
                           fontSize: 16,
                         ),
                         onChanged: (text) {
@@ -581,20 +582,21 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                       : Text(
                         value != null ? displayText(value) : labelText,
                         style: TextStyle(
-                          color: isEnabled
-                              ? (value != null
-                                  ? const Color(0xFF44A301)
-                                  : const Color(0xFF44A301).withOpacity(0.6))
-                              : Colors.grey.withOpacity(0.6),
+                          color:
+                              isEnabled
+                                  ? (value != null
+                                      ? const Color(0xFF44A301)
+                                      : const Color(
+                                        0xFF44A301,
+                                      ).withOpacity(0.6))
+                                  : Colors.grey.withOpacity(0.6),
                           fontSize: 16,
                         ),
                       ),
             ),
             Icon(
               isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-              color: isEnabled 
-                  ? const Color(0xFF44A301)
-                  : Colors.grey,
+              color: isEnabled ? const Color(0xFF44A301) : Colors.grey,
             ),
           ],
         ),
@@ -1398,7 +1400,7 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF44A301), Color(0xFF66BB6A)],
+                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
                 ),
               ),
               child: Row(
@@ -1407,11 +1409,14 @@ class _CriarProvaPageState extends State<CriarProvaPage> {
                     padding: const EdgeInsets.only(
                       left: 16.0,
                     ), // Espaço à esquerda
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.contain,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/UniCV-Variacoes-07.png',
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),

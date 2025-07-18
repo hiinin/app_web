@@ -293,6 +293,7 @@ class CriarLocacaoFunctions {
     required String? periodoAulaSelecionado,
     required Map<int, Map<String, dynamic>?> materiasPorCurso,
     required Map<int, Map<String, dynamic>?> professoresPorCurso,
+    Function(String)? onProgress,
   }) async {
     if (isLoading) return; // Evita duplo clique
 
@@ -302,6 +303,8 @@ class CriarLocacaoFunctions {
       'sala=${salaSelecionada?.id}, '
       'aula=$periodoAulaSelecionado',
     );
+
+    onProgress?.call('Verificando dados...');
 
     final bool temDiasSelecionados =
         modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
@@ -337,7 +340,13 @@ class CriarLocacaoFunctions {
     }
 
     // Verifica todos os dias antes de salvar
+    int diaAtual = 0;
     for (DateTime diaProcessar in diasParaProcessar) {
+      diaAtual++;
+      onProgress?.call(
+        'Verificando dia $diaAtual de ${diasParaProcessar.length}...',
+      );
+
       final dataFormatada =
           '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
@@ -538,8 +547,16 @@ class CriarLocacaoFunctions {
         'DEBUG - Cursos selecionados: ${cursosSelecionados.map((c) => '${c.curso} (ID: ${c.id})').join(', ')}',
       );
 
+      onProgress?.call('Salvando agendamentos...');
+
       // Salva agendamentos para todos os cursos e dias selecionados
+      int diaSalvando = 0;
       for (DateTime diaProcessar in diasParaProcessar) {
+        diaSalvando++;
+        onProgress?.call(
+          'Salvando dia $diaSalvando de ${diasParaProcessar.length}...',
+        );
+
         final dataFormatada =
             '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
 
@@ -579,6 +596,8 @@ class CriarLocacaoFunctions {
       // Se foram criados múltiplos agendamentos, aguarda um pouco e então
       // remove os registros individuais do histórico e cria um registro múltiplo
       if (idsAgendamentosCriados.length > 1) {
+        onProgress?.call('Finalizando agendamento...');
+
         // Aguarda um pouco para os triggers criarem os registros
         await Future.delayed(const Duration(milliseconds: 1000));
 

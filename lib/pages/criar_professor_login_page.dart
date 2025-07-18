@@ -408,16 +408,25 @@ class _CriarProfessorLoginPageState extends State<CriarProfessorLoginPage> {
         child: Column(
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(color: Color(0xFF1E40AF)),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
+                ),
+              ),
               child: Row(
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(left: 16.0),
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.contain,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/UniCV-Variacoes-07.png',
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -444,7 +453,7 @@ class _CriarProfessorLoginPageState extends State<CriarProfessorLoginPage> {
             ),
             // INÍCIO
             ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
               title: const Text(
                 'Início',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -453,27 +462,27 @@ class _CriarProfessorLoginPageState extends State<CriarProfessorLoginPage> {
             ),
 
             ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
               title: const Text('Novo Agendamento'),
               onTap:
                   () =>
                       Navigator.pushReplacementNamed(context, '/criarlocacao'),
             ),
             ListTile(
-              leading: const Icon(Icons.quiz, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
               title: const Text('Agendar Prova'),
               onTap:
                   () => Navigator.pushReplacementNamed(context, '/criarprova'),
             ),
             ListTile(
-              leading: const Icon(Icons.event, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
               title: const Text('Novo Evento'),
               onTap:
                   () => Navigator.pushReplacementNamed(context, '/criarevento'),
             ),
 
             ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
               title: const Text('Lista de Agendamento'),
               onTap:
                   () =>
@@ -481,19 +490,19 @@ class _CriarProfessorLoginPageState extends State<CriarProfessorLoginPage> {
             ),
 
             ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
               title: const Text('Nova Sala'),
               onTap:
                   () => Navigator.pushReplacementNamed(context, '/criarsala'),
             ),
             ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
               title: const Text('Novo Curso'),
               onTap:
                   () => Navigator.pushReplacementNamed(context, '/criarcurso'),
             ),
             ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
               title: const Text('Novo Professor'),
               onTap:
                   () => Navigator.pushReplacementNamed(
@@ -502,14 +511,14 @@ class _CriarProfessorLoginPageState extends State<CriarProfessorLoginPage> {
                   ),
             ),
             ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
               title: const Text('Nova Matéria'),
               onTap:
                   () =>
                       Navigator.pushReplacementNamed(context, '/criarmateria'),
             ),
             ListTile(
-              leading: const Icon(Icons.person_add, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.person_add, color: Color(0xFF44A301)),
               title: const Text('Cadastrar Professor'),
               onTap:
                   () => Navigator.pushReplacementNamed(
@@ -519,7 +528,7 @@ class _CriarProfessorLoginPageState extends State<CriarProfessorLoginPage> {
             ),
 
             ListTile(
-              leading: const Icon(Icons.history, color: Color(0xFF1E40AF)),
+              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
               title: const Text('Histórico de Ações'),
               onTap:
                   () => Navigator.pushReplacementNamed(

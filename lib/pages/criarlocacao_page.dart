@@ -1301,6 +1301,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
 
         // Calendário completo em uma caixa
         Container(
+          height: 420, // Altura fixa para manter consistência
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1470,15 +1471,24 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
               ),
               const SizedBox(height: 12),
 
-              // Grade do calendário
-              ...List.generate((calendarDays.length / 7).ceil(), (weekIndex) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: calendarDays.skip(weekIndex * 7).take(7).toList(),
-                  ),
-                );
-              }),
+              // Grade do calendário com altura fixa
+              Expanded(
+                child: Column(
+                  children: List.generate((calendarDays.length / 7).ceil(), (
+                    weekIndex,
+                  ) {
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children:
+                              calendarDays.skip(weekIndex * 7).take(7).toList(),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
             ],
           ),
         ),
@@ -1490,6 +1500,11 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
     if (isLoading) return; // Evita duplo clique
 
     try {
+      // Salva os valores antes de limpar para usar na mensagem
+      final numCursos = cursosSelecionados.length;
+      final numDias = modoMultiplo ? diasMultiplosSelecionados.length : 1;
+      final modoMultiploTemp = modoMultiplo;
+
       await functions.salvarLocacao(
         isLoading: isLoading,
         modoMultiplo: modoMultiplo,
@@ -1500,6 +1515,30 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         periodoAulaSelecionado: periodoAulaSelecionado,
         materiasPorCurso: materiasPorCurso,
         professoresPorCurso: professoresPorCurso,
+        onProgress: (String message) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(message)),
+                  ],
+                ),
+                duration: const Duration(seconds: 2),
+                backgroundColor: const Color(0xFF44A301),
+              ),
+            );
+          }
+        },
       );
 
       setState(() {
@@ -1522,9 +1561,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            modoMultiplo
-                ? 'Agendamento para ${cursosSelecionados.length} curso(s) em ${diasMultiplosSelecionados.length} dia(s) salvo com sucesso'
-                : 'Agendamento para ${cursosSelecionados.length} curso(s) salvo com sucesso',
+            modoMultiploTemp
+                ? 'Agendamento para $numCursos curso(s) em $numDias dia(s) salvo com sucesso'
+                : 'Agendamento para $numCursos curso(s) salvo com sucesso',
           ),
         ),
       );
@@ -1665,18 +1704,19 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   Widget _buildMensagemValidacaoSequencial() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color:
             _podeSelecionarSala()
                 ? Colors.green.withOpacity(0.1)
                 : Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color:
               _podeSelecionarSala()
                   ? Colors.green.withOpacity(0.5)
                   : Colors.orange.withOpacity(0.5),
+          width: 1.5,
         ),
       ),
       child: Row(
@@ -1684,15 +1724,16 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
           Icon(
             _podeSelecionarSala() ? Icons.check_circle : Icons.warning,
             color: _podeSelecionarSala() ? Colors.green : Colors.orange,
-            size: 18,
+            size: 22,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               _getMensagemValidacaoSequencial(),
               style: TextStyle(
                 color: _podeSelecionarSala() ? Colors.green : Colors.orange,
-                fontSize: 13,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -1739,11 +1780,14 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     padding: const EdgeInsets.only(
                       left: 16.0,
                     ), // Espaço à esquerda
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.contain,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/UniCV-Variacoes-07.png',
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1892,15 +1936,19 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                             const SizedBox(height: 20),
                             Expanded(
                               child: SingleChildScrollView(
-                                child: _buildCustomCalendar(),
+                                child: Column(
+                                  children: [
+                                    _buildCustomCalendar(),
+                                    // Aviso de validação mais próximo do agendamento
+                                    if (!_todosCamposPreenchidos()) ...[
+                                      const SizedBox(height: 16),
+                                      _buildMensagemValidacaoSequencial(),
+                                    ],
+                                    const SizedBox(height: 16),
+                                  ],
+                                ),
                               ),
                             ),
-                            // Aviso de validação mais próximo do agendamento
-                            if (!_todosCamposPreenchidos()) ...[
-                              const SizedBox(height: 16),
-                              _buildMensagemValidacaoSequencial(),
-                            ],
-                            const SizedBox(height: 16),
                           ],
                         ),
                       ),

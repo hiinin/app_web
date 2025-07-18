@@ -1229,11 +1229,14 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                     padding: const EdgeInsets.only(
                       left: 16.0,
                     ), // Espaço à esquerda
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.contain,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/images/UniCV-Variacoes-07.png',
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
