@@ -1499,6 +1499,10 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
   Future<void> salvarLocacao() async {
     if (isLoading) return; // Evita duplo clique
 
+    setState(() {
+      isLoading = true; // Ativa o loading no início
+    });
+
     try {
       // Salva os valores antes de limpar para usar na mensagem
       final numCursos = cursosSelecionados.length;
@@ -1517,6 +1521,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         professoresPorCurso: professoresPorCurso,
         onProgress: (String message) {
           if (mounted) {
+            // Remove o SnackBar anterior se existir
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
@@ -1533,13 +1540,18 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                     Expanded(child: Text(message)),
                   ],
                 ),
-                duration: const Duration(seconds: 2),
+                duration: const Duration(seconds: 3),
                 backgroundColor: const Color(0xFF44A301),
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
               ),
             );
           }
         },
       );
+
+      // Aguarda um pouco para garantir que a mensagem final seja exibida
+      await Future.delayed(const Duration(milliseconds: 500));
 
       setState(() {
         salaSelecionada = null;
@@ -1558,21 +1570,58 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
         diasMultiplosSelecionados.clear();
       });
 
+      // Remove o SnackBar de progresso antes de mostrar o sucesso
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            modoMultiploTemp
-                ? 'Agendamento para $numCursos curso(s) em $numDias dia(s) salvo com sucesso'
-                : 'Agendamento para $numCursos curso(s) salvo com sucesso',
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  modoMultiploTemp
+                      ? '✅ Agendamento para $numCursos curso(s) em $numDias dia(s) criado com sucesso!'
+                      : '✅ Agendamento para $numCursos curso(s) criado com sucesso!',
+                ),
+              ),
+            ],
           ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
         ),
       );
 
       carregarDados();
+
+      // Só desativa o loading DEPOIS de tudo estar terminado
+      setState(() => isLoading = false);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-    } finally {
+
+      // Remove o SnackBar de progresso antes de mostrar o erro
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text('❌ Erro: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+
+      // Desativa o loading mesmo em caso de erro
       setState(() => isLoading = false);
     }
   }
@@ -2537,10 +2586,23 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: ElevatedButton.icon(
-                                        icon: const Icon(
-                                          Icons.add,
-                                          color: Colors.white,
-                                        ),
+                                        icon:
+                                            isLoading
+                                                ? const SizedBox(
+                                                  width: 16,
+                                                  height: 16,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                          Color
+                                                        >(Colors.white),
+                                                  ),
+                                                )
+                                                : const Icon(
+                                                  Icons.add,
+                                                  color: Colors.white,
+                                                ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color(
                                             0xFF44A301,
@@ -2562,7 +2624,9 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
                                         onPressed:
                                             isLoading ? null : salvarLocacao,
                                         label: Text(
-                                          'Agendar ${cursosSelecionados.length} curso(s)',
+                                          isLoading
+                                              ? 'Criando agendamento...'
+                                              : 'Agendar ${cursosSelecionados.length} curso(s)',
                                         ),
                                       ),
                                     ),

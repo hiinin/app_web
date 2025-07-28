@@ -304,7 +304,7 @@ class CriarLocacaoFunctions {
       'aula=$periodoAulaSelecionado',
     );
 
-    onProgress?.call('Verificando dados...');
+    onProgress?.call('🔍 Verificando dados do agendamento...');
 
     final bool temDiasSelecionados =
         modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
@@ -344,7 +344,7 @@ class CriarLocacaoFunctions {
     for (DateTime diaProcessar in diasParaProcessar) {
       diaAtual++;
       onProgress?.call(
-        'Verificando dia $diaAtual de ${diasParaProcessar.length}...',
+        '📅 Verificando disponibilidade do dia $diaAtual de ${diasParaProcessar.length}...',
       );
 
       final dataFormatada =
@@ -547,14 +547,14 @@ class CriarLocacaoFunctions {
         'DEBUG - Cursos selecionados: ${cursosSelecionados.map((c) => '${c.curso} (ID: ${c.id})').join(', ')}',
       );
 
-      onProgress?.call('Salvando agendamentos...');
+      onProgress?.call('💾 Iniciando salvamento dos agendamentos...');
 
       // Salva agendamentos para todos os cursos e dias selecionados
       int diaSalvando = 0;
       for (DateTime diaProcessar in diasParaProcessar) {
         diaSalvando++;
         onProgress?.call(
-          'Salvando dia $diaSalvando de ${diasParaProcessar.length}...',
+          '📝 Salvando agendamentos do dia $diaSalvando de ${diasParaProcessar.length}...',
         );
 
         final dataFormatada =
@@ -596,7 +596,7 @@ class CriarLocacaoFunctions {
       // Se foram criados múltiplos agendamentos, aguarda um pouco e então
       // remove os registros individuais do histórico e cria um registro múltiplo
       if (idsAgendamentosCriados.length > 1) {
-        onProgress?.call('Finalizando agendamento...');
+        onProgress?.call('✨ Finalizando e organizando dados do agendamento...');
 
         // Aguarda um pouco para os triggers criarem os registros
         await Future.delayed(const Duration(milliseconds: 1000));
@@ -666,6 +666,12 @@ class CriarLocacaoFunctions {
           'data_hora': timestampCriacao.toIso8601String(),
         });
       }
+
+      // Mensagem final de conclusão
+      onProgress?.call('🎉 Agendamento criado com sucesso!');
+
+      // Aguarda um pouco para garantir que a mensagem final seja exibida
+      await Future.delayed(const Duration(milliseconds: 300));
     } catch (e) {
       throw Exception('Erro ao salvar agendamento: $e');
     }

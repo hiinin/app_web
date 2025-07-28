@@ -62,91 +62,6 @@ class _CriarEventoPageState extends State<CriarEventoPage> {
 
   bool isLoading = false;
 
-  // NOVO: Controles para validação sequencial
-  bool _podeSelecionarAula() {
-    return dataEvento != null;
-  }
-
-  bool _podeSelecionarCurso() {
-    return _podeSelecionarAula();
-  }
-
-  bool _podeSelecionarMateria() {
-    return _podeSelecionarCurso() && cursoSelecionado != null;
-  }
-
-  bool _podeSelecionarProfessor() {
-    return _podeSelecionarMateria() && materiaSelecionada != null;
-  }
-
-  bool _podeSelecionarSala() {
-    return _podeSelecionarProfessor() &&
-        professorSelecionado != null &&
-        periodoAulaSelecionado != null;
-  }
-
-  // NOVO: Função para obter mensagem de validação sequencial
-  String _getMensagemValidacaoSequencial() {
-    if (!_podeSelecionarAula()) {
-      return '⚠️ Primeiro selecione a data do evento';
-    }
-    if (!_podeSelecionarCurso()) {
-      return '⚠️ Agora selecione um curso';
-    }
-    if (!_podeSelecionarMateria()) {
-      return '⚠️ Selecione uma matéria';
-    }
-    if (!_podeSelecionarProfessor()) {
-      return '⚠️ Selecione um professor';
-    }
-    if (!_podeSelecionarSala()) {
-      return '⚠️ Selecione o período da aula';
-    }
-    return '✅ Todos os campos preenchidos! Agora selecione a sala.';
-  }
-
-  // NOVO: Widget para exibir mensagem de validação sequencial
-  Widget _buildMensagemValidacaoSequencial() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color:
-            _podeSelecionarSala()
-                ? Colors.green.withOpacity(0.1)
-                : Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color:
-              _podeSelecionarSala()
-                  ? Colors.green.withOpacity(0.5)
-                  : Colors.orange.withOpacity(0.5),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _podeSelecionarSala() ? Icons.check_circle : Icons.warning,
-            color: _podeSelecionarSala() ? Colors.green : Colors.orange,
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _getMensagemValidacaoSequencial(),
-              style: TextStyle(
-                color: _podeSelecionarSala() ? Colors.green : Colors.orange,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -290,17 +205,8 @@ class _CriarEventoPageState extends State<CriarEventoPage> {
       }
     }
 
-    // NOVO: Determina se o dropdown está habilitado baseado no tipo
+    // Sem validação sequencial, todos os campos sempre habilitados
     bool isEnabled = true;
-    if (T == curso_model.Curso) {
-      isEnabled = _podeSelecionarCurso();
-    } else if (T == Map<String, dynamic>) {
-      if (fieldKey == _materiaFieldKey) {
-        isEnabled = _podeSelecionarMateria();
-      } else if (fieldKey == _professorFieldKey) {
-        isEnabled = _podeSelecionarProfessor();
-      }
-    }
 
     List<T> filteredItems =
         items.where((item) {
@@ -1537,10 +1443,6 @@ class _CriarEventoPageState extends State<CriarEventoPage> {
                         child: Column(
                           children: [
                             _buildCustomCalendar(),
-                            if (!_todosCamposPreenchidos()) ...[
-                              const SizedBox(height: 16),
-                              _buildMensagemValidacaoSequencial(),
-                            ],
                             const SizedBox(height: 16),
                           ],
                         ),
