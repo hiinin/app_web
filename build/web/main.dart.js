@@ -7860,7 +7860,7 @@ aK8(){var s=0,r=A.A(t.H),q=1,p=[],o,n,m,l,k,j,i,h,g,f
 var $async$aK8=A.v(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:q=3
 s=6
-return A.p(A.amU("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5laWVkcW9wemRuaWV2Z21mYm10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3ODYxMjcsImV4cCI6MjA1OTM2MjEyN30.wD9Qa5qwmstJVofDIT2hpMoxvrIDzH_uyN-IGigehC0","https://neiedqopzdnievgmfbmt.supabase.co"),$async$aK8)
+return A.p(A.amU("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5laWVkcW9wemRuaWV2Z21mYm10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3ODYxMjcsImV4cCI6MjA1OTM2MjEyN30.wD9Qa5qwmstJVofDIT2hpMoxvrIDzH_uyN-IGigehC0","https://kjtfpumdexotigyxauyb.supabase.co"),$async$aK8)
 case 6:A.bx("Supabase inicializado com sucesso")
 q=1
 s=5
