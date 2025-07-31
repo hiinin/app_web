@@ -806,7 +806,7 @@ class _CriarEventoPageState extends State<CriarEventoPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Não é possível criar evento. Já existe uma $tipoExistente cadastrada para este curso, sala e dia ${dataFormatada.split('-').reversed.join('/')}.',
+              'Não é possível criar evento. Já existte uma $tipoExistente cadastrada para este curso, sala e dia ${dataFormatada.split('-').reversed.join('/')}.',
             ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
