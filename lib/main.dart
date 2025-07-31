@@ -32,9 +32,9 @@ void main() async {
 Future<void> _initializeApp() async {
   try {
     await Supabase.initialize(
-      url: 'https://neiedqopzdnievgmfbmt.supabase.co',
+      url: 'https://kjtfpumdexotigyxauyb.supabase.co',
       anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5laWVkcW9wemRuaWV2Z21mYm10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM3ODYxMjcsImV4cCI6MjA1OTM2MjEyN30.wD9Qa5qwmstJVofDIT2hpMoxvrIDzH_uyN-IGigehC0',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqdGZwdW1kZXhvdGlneXhhdXliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4OTMzOTcsImV4cCI6MjA2OTQ2OTM5N30.qTJaYkGyXdJEbyOglc3WkH50P6BmhiBtOFFa83mdvSY',
     );
     print('Supabase inicializado com sucesso');
   } catch (e) {
