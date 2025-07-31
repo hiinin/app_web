@@ -1,7 +1,7 @@
 {
-  "buildCommand": "flutter build web",
+  "buildCommand": "curl -sL https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.19.3-stable.tar.xz | tar xJ && export PATH=\"$PATH:`pwd`/flutter/bin\" && flutter doctor && flutter pub get && flutter build web",
   "outputDirectory": "build/web",
-  "installCommand": "flutter pub get",
+  "installCommand": "echo 'Flutter will be installed during build'",
   "framework": null,
   "rewrites": [
     {
