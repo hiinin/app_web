@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'routes/routes.dart';
 import 'package:flutter/services.dart';
 
+// FORÇA NOVO DEPLOY - ATUALIZA BANCO DE DADOS
 void main() async {
   // Garante que o Flutter seja inicializado na zona correta
   WidgetsFlutterBinding.ensureInitialized();
