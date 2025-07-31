@@ -1,0 +1,24 @@
+{
+  "buildCommand": "flutter build web",
+  "outputDirectory": "build/web",
+  "installCommand": "flutter pub get",
+  "framework": null,
+  "functions": {},
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ]
+} 
