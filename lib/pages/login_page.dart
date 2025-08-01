@@ -81,7 +81,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
             child: Container(
               decoration: BoxDecoration(
                 image: const DecorationImage(
-                  image: AssetImage('assets/images/imagemfundologin.jpg'),
+                  image: AssetImage('assets/images/fundounicv1.png'),
                   fit: BoxFit.cover,
                 ),
                 boxShadow: [
