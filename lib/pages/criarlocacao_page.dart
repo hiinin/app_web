@@ -1509,8 +1509,7 @@ class _CriarLocacaoPageState extends State<CriarLocacaoPage> {
       final numDias = modoMultiplo ? diasMultiplosSelecionados.length : 1;
       final modoMultiploTemp = modoMultiplo;
 
-      await functions.salvarLocacao(
-        isLoading: isLoading,
+      await functions.salvarLocacaoTeste(
         modoMultiplo: modoMultiplo,
         diasMultiplosSelecionados: diasMultiplosSelecionados,
         dia: dia,

@@ -669,7 +669,7 @@ class _HomeCalendarState extends State<_HomeCalendar> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 450, // Aumentei a altura para acomodar melhor o conteúdo
+      height: 500, // Aumentei de 450 para 500 para resolver o overflow
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
@@ -937,7 +937,7 @@ class _HomeCalendarState extends State<_HomeCalendar> {
       calendarDays.add(
         Expanded(
           child: Container(
-            height: 45, // Aumentei mais a altura dos dias
+            height: 50, // Aumentei de 45 para 50 para dar mais espaço
             margin: const EdgeInsets.all(2), // Aumentei um pouco a margem
             decoration: BoxDecoration(
               shape: BoxShape.circle,

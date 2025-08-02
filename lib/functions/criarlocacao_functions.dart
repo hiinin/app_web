@@ -540,12 +540,19 @@ class CriarLocacaoFunctions {
       List<int> idsAgendamentosCriados = [];
       final timestampCriacao = DateTime.now();
 
+      print('DEBUG - ==========================================');
+      print('DEBUG - INICIANDO PROCESSO DE SALVAMENTO');
+      print('DEBUG - ==========================================');
       print(
         'DEBUG - Iniciando salvamento de ${cursosSelecionados.length} cursos',
       );
       print(
         'DEBUG - Cursos selecionados: ${cursosSelecionados.map((c) => '${c.curso} (ID: ${c.id})').join(', ')}',
       );
+      print('DEBUG - Sala selecionada: ${salaSelecionada?.id}');
+      print('DEBUG - Período aula: $periodoAulaSelecionado');
+      print('DEBUG - Modo múltiplo: $modoMultiplo');
+      print('DEBUG - Dias para processar: ${diasParaProcessar.length}');
 
       onProgress?.call('💾 Iniciando salvamento dos agendamentos...');
 
@@ -566,24 +573,58 @@ class CriarLocacaoFunctions {
           final materia = materiasPorCurso[curso.id];
           final professor = professoresPorCurso[curso.id];
 
-          final response =
-              await supabase.from('agendamento').insert({
-                'aula_periodo': periodoAulaSelecionado!,
-                'sala_id': salaSelecionada!.id,
-                'curso_id': curso.id,
-                'materia_id': materia!['id'],
-                'professor_id': professor!['id'],
-                'dia': dataFormatada,
-                'periodo': periodoCurso,
-                'tipo_agendamento': 'A', // A=Aula
-              }).select();
+          print('DEBUG - ==========================================');
+          print('DEBUG - TENTANDO INSERIR AGENDAMENTO');
+          print('DEBUG - ==========================================');
+          print('DEBUG - Curso: ${curso.curso} (ID: ${curso.id})');
+          print('DEBUG - Sala ID: ${salaSelecionada!.id}');
+          print('DEBUG - Matéria ID: ${materia!['id']}');
+          print('DEBUG - Professor ID: ${professor!['id']}');
+          print('DEBUG - Data formatada: $dataFormatada');
+          print('DEBUG - Período curso: $periodoCurso');
+          print('DEBUG - Período aula: $periodoAulaSelecionado');
 
-          // Captura o ID do agendamento criado
-          if (response != null && response.isNotEmpty) {
-            idsAgendamentosCriados.add(response[0]['id']);
-          } else {
+          // Preparar dados para inserção
+          final dadosInserir = {
+            'aula_periodo': periodoAulaSelecionado!,
+            'sala_id': salaSelecionada!.id,
+            'curso_id': curso.id,
+            'materia_id': materia!['id'],
+            'professor_id': professor!['id'],
+            'dia': dataFormatada,
+            'periodo': periodoCurso,
+            'tipo_agendamento': 'A', // A=Aula
+          };
+
+          print('DEBUG - Dados para inserção: $dadosInserir');
+
+          try {
+            print('DEBUG - Executando INSERT no Supabase...');
+            final response =
+                await supabase
+                    .from('agendamento')
+                    .insert(dadosInserir)
+                    .select();
+
+            print('DEBUG - Resposta da inserção: $response');
+
+            // Captura o ID do agendamento criado
+            if (response != null && response.isNotEmpty) {
+              idsAgendamentosCriados.add(response[0]['id']);
+              print(
+                'DEBUG - ✅ Agendamento criado com sucesso para curso ${curso.curso}, ID: ${response[0]['id']}',
+              );
+            } else {
+              print(
+                'DEBUG - ❌ ERRO: Falha ao criar agendamento para curso ${curso.curso} - resposta vazia',
+              );
+            }
+          } catch (e) {
             print(
-              'DEBUG - ERRO: Falha ao criar agendamento para curso ${curso.curso}',
+              'DEBUG - ❌ ERRO ao inserir agendamento para curso ${curso.curso}: $e',
+            );
+            throw Exception(
+              'Erro ao criar agendamento para curso ${curso.curso}: $e',
             );
           }
         }
@@ -674,6 +715,236 @@ class CriarLocacaoFunctions {
       await Future.delayed(const Duration(milliseconds: 300));
     } catch (e) {
       throw Exception('Erro ao salvar agendamento: $e');
+    }
+  }
+
+  // Função de teste simplificada para inserção de agendamento
+  Future<void> salvarLocacaoTeste({
+    required List<curso_model.Curso> cursosSelecionados,
+    required sala_model.Sala? salaSelecionada,
+    required String? periodoAulaSelecionado,
+    required Map<int, Map<String, dynamic>?> materiasPorCurso,
+    required Map<int, Map<String, dynamic>?> professoresPorCurso,
+    required DateTime? dia,
+    required Set<DateTime> diasMultiplosSelecionados,
+    required bool modoMultiplo,
+    Function(String)? onProgress,
+  }) async {
+    print('DEBUG - ==========================================');
+    print('DEBUG - INICIANDO TESTE DE INSERÇÃO SIMPLIFICADA');
+    print('DEBUG - ==========================================');
+
+    try {
+      List<int> idsAgendamentosCriados = [];
+      final timestampCriacao = DateTime.now();
+
+      // Lista de dias para processar
+      List<DateTime> diasParaProcessar = [];
+      if (modoMultiplo) {
+        diasParaProcessar = diasMultiplosSelecionados.toList();
+      } else {
+        diasParaProcessar = [dia!];
+      }
+
+      print('DEBUG - Dias para processar: ${diasParaProcessar.length}');
+      print('DEBUG - Cursos selecionados: ${cursosSelecionados.length}');
+
+      // Salva agendamentos para todos os cursos e dias selecionados
+      for (DateTime diaProcessar in diasParaProcessar) {
+        final dataFormatada =
+            '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
+
+        print('DEBUG - Processando dia: $dataFormatada');
+
+        // Para cada curso selecionado
+        for (final curso in cursosSelecionados) {
+          final periodoCurso = curso.periodo;
+          final materia = materiasPorCurso[curso.id];
+          final professor = professoresPorCurso[curso.id];
+
+          print('DEBUG - ==========================================');
+          print('DEBUG - TENTANDO INSERIR AGENDAMENTO');
+          print('DEBUG - ==========================================');
+          print('DEBUG - Curso: ${curso.curso} (ID: ${curso.id})');
+          print('DEBUG - Sala ID: ${salaSelecionada!.id}');
+          print('DEBUG - Matéria ID: ${materia!['id']}');
+          print('DEBUG - Professor ID: ${professor!['id']}');
+          print('DEBUG - Data formatada: $dataFormatada');
+          print('DEBUG - Período curso: $periodoCurso');
+          print('DEBUG - Período aula: $periodoAulaSelecionado');
+
+          // Preparar dados para inserção
+          final dadosInserir = {
+            'aula_periodo': periodoAulaSelecionado!,
+            'sala_id': salaSelecionada!.id,
+            'curso_id': curso.id,
+            'materia_id': materia!['id'],
+            'professor_id': professor!['id'],
+            'dia': dataFormatada,
+            'periodo': periodoCurso,
+            'tipo_agendamento': 'A', // A=Aula
+          };
+
+          print('DEBUG - Dados para inserção: $dadosInserir');
+
+          try {
+            print('DEBUG - Executando INSERT no Supabase...');
+            final response =
+                await supabase
+                    .from('agendamento')
+                    .insert(dadosInserir)
+                    .select();
+
+            print('DEBUG - Resposta da inserção: $response');
+
+            // Captura o ID do agendamento criado
+            if (response != null && response.isNotEmpty) {
+              idsAgendamentosCriados.add(response[0]['id']);
+              print(
+                'DEBUG - ✅ Agendamento criado com sucesso para curso ${curso.curso}, ID: ${response[0]['id']}',
+              );
+            } else {
+              print(
+                'DEBUG - ❌ ERRO: Falha ao criar agendamento para curso ${curso.curso} - resposta vazia',
+              );
+            }
+          } catch (e) {
+            print(
+              'DEBUG - ❌ ERRO ao inserir agendamento para curso ${curso.curso}: $e',
+            );
+            throw Exception(
+              'Erro ao criar agendamento para curso ${curso.curso}: $e',
+            );
+          }
+        }
+      }
+
+      print(
+        'DEBUG - Total de agendamentos criados: ${idsAgendamentosCriados.length}',
+      );
+
+      onProgress?.call('🎉 Agendamento criado com sucesso!');
+    } catch (e) {
+      print('DEBUG - ❌ ERRO GERAL: $e');
+      throw Exception('Erro ao salvar agendamento: $e');
+    }
+  }
+
+  // Função para carregar agendamentos múltiplos existentes
+  Future<List<Map<String, dynamic>>> carregarAgendamentosMultiplos({
+    DateTime? dataInicio,
+    DateTime? dataFim,
+    int? salaId,
+    int? cursoId,
+  }) async {
+    try {
+      var query = supabase
+          .from('historico_acoes')
+          .select()
+          .eq('tabela_afetada', 'agendamento')
+          .eq('acao', 'INSERT_MULTIPLE')
+          .order('data_hora', ascending: false);
+
+      final response = await query;
+
+      if (response == null || response.isEmpty) {
+        return [];
+      }
+
+      List<Map<String, dynamic>> agendamentosMultiplos = [];
+
+      for (final item in response) {
+        final dadosNovos = item['dados_novos'] as Map<String, dynamic>?;
+        if (dadosNovos != null) {
+          // Aplicar filtros adicionais se fornecidos
+          if (salaId != null && dadosNovos['sala_id'] != salaId) {
+            continue;
+          }
+          if (cursoId != null &&
+              !(dadosNovos['cursos_ids'] as List).contains(cursoId)) {
+            continue;
+          }
+
+          // Aplicar filtros de data se fornecidos
+          if (dataInicio != null) {
+            final dataHora = DateTime.parse(item['data_hora']);
+            if (dataHora.isBefore(dataInicio)) {
+              continue;
+            }
+          }
+          if (dataFim != null) {
+            final dataHora = DateTime.parse(item['data_hora']);
+            if (dataHora.isAfter(dataFim)) {
+              continue;
+            }
+          }
+
+          agendamentosMultiplos.add({
+            'id': item['id'],
+            'data_hora': item['data_hora'],
+            'detalhes': item['detalhes'],
+            'dados_novos': dadosNovos,
+            'registro_id': item['registro_id'],
+          });
+        }
+      }
+
+      return agendamentosMultiplos;
+    } catch (e) {
+      print('Erro ao carregar agendamentos múltiplos: $e');
+      return [];
+    }
+  }
+
+  // Função para verificar se existem agendamentos múltiplos para um período específico
+  Future<List<Map<String, dynamic>>> verificarAgendamentosMultiplosExistentes({
+    required DateTime data,
+    required int? salaId,
+    required String periodoAula,
+    required int periodoCurso,
+  }) async {
+    try {
+      final dataFormatada =
+          '${data.year.toString().padLeft(4, '0')}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+
+      // Buscar agendamentos múltiplos que incluem esta data
+      final response = await supabase
+          .from('historico_acoes')
+          .select()
+          .eq('tabela_afetada', 'agendamento')
+          .eq('acao', 'INSERT_MULTIPLE');
+
+      List<Map<String, dynamic>> agendamentosEncontrados = [];
+
+      for (final item in response) {
+        final dadosNovos = item['dados_novos'] as Map<String, dynamic>?;
+        if (dadosNovos != null) {
+          final datas = dadosNovos['datas'] as List<String>?;
+          final salaIdHistorico = dadosNovos['sala_id'];
+          final aulaPeriodo = dadosNovos['aula_periodo'];
+          final periodo = dadosNovos['periodo'];
+
+          // Verificar se este agendamento múltiplo inclui a data e sala específicas
+          if (datas != null &&
+              datas.contains(dataFormatada.split('-').reversed.join('/')) &&
+              salaIdHistorico == salaId &&
+              aulaPeriodo == periodoAula &&
+              periodo == periodoCurso) {
+            agendamentosEncontrados.add({
+              'id': item['id'],
+              'data_hora': item['data_hora'],
+              'detalhes': item['detalhes'],
+              'dados_novos': dadosNovos,
+              'registro_id': item['registro_id'],
+            });
+          }
+        }
+      }
+
+      return agendamentosEncontrados;
+    } catch (e) {
+      print('Erro ao verificar agendamentos múltiplos existentes: $e');
+      return [];
     }
   }
 }

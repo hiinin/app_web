@@ -106,145 +106,155 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               decoration: const BoxDecoration(color: Colors.white),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 30),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 30),
 
-                  Center(
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.asset(
-                            'assets/images/UniCV-Variacoes-07.png', // ajuste o caminho se necessário
-                            width: 350,
-                            height: 350,
-                            fit: BoxFit.contain,
+                    Center(
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/images/UniCV-Variacoes-07.png', // ajuste o caminho se necessário
+                              width: 300, // Reduced from 350
+                              height: 300, // Reduced from 350
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 40), // Reduced from Spacer
+                    // Campo Login
+                    TextField(
+                      controller: _loginController,
+                      style: const TextStyle(color: Color(0xFF222B45)),
+                      decoration: InputDecoration(
+                        labelText: 'Login',
+                        labelStyle: const TextStyle(color: Color(0xFF8F9BB3)),
+                        filled: true,
+                        fillColor: const Color(0xFFF7F9FC),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 20, // Reduced from 24
+                          horizontal: 20,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE4E9F2),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-
-                  const Spacer(flex: 1), // Espaço entre cabeçalho e campos
-                  // Campo Login
-                  TextField(
-                    controller: _loginController,
-                    style: const TextStyle(color: Color(0xFF222B45)),
-                    decoration: InputDecoration(
-                      labelText: 'Login',
-                      labelStyle: const TextStyle(color: Color(0xFF8F9BB3)),
-                      filled: true,
-                      fillColor: const Color(0xFFF7F9FC),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 24,
-                        horizontal: 20,
-                      ), // AUMENTA ALTURA
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE4E9F2)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE4E9F2)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF1976D2),
-                          width: 2,
-                        ),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.person_outline,
-                        color: Color(0xFF8F9BB3),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 60), // Espaço grande entre campos
-                  // Campo Senha
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    style: const TextStyle(color: Color(0xFF222B45)),
-                    decoration: InputDecoration(
-                      labelText: 'Senha',
-                      labelStyle: const TextStyle(color: Color(0xFF8F9BB3)),
-                      filled: true,
-                      fillColor: const Color(0xFFF7F9FC),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 24,
-                        horizontal: 20,
-                      ), // AUMENTA ALTURA
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE4E9F2)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE4E9F2)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF1976D2),
-                          width: 2,
-                        ),
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.lock_outline,
-                        color: Color(0xFF8F9BB3),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: const Color(0xFF8F9BB3),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                    ),
-                    onSubmitted: (_) => _tryLogin(),
-                  ),
-
-                  const Spacer(flex: 1), // Espaço entre campos e botão
-                  // Botão
-                  SizedBox(
-                    width: double.infinity,
-                    height: 64, // AUMENTA ALTURA DO BOTÃO
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 22,
-                        ), // AUMENTA ALTURA DO BOTÃO
-                        shape: RoundedRectangleBorder(
+                        enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE4E9F2),
+                          ),
                         ),
-                        elevation: 0,
-                        backgroundColor: const Color(0xFF44A301),
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: _tryLogin,
-                      child: const Text(
-                        "Entrar",
-                        style: TextStyle(
-                          fontSize: 20, // Se quiser aumentar o texto também
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.1,
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1976D2),
+                            width: 2,
+                          ),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.person_outline,
+                          color: Color(0xFF8F9BB3),
                         ),
                       ),
                     ),
-                  ),
 
-                  const Spacer(flex: 2), // Espaço no final
-                ],
+                    const SizedBox(height: 30), // Reduced from 60
+                    // Campo Senha
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      style: const TextStyle(color: Color(0xFF222B45)),
+                      decoration: InputDecoration(
+                        labelText: 'Senha',
+                        labelStyle: const TextStyle(color: Color(0xFF8F9BB3)),
+                        filled: true,
+                        fillColor: const Color(0xFFF7F9FC),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 20, // Reduced from 24
+                          horizontal: 20,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE4E9F2),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE4E9F2),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1976D2),
+                            width: 2,
+                          ),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: Color(0xFF8F9BB3),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: const Color(0xFF8F9BB3),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      onSubmitted: (_) => _tryLogin(),
+                    ),
+
+                    const SizedBox(height: 40), // Reduced from Spacer
+                    // Botão
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56, // Reduced from 64
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18, // Reduced from 22
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                          backgroundColor: const Color(0xFF44A301),
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: _tryLogin,
+                        child: const Text(
+                          "Entrar",
+                          style: TextStyle(
+                            fontSize: 18, // Reduced from 20
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 30), // Reduced from Spacer
+                  ],
+                ),
               ),
             ),
           ),
