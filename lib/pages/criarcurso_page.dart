@@ -328,14 +328,14 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.list_alt, color: Colors.black87),
+              leading: const Icon(Icons.home, color: Colors.black87),
               title: const Text(
-                'Lista de Alocações',
+                'Início',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/listalocacao');
+                Navigator.pushReplacementNamed(context, '/home');
               },
             ),
             ListTile(
@@ -350,9 +350,20 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.book, color: Colors.black87),
+              title: const Text(
+                'Nova Matéria',
+                style: TextStyle(color: Colors.black87),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/criarmateria');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.add_business, color: Colors.black87),
               title: const Text(
-                'Nova Alocação',
+                'Novo Agendamento',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () {
@@ -361,14 +372,14 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.school, color: Colors.black87),
+              leading: const Icon(Icons.list_alt, color: Colors.black87),
               title: const Text(
-                'Novo Curso',
+                'Lista de Alocações',
                 style: TextStyle(color: Colors.black87),
               ),
               onTap: () {
                 Navigator.pop(context);
-                // Já está na tela de criar curso
+                Navigator.pushNamed(context, '/listalocacao');
               },
             ),
             const Spacer(),

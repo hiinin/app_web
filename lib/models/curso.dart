@@ -34,7 +34,7 @@ class Curso {
 class DetalhesCurso extends StatelessWidget {
   final Curso? cursoSelecionado;
 
-  const DetalhesCurso({Key? key, this.cursoSelecionado}) : super(key: key);
+  const DetalhesCurso({super.key, this.cursoSelecionado});
 
   @override
   Widget build(BuildContext context) {

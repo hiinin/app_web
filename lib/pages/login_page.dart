@@ -62,15 +62,28 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           Expanded(
             flex: 7,
             child: Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
+              decoration: BoxDecoration(
+                image: const DecorationImage(
                   image: AssetImage('assets/images/imagemfundologin.jpg'),
                   fit: BoxFit.cover,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.3),
+                    blurRadius: 30,
+                    spreadRadius: 10,
+                    offset: const Offset(15, 0), // Shadow para a direita
+                  ),
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.2),
+                    blurRadius: 50,
+                    spreadRadius: 20,
+                    offset: const Offset(25, 0), // Shadow mais suave
+                  ),
+                ],
               ),
             ),
-          ),
-          // Formulário à direita (30%)
+          ),          // Formulário à direita (30%)
           Expanded(
             flex: 3,
             child: Container(
