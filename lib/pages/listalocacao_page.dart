@@ -1170,7 +1170,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   icon: const Icon(Icons.add_box, size: 16),
-                                  label: const Text('Nova Aula'),
+                                  label: const Text('Novo Ensalamento'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF44A301),
                                     foregroundColor: Colors.white,
