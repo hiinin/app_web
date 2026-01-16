@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../functions/drawer_helper.dart';
 
 class CriarSalaPage extends StatefulWidget {
   const CriarSalaPage({super.key});
@@ -13,6 +14,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   final _formKey = GlobalKey<FormState>();
   final _numeroSalaController = TextEditingController();
   final _qtdCadeirasController = TextEditingController();
+  final _qtdCadeirasPcdController = TextEditingController();
   bool _disponivel = true;
 
   List<Map<String, dynamic>> _salas = [];
@@ -24,6 +26,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   bool _projetor = false;
   bool _tv = false;
   bool _arCondicionado = false;
+  bool _pcd = false;
 
   @override
   void initState() {
@@ -38,6 +41,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     _scrollController.dispose();
     _numeroSalaController.dispose();
     _qtdCadeirasController.dispose();
+    _qtdCadeirasPcdController.dispose();
     super.dispose();
   }
 
@@ -47,7 +51,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
       final data = await supabase
           .from('salas')
           .select(
-            'id, numero_sala, qtd_cadeiras, disponivel, cor, projetor, tv, ar_condicionado',
+            'id, numero_sala, qtd_cadeiras, disponivel, cor, projetor, tv, ar_condicionado, pcd, qtd_cadeiras_pcd',
           )
           .order('numero_sala');
 
@@ -84,15 +88,25 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
   }
 
   Future<void> _salvarSala() async {
-    // Força a atualização do estado antes de salvar
-    setState(() {});
-
     final numeroSala = _numeroSalaController.text.trim();
     final qtdCadeiras = int.tryParse(_qtdCadeirasController.text.trim()) ?? 0;
+    final qtdCadeirasPcd =
+        _pcd ? (int.tryParse(_qtdCadeirasPcdController.text.trim()) ?? 0) : 0;
 
     if (numeroSala.isEmpty || qtdCadeiras <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Preencha todos os campos corretamente')),
+      );
+      return;
+    }
+
+    if (_pcd && qtdCadeirasPcd <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Quando PCD estiver marcado, informe a quantidade de carteiras PCD',
+          ),
+        ),
       );
       return;
     }
@@ -123,16 +137,36 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
       'projetor': _projetor,
       'tv': _tv,
       'ar_condicionado': _arCondicionado,
+      'pcd': _pcd,
+      'qtd_cadeiras_pcd': _pcd ? qtdCadeirasPcd : 0,
     };
 
     print('Salvando sala: $dadosSala');
     print(
-      'Valores dos switches: disponivel=$_disponivel, projetor=$_projetor, tv=$_tv, ar=$_arCondicionado',
+      'Valores dos switches: disponivel=$_disponivel (${_disponivel.runtimeType}), projetor=$_projetor (${_projetor.runtimeType}), tv=$_tv (${_tv.runtimeType}), ar=$_arCondicionado (${_arCondicionado.runtimeType})',
     );
 
     try {
       final resultado = await supabase.from('salas').insert(dadosSala).select();
       print('Sala salva com sucesso: $resultado');
+
+      await _buscarSalas();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Sala criada com sucesso!')));
+
+      // Limpa os campos após salvar com sucesso
+      _numeroSalaController.clear();
+      _qtdCadeirasController.clear();
+      _qtdCadeirasPcdController.clear();
+      setState(() {
+        _disponivel = true;
+        _projetor = false;
+        _tv = false;
+        _arCondicionado = false;
+        _pcd = false;
+      });
     } catch (e) {
       print('Erro ao salvar sala: $e');
       ScaffoldMessenger.of(
@@ -140,13 +174,6 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
       ).showSnackBar(SnackBar(content: Text('Erro ao salvar sala: $e')));
       return;
     }
-    await _buscarSalas(); // Adicione esta linha
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Sala criada com sucesso!')));
-    // Remova ou comente a linha abaixo para não sair da tela
-    // Navigator.pop(context);
   }
 
   Future<void> _editarSalaDialog(Map<String, dynamic> sala) async {
@@ -156,10 +183,14 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     final cadeirasController = TextEditingController(
       text: sala['qtd_cadeiras']?.toString() ?? '',
     );
-    bool disponivel = sala['disponivel'] == true;
-    bool projetor = sala['projetor'] == true;
-    bool tv = sala['tv'] == true;
-    bool arCondicionado = sala['ar_condicionado'] == true;
+    final cadeirasPcdController = TextEditingController(
+      text: sala['qtd_cadeiras_pcd']?.toString() ?? '0',
+    );
+    bool disponivel = _parseBool(sala['disponivel']);
+    bool projetor = _parseBool(sala['projetor']);
+    bool tv = _parseBool(sala['tv']);
+    bool arCondicionado = _parseBool(sala['ar_condicionado']);
+    bool pcd = _parseBool(sala['pcd']);
 
     final result = await showDialog<bool>(
       context: context,
@@ -233,7 +264,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                     ),
                                   ),
                                   Text(
-                                    'Sala ${sala['numero_sala']} - ${sala['qtd_cadeiras']} cadeiras',
+                                    'Sala ${sala['numero_sala']} - ${sala['qtd_cadeiras']} Carteiras',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey,
@@ -293,7 +324,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           controller: cadeirasController,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'Quantidade de Cadeiras',
+                            labelText: 'Quantidade de Carteiras',
                             labelStyle: const TextStyle(
                               color: Color(0xFF44A301),
                             ),
@@ -376,9 +407,59 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                   () => arCondicionado = value,
                                 ),
                               ),
+                              _buildSwitchTile('PCD', pcd, Icons.accessible, (
+                                value,
+                              ) {
+                                setDialogState(() {
+                                  pcd = value;
+                                  if (!value) {
+                                    cadeirasPcdController.clear();
+                                  }
+                                });
+                              }),
                             ],
                           ),
                         ),
+                        if (pcd) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: cadeirasPcdController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Quantidade de Carteiras PCD',
+                              labelStyle: const TextStyle(
+                                color: Color(0xFF44A301),
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.accessible,
+                                color: Color(0xFF44A301),
+                              ),
+                              filled: true,
+                              fillColor: const Color(
+                                0xFF44A301,
+                              ).withOpacity(0.05),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF44A301),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF44A301),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF44A301),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
 
                         // Botões de ação
@@ -442,6 +523,20 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     );
 
     if (result == true) {
+      final qtdCadeirasPcd =
+          int.tryParse(cadeirasPcdController.text.trim()) ?? 0;
+
+      if (pcd && qtdCadeirasPcd <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Quando PCD estiver marcado, informe a quantidade de carteiras PCD',
+            ),
+          ),
+        );
+        return;
+      }
+
       // Gera uma nova cor baseada no número da sala
       final novaCorSala = _gerarCorSala(numeroController.text.trim());
       await supabase
@@ -454,6 +549,8 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
             'projetor': projetor,
             'tv': tv,
             'ar_condicionado': arCondicionado,
+            'pcd': pcd,
+            'qtd_cadeiras_pcd': pcd ? qtdCadeirasPcd : 0,
           })
           .match({'id': sala['id']});
       await _buscarSalas();
@@ -644,6 +741,17 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
     return color.value.toString();
   }
 
+  // Função auxiliar para normalizar valores booleanos
+  bool _parseBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is int) return value != 0;
+    if (value is String) {
+      return value.toLowerCase() == 'true' || value == '1';
+    }
+    return false;
+  }
+
   // Função para gerar cor baseada no número da sala
   Color _gerarCorSala(String numeroSala) {
     final cores = [
@@ -714,146 +822,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
-                ),
-              ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 16.0,
-                    ), // Espaço à esquerda
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/images/UniCV-Variacoes-07.png',
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Campus Map',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Bem-vindo!',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
-              title: const Text(
-                'Inicio',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/home'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
-              title: const Text(
-                'Lista Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/listalocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Sala',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarsala'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Curso',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarcurso'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Matéria',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarmateria'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Professor',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Evento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarevento'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
-              title: const Text(
-                'Agendar Prova',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprova'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
-              title: const Text(
-                'Historico de Acoes',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                '© 2025 RH Company',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
+      drawer: buildAppDrawer(context),
       backgroundColor: const Color(0xFFF8FAFC), // igual criarcurso
       body: Center(
         child: SingleChildScrollView(
@@ -912,7 +881,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           keyboardType: TextInputType.number,
                           style: const TextStyle(color: Colors.black),
                           decoration: InputDecoration(
-                            labelText: 'Quantidade de Cadeiras',
+                            labelText: 'Quantidade de Carteiras',
                             labelStyle: const TextStyle(color: Colors.black54),
                             filled: true,
                             fillColor: Colors.white,
@@ -976,6 +945,46 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           },
                           contentPadding: EdgeInsets.zero,
                         ),
+                        SwitchListTile(
+                          title: const Text(
+                            'PCD',
+                            style: TextStyle(color: Colors.black),
+                          ),
+                          value: _pcd,
+                          activeColor: const Color(0xFF44A301),
+                          onChanged: (val) {
+                            print('PCD alterado para: $val');
+                            setState(() => _pcd = val);
+                            if (!val) {
+                              _qtdCadeirasPcdController.clear();
+                            }
+                          },
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        if (_pcd) ...[
+                          const SizedBox(height: 18),
+                          TextFormField(
+                            controller: _qtdCadeirasPcdController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Quantidade de Carteiras PCD',
+                              labelStyle: const TextStyle(
+                                color: Colors.black54,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none,
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.accessible,
+                                color: Color(0xFF44A301),
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,
@@ -1004,16 +1013,8 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             onPressed:
                                 _loadingSalas
                                     ? null
-                                    : () {
-                                      _salvarSala();
-                                      _numeroSalaController.clear();
-                                      _qtdCadeirasController.clear();
-                                      setState(() {
-                                        _disponivel = true;
-                                        _projetor = false;
-                                        _tv = false;
-                                        _arCondicionado = false;
-                                      });
+                                    : () async {
+                                      await _salvarSala();
                                     },
                           ),
                         ),
@@ -1037,7 +1038,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                           controller: _searchController,
                           style: const TextStyle(color: Colors.black),
                           decoration: InputDecoration(
-                            hintText: 'Pesquisar sala ou cadeiras...',
+                            hintText: 'Pesquisar sala ou carteiras...',
                             hintStyle: const TextStyle(color: Colors.black45),
                             prefixIcon: const Icon(
                               Icons.search,
@@ -1081,7 +1082,7 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                             Expanded(
                               flex: 2,
                               child: Text(
-                                'Cadeiras',
+                                'Carteiras',
                                 style: TextStyle(
                                   color: Colors.black54,
                                   fontWeight: FontWeight.bold,
@@ -1124,6 +1125,14 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                 size: 18,
                               ),
                             ), // Ar
+                            Expanded(
+                              flex: 1,
+                              child: Icon(
+                                Icons.accessible,
+                                color: Colors.black45,
+                                size: 18,
+                              ),
+                            ), // PCD
                             Expanded(
                               flex: 1,
                               child: Text(
@@ -1247,12 +1256,14 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                             Expanded(
                                               flex: 2,
                                               child: Text(
-                                                sala['disponivel'] == true
+                                                _parseBool(sala['disponivel'])
                                                     ? 'Sim'
                                                     : 'Não',
                                                 style: TextStyle(
                                                   color:
-                                                      sala['disponivel'] == true
+                                                      _parseBool(
+                                                            sala['disponivel'],
+                                                          )
                                                           ? Colors.green
                                                           : Colors.red,
                                                   fontWeight: FontWeight.bold,
@@ -1263,11 +1274,11 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                             Expanded(
                                               flex: 1,
                                               child: Icon(
-                                                sala['projetor'] == true
+                                                _parseBool(sala['projetor'])
                                                     ? Icons.videocam
                                                     : Icons.videocam_off,
                                                 color:
-                                                    sala['projetor'] == true
+                                                    _parseBool(sala['projetor'])
                                                         ? Colors.green
                                                         : Colors.grey,
                                                 size: 18,
@@ -1276,11 +1287,11 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                             Expanded(
                                               flex: 1,
                                               child: Icon(
-                                                sala['tv'] == true
+                                                _parseBool(sala['tv'])
                                                     ? Icons.tv
                                                     : Icons.tv_off,
                                                 color:
-                                                    sala['tv'] == true
+                                                    _parseBool(sala['tv'])
                                                         ? Colors.green
                                                         : Colors.grey,
                                                 size: 18,
@@ -1289,12 +1300,28 @@ class _CriarSalaPageState extends State<CriarSalaPage> {
                                             Expanded(
                                               flex: 1,
                                               child: Icon(
-                                                sala['ar_condicionado'] == true
+                                                _parseBool(
+                                                      sala['ar_condicionado'],
+                                                    )
                                                     ? Icons.ac_unit
                                                     : Icons.close,
                                                 color:
-                                                    sala['ar_condicionado'] ==
-                                                            true
+                                                    _parseBool(
+                                                          sala['ar_condicionado'],
+                                                        )
+                                                        ? Colors.green
+                                                        : Colors.grey,
+                                                size: 18,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: Icon(
+                                                _parseBool(sala['pcd'])
+                                                    ? Icons.accessible
+                                                    : Icons.accessible_forward,
+                                                color:
+                                                    _parseBool(sala['pcd'])
                                                         ? Colors.green
                                                         : Colors.grey,
                                                 size: 18,

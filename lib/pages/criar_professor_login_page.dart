@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../functions/drawer_helper.dart';
 
 class CriarProfessorLoginPage extends StatefulWidget {
   @override
@@ -404,141 +405,7 @@ class _CriarProfessorLoginPageState extends State<CriarProfessorLoginPage> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
-                ),
-              ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/images/UniCV-Variacoes-07.png',
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Campus Map',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Bem-vindo!',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // INÍCIO
-            ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
-              title: const Text(
-                'Início',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              onTap: () => Navigator.pushReplacementNamed(context, '/home'),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
-              title: const Text('Novo Agendamento'),
-              onTap:
-                  () =>
-                      Navigator.pushReplacementNamed(context, '/criarlocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
-              title: const Text('Agendar Prova'),
-              onTap:
-                  () => Navigator.pushReplacementNamed(context, '/criarprova'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
-              title: const Text('Novo Evento'),
-              onTap:
-                  () => Navigator.pushReplacementNamed(context, '/criarevento'),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
-              title: const Text('Lista de Agendamento'),
-              onTap:
-                  () =>
-                      Navigator.pushReplacementNamed(context, '/listalocacao'),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
-              title: const Text('Nova Sala'),
-              onTap:
-                  () => Navigator.pushReplacementNamed(context, '/criarsala'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
-              title: const Text('Novo Curso'),
-              onTap:
-                  () => Navigator.pushReplacementNamed(context, '/criarcurso'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
-              title: const Text('Novo Professor'),
-              onTap:
-                  () => Navigator.pushReplacementNamed(
-                    context,
-                    '/criarprofessor',
-                  ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
-              title: const Text('Nova Matéria'),
-              onTap:
-                  () =>
-                      Navigator.pushReplacementNamed(context, '/criarmateria'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.person_add, color: Color(0xFF44A301)),
-              title: const Text('Cadastrar Professor'),
-              onTap:
-                  () => Navigator.pushReplacementNamed(
-                    context,
-                    '/criarprofessorlogin',
-                  ),
-            ),
-
-            ListTile(
-              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
-              title: const Text('Histórico de Ações'),
-              onTap:
-                  () => Navigator.pushReplacementNamed(
-                    context,
-                    '/historicoacoes',
-                  ),
-            ),
-          ],
-        ),
-      ),
+      drawer: buildAppDrawer(context),
       body: Stack(
         children: [
           Row(

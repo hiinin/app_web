@@ -27,6 +27,49 @@ class CriarLocacaoFunctions {
     }
   }
 
+  // Função para obter horários baseados no período da aula e período do curso
+  // Retorna um Map com 'hora_inicio' e 'hora_fim' no formato TimeOfDay
+  Map<String, TimeOfDay> obterHorariosPorPeriodo(
+    String periodoAula,
+    int periodoCurso,
+  ) {
+    // periodoCurso: 1 = Matutino, 2 = Vespertino, 3 = Noturno
+    if (periodoAula == 'Primeira Aula') {
+      if (periodoCurso == 1) {
+        // Matutino: 08h00 às 09h40
+        return {
+          'hora_inicio': const TimeOfDay(hour: 8, minute: 0),
+          'hora_fim': const TimeOfDay(hour: 9, minute: 40),
+        };
+      } else if (periodoCurso == 3) {
+        // Noturno: 19h00 às 20h40
+        return {
+          'hora_inicio': const TimeOfDay(hour: 19, minute: 0),
+          'hora_fim': const TimeOfDay(hour: 20, minute: 40),
+        };
+      }
+    } else if (periodoAula == 'Segunda Aula') {
+      if (periodoCurso == 1) {
+        // Matutino: 09h55 às 11h35
+        return {
+          'hora_inicio': const TimeOfDay(hour: 9, minute: 55),
+          'hora_fim': const TimeOfDay(hour: 11, minute: 35),
+        };
+      } else if (periodoCurso == 3) {
+        // Noturno: 20h55 às 22h35
+        return {
+          'hora_inicio': const TimeOfDay(hour: 20, minute: 55),
+          'hora_fim': const TimeOfDay(hour: 22, minute: 35),
+        };
+      }
+    }
+    // Fallback: horário padrão
+    return {
+      'hora_inicio': const TimeOfDay(hour: 8, minute: 0),
+      'hora_fim': const TimeOfDay(hour: 9, minute: 0),
+    };
+  }
+
   // Função para obter nome do mês
   String getMonthName(int month) {
     const months = [
@@ -95,16 +138,15 @@ class CriarLocacaoFunctions {
     }
   }
 
-  // Função para carregar professores por matéria
-  Future<List<Map<String, dynamic>>> carregarProfessoresPorMateria(
-    int materiaId,
+  // Função para carregar professores por turma (curso)
+  Future<List<Map<String, dynamic>>> carregarProfessoresPorTurma(
     int cursoId,
   ) async {
     try {
       final response = await supabase
-          .from('professor_materias')
+          .from('professor_turmas')
           .select('professor_id, professores!inner(id, nome_professor)')
-          .eq('materia_id', materiaId);
+          .eq('curso_id', cursoId);
 
       return (response as List).map((item) {
         return item['professores'] as Map<String, dynamic>;
@@ -114,15 +156,125 @@ class CriarLocacaoFunctions {
     }
   }
 
+  // Função para verificar agendamentos por curso em um dia específico
+  // Considera os períodos de aula selecionados para verificar agendamentos
+  // Retorna: { cursoId: { 'periodo_selecionado': count, 'total_dia': count, 'periodos_com_agendamento': ['Primeira Aula', ...] } }
+  Future<Map<int, Map<String, dynamic>>> verificarAgendamentosCursosPorDia(
+    DateTime dia,
+    Set<String> periodosAulaSelecionados,
+  ) async {
+    try {
+      final dataFormatada =
+          '${dia.year.toString().padLeft(4, '0')}-${dia.month.toString().padLeft(2, '0')}-${dia.day.toString().padLeft(2, '0')}';
+
+      // Retorna um Map com informações detalhadas:
+      // { cursoId: { 'periodo_selecionado': count, 'total_dia': count, 'periodos_com_agendamento': List<String> } }
+      Map<int, Map<String, dynamic>> contagemPorCurso = {};
+
+      if (periodosAulaSelecionados.isEmpty) {
+        // Se nenhum período está selecionado, retorna contagem total do dia
+        final agendamentos = await supabase
+            .from('agendamento')
+            .select('curso_id')
+            .eq('dia', dataFormatada);
+
+        for (final agendamento in agendamentos) {
+          final cursoId = agendamento['curso_id'] as int;
+          if (!contagemPorCurso.containsKey(cursoId)) {
+            contagemPorCurso[cursoId] = {
+              'periodo_selecionado': 0,
+              'total_dia': 0,
+              'periodos_com_agendamento': <String>[],
+            };
+          }
+          contagemPorCurso[cursoId]!['total_dia'] =
+              (contagemPorCurso[cursoId]!['total_dia'] as int? ?? 0) + 1;
+        }
+        return contagemPorCurso;
+      }
+
+      // Busca agendamentos nos períodos selecionados
+      final agendamentosPeriodoSelecionado = await supabase
+          .from('agendamento')
+          .select('curso_id, aula_periodo')
+          .eq('dia', dataFormatada)
+          .in_('aula_periodo', periodosAulaSelecionados.toList());
+
+      // Busca todos os agendamentos do dia para contar total e verificar quais períodos têm agendamento
+      final agendamentosDia = await supabase
+          .from('agendamento')
+          .select('curso_id, aula_periodo')
+          .eq('dia', dataFormatada);
+
+      // Map para armazenar quais períodos têm agendamento por curso
+      Map<int, Set<String>> periodosComAgendamentoPorCurso = {};
+
+      // Conta agendamentos no período selecionado
+      for (final agendamento in agendamentosPeriodoSelecionado) {
+        final cursoId = agendamento['curso_id'] as int;
+        final aulaPeriodo = agendamento['aula_periodo'] as String? ?? '';
+
+        if (!contagemPorCurso.containsKey(cursoId)) {
+          contagemPorCurso[cursoId] = {
+            'periodo_selecionado': 0,
+            'total_dia': 0,
+            'periodos_com_agendamento': <String>[],
+          };
+          periodosComAgendamentoPorCurso[cursoId] = <String>{};
+        }
+        contagemPorCurso[cursoId]!['periodo_selecionado'] =
+            (contagemPorCurso[cursoId]!['periodo_selecionado'] as int? ?? 0) +
+            1;
+
+        // Adiciona o período à lista de períodos com agendamento
+        if (!periodosComAgendamentoPorCurso[cursoId]!.contains(aulaPeriodo)) {
+          periodosComAgendamentoPorCurso[cursoId]!.add(aulaPeriodo);
+        }
+      }
+
+      // Conta total do dia e coleta todos os períodos com agendamento
+      for (final agendamento in agendamentosDia) {
+        final cursoId = agendamento['curso_id'] as int;
+        final aulaPeriodo = agendamento['aula_periodo'] as String? ?? '';
+
+        if (!contagemPorCurso.containsKey(cursoId)) {
+          contagemPorCurso[cursoId] = {
+            'periodo_selecionado': 0,
+            'total_dia': 0,
+            'periodos_com_agendamento': <String>[],
+          };
+          periodosComAgendamentoPorCurso[cursoId] = <String>{};
+        }
+        contagemPorCurso[cursoId]!['total_dia'] =
+            (contagemPorCurso[cursoId]!['total_dia'] as int? ?? 0) + 1;
+
+        // Adiciona o período à lista de períodos com agendamento (para todos os períodos do dia)
+        if (!periodosComAgendamentoPorCurso[cursoId]!.contains(aulaPeriodo)) {
+          periodosComAgendamentoPorCurso[cursoId]!.add(aulaPeriodo);
+        }
+      }
+
+      // Atualiza a lista de períodos com agendamento no resultado
+      for (final cursoId in contagemPorCurso.keys) {
+        contagemPorCurso[cursoId]!['periodos_com_agendamento'] =
+            periodosComAgendamentoPorCurso[cursoId]?.toList() ?? <String>[];
+      }
+
+      return contagemPorCurso;
+    } catch (e) {
+      throw Exception('Erro ao verificar agendamentos por curso: $e');
+    }
+  }
+
   // Função para filtrar salas
   Future<List<Map<String, dynamic>>> filtrarSalas({
-    required String? periodoAulaSelecionado,
+    required Set<String> periodosAulaSelecionados,
     required List<curso_model.Curso> cursosSelecionados,
     required bool modoMultiplo,
     required Set<DateTime> diasMultiplosSelecionados,
     required DateTime? dia,
   }) async {
-    if (periodoAulaSelecionado == null ||
+    if (periodosAulaSelecionados.isEmpty ||
         cursosSelecionados.isEmpty ||
         (modoMultiplo ? diasMultiplosSelecionados.isEmpty : dia == null)) {
       return [];
@@ -136,11 +288,10 @@ class CriarLocacaoFunctions {
         diasParaVerificar = [dia!];
       }
 
-      // Primeiro, busca todas as salas disponíveis
+      // Busca TODAS as salas (incluindo não disponíveis para mostrar com indicador vermelho)
       final todasSalas = await supabase
           .from('salas')
-          .select('id, numero_sala, qtd_cadeiras')
-          .eq('disponivel', true);
+          .select('id, numero_sala, qtd_cadeiras, disponivel');
 
       Map<int, Map<String, dynamic>> salasDisponiveis = {};
 
@@ -149,47 +300,47 @@ class CriarLocacaoFunctions {
         final dataFormatada =
             '${diaVerificar.year.toString().padLeft(4, '0')}-${diaVerificar.month.toString().padLeft(2, '0')}-${diaVerificar.day.toString().padLeft(2, '0')}';
 
-        // Para cada curso selecionado
-        for (final curso in cursosSelecionados) {
-          final periodoCurso = curso.periodo;
+        final periodoCursoReferencia = cursosSelecionados.first.periodo;
 
-          // Busca agendamentos existentes para esta data, período da aula e período do curso
+        // Para cada período de aula selecionado, busca agendamentos existentes
+        // (apenas para indicador visual)
+        Map<int, int> contagemPorSala = {};
+
+        for (String periodoAula in periodosAulaSelecionados) {
           final agendamentosExistentes = await supabase
               .from('agendamento')
               .select('sala_id')
               .eq('dia', dataFormatada)
-              .eq('aula_periodo', periodoAulaSelecionado!)
-              .eq('periodo', periodoCurso);
+              .eq('aula_periodo', periodoAula)
+              .eq('periodo', periodoCursoReferencia!);
 
-          // Conta agendamentos por sala
-          Map<int, int> contagemPorSala = {};
+          // Conta agendamentos por sala para este período (apenas para indicador visual)
           for (final agendamento in agendamentosExistentes) {
             final salaId = agendamento['sala_id'];
             contagemPorSala[salaId] = (contagemPorSala[salaId] ?? 0) + 1;
           }
+        }
 
-          // Verifica todas as salas disponíveis
-          for (final sala in todasSalas) {
-            final salaId = sala['id'];
-            final contagem = contagemPorSala[salaId] ?? 0;
+        // ADICIONA TODAS AS SALAS (sem filtrar por quantidade de agendamentos)
+        for (final sala in todasSalas) {
+          final salaId = sala['id'];
+          final agendamentosExistentes = contagemPorSala[salaId] ?? 0;
 
-            // Só inclui se tem menos de 2 agendamentos
-            if (contagem < 2) {
-              if (!salasDisponiveis.containsKey(salaId)) {
-                salasDisponiveis[salaId] = {
-                  'sala_id': salaId,
-                  'numero_sala': sala['numero_sala'],
-                  'qtd_cadeiras': sala['qtd_cadeiras'],
-                  'agendamentos_existentes': contagem,
-                };
-              } else {
-                // Se a sala já existe, pega a maior contagem de agendamentos
-                if (contagem >
-                    salasDisponiveis[salaId]!['agendamentos_existentes']) {
-                  salasDisponiveis[salaId]!['agendamentos_existentes'] =
-                      contagem;
-                }
-              }
+          // Sempre inclui a sala, apenas marca quantos agendamentos existem
+          if (!salasDisponiveis.containsKey(salaId)) {
+            salasDisponiveis[salaId] = {
+              'sala_id': salaId,
+              'numero_sala': sala['numero_sala'],
+              'qtd_cadeiras': sala['qtd_cadeiras'],
+              'disponivel': sala['disponivel'],
+              'agendamentos_existentes': agendamentosExistentes,
+            };
+          } else {
+            // Se a sala já existe, pega a maior contagem de agendamentos entre os períodos
+            if (agendamentosExistentes >
+                salasDisponiveis[salaId]!['agendamentos_existentes']) {
+              salasDisponiveis[salaId]!['agendamentos_existentes'] =
+                  agendamentosExistentes;
             }
           }
         }
@@ -198,14 +349,28 @@ class CriarLocacaoFunctions {
       List<Map<String, dynamic>> salasFiltradas =
           salasDisponiveis.values.toList();
 
-      // Ordena por número de agendamentos (menos primeiro) e depois por número da sala
+      // Ordena: primeiro por disponibilidade (disponível primeiro), depois por agendamentos, depois por número da sala
       salasFiltradas.sort((a, b) {
-        if (a['agendamentos_existentes'] != b['agendamentos_existentes']) {
-          return a['agendamentos_existentes'].compareTo(
-            b['agendamentos_existentes'],
-          );
+        // Primeiro ordena por disponibilidade (true vem antes de false)
+        // Converte de forma segura para bool
+        final aDisponivel = a['disponivel'] == true;
+        final bDisponivel = b['disponivel'] == true;
+        if (aDisponivel != bDisponivel) {
+          // Converte para int: true = 0 (vem primeiro), false = 1 (vem depois)
+          final aInt = aDisponivel ? 0 : 1;
+          final bInt = bDisponivel ? 0 : 1;
+          return aInt.compareTo(bInt);
         }
-        return a['numero_sala'].compareTo(b['numero_sala']);
+        // Depois ordena por número de agendamentos (menos primeiro)
+        final aAgendamentos = a['agendamentos_existentes'] as int? ?? 0;
+        final bAgendamentos = b['agendamentos_existentes'] as int? ?? 0;
+        if (aAgendamentos != bAgendamentos) {
+          return aAgendamentos.compareTo(bAgendamentos);
+        }
+        // Por último ordena por número da sala
+        final aNumero = a['numero_sala'].toString();
+        final bNumero = b['numero_sala'].toString();
+        return aNumero.compareTo(bNumero);
       });
 
       return salasFiltradas;
@@ -219,13 +384,13 @@ class CriarLocacaoFunctions {
     required bool modoMultiplo,
     required Set<DateTime> diasMultiplosSelecionados,
     required DateTime? dia,
-    required String? periodoAulaSelecionado,
+    required Set<String> periodosAulaSelecionados,
     required List<curso_model.Curso> cursosSelecionados,
     required sala_model.Sala? salaSelecionada,
   }) {
     bool temDia =
         modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
-    bool temPeriodo = periodoAulaSelecionado != null;
+    bool temPeriodo = periodosAulaSelecionados.isNotEmpty;
     bool temCurso = cursosSelecionados.isNotEmpty;
     bool temSala = salaSelecionada != null;
 
@@ -237,7 +402,7 @@ class CriarLocacaoFunctions {
     required bool modoMultiplo,
     required Set<DateTime> diasMultiplosSelecionados,
     required DateTime? dia,
-    required String? periodoAulaSelecionado,
+    required Set<String> periodosAulaSelecionados,
     required List<curso_model.Curso> cursosSelecionados,
     required sala_model.Sala? salaSelecionada,
   }) {
@@ -251,8 +416,8 @@ class CriarLocacaoFunctions {
     }
 
     // Verifica período da aula
-    if (periodoAulaSelecionado == null) {
-      camposFaltando.add('um período de aula');
+    if (periodosAulaSelecionados.isEmpty) {
+      camposFaltando.add('pelo menos um período de aula');
     }
 
     // Verifica curso
@@ -570,7 +735,6 @@ class CriarLocacaoFunctions {
         // Para cada curso selecionado
         for (final curso in cursosSelecionados) {
           final periodoCurso = curso.periodo;
-          final materia = materiasPorCurso[curso.id];
           final professor = professoresPorCurso[curso.id];
 
           print('DEBUG - ==========================================');
@@ -578,7 +742,6 @@ class CriarLocacaoFunctions {
           print('DEBUG - ==========================================');
           print('DEBUG - Curso: ${curso.curso} (ID: ${curso.id})');
           print('DEBUG - Sala ID: ${salaSelecionada!.id}');
-          print('DEBUG - Matéria ID: ${materia!['id']}');
           print('DEBUG - Professor ID: ${professor!['id']}');
           print('DEBUG - Data formatada: $dataFormatada');
           print('DEBUG - Período curso: $periodoCurso');
@@ -589,7 +752,6 @@ class CriarLocacaoFunctions {
             'aula_periodo': periodoAulaSelecionado!,
             'sala_id': salaSelecionada!.id,
             'curso_id': curso.id,
-            'materia_id': materia!['id'],
             'professor_id': professor!['id'],
             'dia': dataFormatada,
             'periodo': periodoCurso,
@@ -722,12 +884,13 @@ class CriarLocacaoFunctions {
   Future<void> salvarLocacaoTeste({
     required List<curso_model.Curso> cursosSelecionados,
     required sala_model.Sala? salaSelecionada,
-    required String? periodoAulaSelecionado,
+    required Set<String> periodosAulaSelecionados,
     required Map<int, Map<String, dynamic>?> materiasPorCurso,
     required Map<int, Map<String, dynamic>?> professoresPorCurso,
     required DateTime? dia,
     required Set<DateTime> diasMultiplosSelecionados,
     required bool modoMultiplo,
+    String? observacao,
     Function(String)? onProgress,
   }) async {
     print('DEBUG - ==========================================');
@@ -735,6 +898,30 @@ class CriarLocacaoFunctions {
     print('DEBUG - ==========================================');
 
     try {
+      // Validação: verifica se a sala está disponível
+      if (salaSelecionada == null) {
+        throw Exception('Por favor, selecione uma sala');
+      }
+
+      // Verifica se a sala está disponível no banco de dados
+      final salaAtualizada =
+          await supabase
+              .from('salas')
+              .select('disponivel')
+              .eq('id', salaSelecionada.id)
+              .maybeSingle();
+
+      if (salaAtualizada == null) {
+        throw Exception('Sala não encontrada');
+      }
+
+      final salaDisponivel = salaAtualizada['disponivel'] == true;
+      if (!salaDisponivel) {
+        throw Exception(
+          'Não é possível agendar na sala ${salaSelecionada.numeroSala} pois ela está marcada como indisponível.',
+        );
+      }
+
       List<int> idsAgendamentosCriados = [];
       final timestampCriacao = DateTime.now();
 
@@ -748,8 +935,11 @@ class CriarLocacaoFunctions {
 
       print('DEBUG - Dias para processar: ${diasParaProcessar.length}');
       print('DEBUG - Cursos selecionados: ${cursosSelecionados.length}');
+      print(
+        'DEBUG - Períodos de aula selecionados: ${periodosAulaSelecionados.length}',
+      );
 
-      // Salva agendamentos para todos os cursos e dias selecionados
+      // Salva agendamentos para todos os cursos, dias e períodos selecionados
       for (DateTime diaProcessar in diasParaProcessar) {
         final dataFormatada =
             '${diaProcessar.year.toString().padLeft(4, '0')}-${diaProcessar.month.toString().padLeft(2, '0')}-${diaProcessar.day.toString().padLeft(2, '0')}';
@@ -762,59 +952,78 @@ class CriarLocacaoFunctions {
           final materia = materiasPorCurso[curso.id];
           final professor = professoresPorCurso[curso.id];
 
-          print('DEBUG - ==========================================');
-          print('DEBUG - TENTANDO INSERIR AGENDAMENTO');
-          print('DEBUG - ==========================================');
-          print('DEBUG - Curso: ${curso.curso} (ID: ${curso.id})');
-          print('DEBUG - Sala ID: ${salaSelecionada!.id}');
-          print('DEBUG - Matéria ID: ${materia!['id']}');
-          print('DEBUG - Professor ID: ${professor!['id']}');
-          print('DEBUG - Data formatada: $dataFormatada');
-          print('DEBUG - Período curso: $periodoCurso');
-          print('DEBUG - Período aula: $periodoAulaSelecionado');
+          // Para cada período de aula selecionado (cria um agendamento para cada um)
+          for (String periodoAula in periodosAulaSelecionados) {
+            print('DEBUG - ==========================================');
+            print('DEBUG - TENTANDO INSERIR AGENDAMENTO');
+            print('DEBUG - ==========================================');
+            print('DEBUG - Curso: ${curso.curso} (ID: ${curso.id})');
+            print('DEBUG - Sala ID: ${salaSelecionada!.id}');
+            print('DEBUG - Matéria ID: ${materia!['id']}');
+            print('DEBUG - Professor ID: ${professor!['id']}');
+            print('DEBUG - Data formatada: $dataFormatada');
+            print('DEBUG - Período curso: $periodoCurso');
+            print('DEBUG - Período aula: $periodoAula');
 
-          // Preparar dados para inserção
-          final dadosInserir = {
-            'aula_periodo': periodoAulaSelecionado!,
-            'sala_id': salaSelecionada!.id,
-            'curso_id': curso.id,
-            'materia_id': materia!['id'],
-            'professor_id': professor!['id'],
-            'dia': dataFormatada,
-            'periodo': periodoCurso,
-            'tipo_agendamento': 'A', // A=Aula
-          };
+            // Obtém os horários baseados no período da aula e período do curso
+            final horarios = obterHorariosPorPeriodo(
+              periodoAula,
+              periodoCurso!,
+            );
+            final horaInicio = horarios['hora_inicio']!;
+            final horaFim = horarios['hora_fim']!;
 
-          print('DEBUG - Dados para inserção: $dadosInserir');
+            print('DEBUG - Horário início: ${formatHora(horaInicio)}');
+            print('DEBUG - Horário fim: ${formatHora(horaFim)}');
 
-          try {
-            print('DEBUG - Executando INSERT no Supabase...');
-            final response =
-                await supabase
-                    .from('agendamento')
-                    .insert(dadosInserir)
-                    .select();
+            // Preparar dados para inserção
+            final dadosInserir = {
+              'aula_periodo':
+                  periodoAula, // Mantém "Primeira Aula" ou "Segunda Aula"
+              'hora_inicio': formatHora(horaInicio),
+              'hora_fim': formatHora(horaFim),
+              'sala_id': salaSelecionada!.id,
+              'curso_id': curso.id,
+              'materia_id': materia!['id'],
+              'professor_id': professor!['id'],
+              'dia': dataFormatada,
+              'periodo': periodoCurso,
+              'tipo_agendamento': 'A', // A=Aula
+              if (observacao != null && observacao.isNotEmpty)
+                'observacao': observacao,
+            };
 
-            print('DEBUG - Resposta da inserção: $response');
+            print('DEBUG - Dados para inserção: $dadosInserir');
 
-            // Captura o ID do agendamento criado
-            if (response != null && response.isNotEmpty) {
-              idsAgendamentosCriados.add(response[0]['id']);
+            try {
+              print('DEBUG - Executando INSERT no Supabase...');
+              final response =
+                  await supabase
+                      .from('agendamento')
+                      .insert(dadosInserir)
+                      .select();
+
+              print('DEBUG - Resposta da inserção: $response');
+
+              // Captura o ID do agendamento criado
+              if (response != null && response.isNotEmpty) {
+                idsAgendamentosCriados.add(response[0]['id']);
+                print(
+                  'DEBUG - ✅ Agendamento criado com sucesso para curso ${curso.curso}, período $periodoAula, ID: ${response[0]['id']}',
+                );
+              } else {
+                print(
+                  'DEBUG - ❌ ERRO: Falha ao criar agendamento para curso ${curso.curso}, período $periodoAula - resposta vazia',
+                );
+              }
+            } catch (e) {
               print(
-                'DEBUG - ✅ Agendamento criado com sucesso para curso ${curso.curso}, ID: ${response[0]['id']}',
+                'DEBUG - ❌ ERRO ao inserir agendamento para curso ${curso.curso}, período $periodoAula: $e',
               );
-            } else {
-              print(
-                'DEBUG - ❌ ERRO: Falha ao criar agendamento para curso ${curso.curso} - resposta vazia',
+              throw Exception(
+                'Erro ao criar agendamento para curso ${curso.curso}, período $periodoAula: $e',
               );
             }
-          } catch (e) {
-            print(
-              'DEBUG - ❌ ERRO ao inserir agendamento para curso ${curso.curso}: $e',
-            );
-            throw Exception(
-              'Erro ao criar agendamento para curso ${curso.curso}: $e',
-            );
           }
         }
       }
@@ -823,7 +1032,163 @@ class CriarLocacaoFunctions {
         'DEBUG - Total de agendamentos criados: ${idsAgendamentosCriados.length}',
       );
 
-      onProgress?.call('🎉 Agendamento criado com sucesso!');
+      // Se foram criados múltiplos agendamentos, remove os registros individuais
+      // do histórico e cria um registro múltiplo agrupado
+      if (idsAgendamentosCriados.length > 1) {
+        onProgress?.call('✨ Organizando histórico de agendamentos...');
+
+        // Aguarda um pouco para os triggers criarem os registros individuais
+        await Future.delayed(const Duration(milliseconds: 1000));
+
+        // Remove os registros individuais do histórico criados pelos triggers
+        await supabase
+            .from('historico_acoes')
+            .delete()
+            .eq('tabela_afetada', 'agendamento')
+            .eq('acao', 'INSERT')
+            .in_('registro_id', idsAgendamentosCriados)
+            .gte(
+              'data_hora',
+              timestampCriacao
+                  .subtract(const Duration(seconds: 10))
+                  .toIso8601String(),
+            )
+            .lte(
+              'data_hora',
+              timestampCriacao
+                  .add(const Duration(seconds: 10))
+                  .toIso8601String(),
+            );
+
+        // Formata as datas para exibição
+        final datasFormatadas =
+            diasParaProcessar.map((data) {
+              return '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
+            }).toList();
+
+        // Obtém o período do primeiro curso como referência
+        final periodoCursoReferencia = cursosSelecionados.first.periodo;
+        final primeiroCurso = cursosSelecionados.first;
+        final primeiraMateria = materiasPorCurso[primeiroCurso.id]!;
+
+        // Prepara a lista de cursos com seus detalhes
+        final materiasProfessores =
+            cursosSelecionados
+                .map(
+                  (c) => {
+                    'curso_id': c.id,
+                    'curso_nome': c.curso,
+                    'materia_id': materiasPorCurso[c.id]!['id'],
+                    'materia_nome': materiasPorCurso[c.id]!['nome'],
+                    'professor_id': professoresPorCurso[c.id]!['id'],
+                    'professor_nome':
+                        professoresPorCurso[c.id]!['nome_professor'],
+                  },
+                )
+                .toList();
+
+        // Obtém os períodos de aula como lista
+        final periodosAulaLista = periodosAulaSelecionados.toList();
+
+        final detalhes =
+            'Agendamento múltiplo criado para ${diasParaProcessar.length} dia(s), ${cursosSelecionados.length} curso(s) e ${periodosAulaSelecionados.length} período(s): ${datasFormatadas.join(', ')}';
+
+        // Cria um registro especial no histórico que agrupa todos os agendamentos
+        await supabase.from('historico_acoes').insert({
+          'tabela_afetada': 'agendamento',
+          'acao': 'INSERT_MULTIPLE',
+          'registro_id':
+              idsAgendamentosCriados.first, // Usa o primeiro ID como referência
+          'dados_anteriores': null,
+          'dados_novos': {
+            'ids_agendamentos': idsAgendamentosCriados,
+            'quantidade_dias': diasParaProcessar.length,
+            'quantidade_cursos': cursosSelecionados.length,
+            'quantidade_periodos': periodosAulaSelecionados.length,
+            'datas': datasFormatadas,
+            'sala_id': salaSelecionada!.id,
+            'curso_id': primeiroCurso.id, // Primeiro curso para compatibilidade
+            'materia_id':
+                primeiraMateria['id'], // Primeira matéria para compatibilidade
+            'cursos_ids': cursosSelecionados.map((c) => c.id).toList(),
+            'cursos_nomes': cursosSelecionados.map((c) => c.curso).toList(),
+            'materias_professores': materiasProfessores,
+            'periodo': periodoCursoReferencia,
+            'aula_periodo':
+                periodosAulaLista.length == 1
+                    ? periodosAulaLista.first
+                    : periodosAulaLista,
+            'aula_periodos': periodosAulaLista, // Lista de períodos
+            'tipo_agendamento': 'A',
+            if (observacao != null && observacao.isNotEmpty)
+              'observacao': observacao,
+          },
+          'detalhes': detalhes,
+          'data_hora': timestampCriacao.toIso8601String(),
+        });
+      } else if (idsAgendamentosCriados.length == 1) {
+        // Para agendamento único, verifica se já existe registro criado pelo trigger
+        // Se não existir, cria um registro individual
+        onProgress?.call('✨ Registrando no histórico...');
+
+        // Aguarda um pouco para o trigger criar o registro
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Verifica se já existe registro criado pelo trigger
+        final registroExistente =
+            await supabase
+                .from('historico_acoes')
+                .select()
+                .eq('tabela_afetada', 'agendamento')
+                .eq('acao', 'INSERT')
+                .eq('registro_id', idsAgendamentosCriados.first)
+                .gte(
+                  'data_hora',
+                  timestampCriacao
+                      .subtract(const Duration(seconds: 5))
+                      .toIso8601String(),
+                )
+                .lte(
+                  'data_hora',
+                  timestampCriacao
+                      .add(const Duration(seconds: 5))
+                      .toIso8601String(),
+                )
+                .maybeSingle();
+
+        // Se não existe registro criado pelo trigger, cria um manualmente
+        if (registroExistente == null) {
+          final curso = cursosSelecionados.first;
+          final materia = materiasPorCurso[curso.id]!;
+          final professor = professoresPorCurso[curso.id]!;
+          final periodoAula = periodosAulaSelecionados.first;
+          final dataFormatada =
+              '${diasParaProcessar.first.year.toString().padLeft(4, '0')}-${diasParaProcessar.first.month.toString().padLeft(2, '0')}-${diasParaProcessar.first.day.toString().padLeft(2, '0')}';
+
+          await supabase.from('historico_acoes').insert({
+            'tabela_afetada': 'agendamento',
+            'acao': 'INSERT',
+            'registro_id': idsAgendamentosCriados.first,
+            'dados_anteriores': null,
+            'dados_novos': {
+              'aula_periodo': periodoAula,
+              'sala_id': salaSelecionada!.id,
+              'curso_id': curso.id,
+              'materia_id': materia['id'],
+              'professor_id': professor['id'],
+              'dia': dataFormatada,
+              'periodo': curso.periodo,
+              'tipo_agendamento': 'A',
+              if (observacao != null && observacao.isNotEmpty)
+                'observacao': observacao,
+            },
+            'detalhes': 'Agendamento criado para ${curso.curso}',
+            'data_hora': timestampCriacao.toIso8601String(),
+          });
+        }
+      }
+
+      onProgress?.call('🎉 Agendamento(s) criado(s) com sucesso!');
     } catch (e) {
       print('DEBUG - ❌ ERRO GERAL: $e');
       throw Exception('Erro ao salvar agendamento: $e');
@@ -946,5 +1311,147 @@ class CriarLocacaoFunctions {
       print('Erro ao verificar agendamentos múltiplos existentes: $e');
       return [];
     }
+  }
+
+  // Funções de validação sequencial
+  bool podeSelecionarAula({
+    required bool modoMultiplo,
+    required Set<DateTime> diasMultiplosSelecionados,
+    required DateTime? dia,
+  }) {
+    return modoMultiplo ? diasMultiplosSelecionados.isNotEmpty : dia != null;
+  }
+
+  bool podeSelecionarCurso({
+    required bool modoMultiplo,
+    required Set<DateTime> diasMultiplosSelecionados,
+    required DateTime? dia,
+    required Set<String> periodosAulaSelecionados,
+  }) {
+    return podeSelecionarAula(
+          modoMultiplo: modoMultiplo,
+          diasMultiplosSelecionados: diasMultiplosSelecionados,
+          dia: dia,
+        ) &&
+        periodosAulaSelecionados.isNotEmpty;
+  }
+
+  bool podeSelecionarMateria({
+    required bool modoMultiplo,
+    required Set<DateTime> diasMultiplosSelecionados,
+    required DateTime? dia,
+    required Set<String> periodosAulaSelecionados,
+    required List<curso_model.Curso> cursosSelecionados,
+    required int cursoId,
+  }) {
+    return podeSelecionarCurso(
+          modoMultiplo: modoMultiplo,
+          diasMultiplosSelecionados: diasMultiplosSelecionados,
+          dia: dia,
+          periodosAulaSelecionados: periodosAulaSelecionados,
+        ) &&
+        cursosSelecionados.isNotEmpty;
+  }
+
+  bool podeSelecionarProfessor({
+    required bool modoMultiplo,
+    required Set<DateTime> diasMultiplosSelecionados,
+    required DateTime? dia,
+    required Set<String> periodosAulaSelecionados,
+    required List<curso_model.Curso> cursosSelecionados,
+    required int cursoId,
+    required Map<int, Map<String, dynamic>?> materiasPorCurso,
+  }) {
+    return podeSelecionarMateria(
+          modoMultiplo: modoMultiplo,
+          diasMultiplosSelecionados: diasMultiplosSelecionados,
+          dia: dia,
+          periodosAulaSelecionados: periodosAulaSelecionados,
+          cursosSelecionados: cursosSelecionados,
+          cursoId: cursoId,
+        ) &&
+        materiasPorCurso[cursoId] != null;
+  }
+
+  bool podeSelecionarSala({
+    required bool modoMultiplo,
+    required Set<DateTime> diasMultiplosSelecionados,
+    required DateTime? dia,
+    required Set<String> periodosAulaSelecionados,
+    required List<curso_model.Curso> cursosSelecionados,
+    required Map<int, Map<String, dynamic>?> materiasPorCurso,
+    required Map<int, Map<String, dynamic>?> professoresPorCurso,
+  }) {
+    if (!podeSelecionarCurso(
+          modoMultiplo: modoMultiplo,
+          diasMultiplosSelecionados: diasMultiplosSelecionados,
+          dia: dia,
+          periodosAulaSelecionados: periodosAulaSelecionados,
+        ) ||
+        cursosSelecionados.isEmpty) {
+      return false;
+    }
+
+    // Verifica se todos os cursos têm matéria e professor selecionados
+    for (final curso in cursosSelecionados) {
+      if (materiasPorCurso[curso.id] == null ||
+          professoresPorCurso[curso.id] == null) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Função para obter mensagem de validação sequencial
+  String getMensagemValidacaoSequencial({
+    required bool modoMultiplo,
+    required Set<DateTime> diasMultiplosSelecionados,
+    required DateTime? dia,
+    required Set<String> periodosAulaSelecionados,
+    required List<curso_model.Curso> cursosSelecionados,
+    required Map<int, Map<String, dynamic>?> materiasPorCurso,
+    required Map<int, Map<String, dynamic>?> professoresPorCurso,
+  }) {
+    if (!podeSelecionarAula(
+      modoMultiplo: modoMultiplo,
+      diasMultiplosSelecionados: diasMultiplosSelecionados,
+      dia: dia,
+    )) {
+      return ' Primeiro selecione o(s) dia(s) no calendário';
+    }
+    if (!podeSelecionarCurso(
+      modoMultiplo: modoMultiplo,
+      diasMultiplosSelecionados: diasMultiplosSelecionados,
+      dia: dia,
+      periodosAulaSelecionados: periodosAulaSelecionados,
+    )) {
+      return '⚠️ Agora selecione o(s) período(s) da aula';
+    }
+    if (!podeSelecionarMateria(
+      modoMultiplo: modoMultiplo,
+      diasMultiplosSelecionados: diasMultiplosSelecionados,
+      dia: dia,
+      periodosAulaSelecionados: periodosAulaSelecionados,
+      cursosSelecionados: cursosSelecionados,
+      cursoId: 0,
+    )) {
+      return '⚠️ Adicione pelo menos um curso';
+    }
+
+    // Verifica se todos os cursos têm matéria selecionada
+    for (final curso in cursosSelecionados) {
+      if (materiasPorCurso[curso.id] == null) {
+        return '⚠️ Selecione a disciplina para o curso ${curso.curso}';
+      }
+    }
+
+    // Verifica se todos os cursos têm professor selecionado
+    for (final curso in cursosSelecionados) {
+      if (professoresPorCurso[curso.id] == null) {
+        return '⚠️ Selecione o professor para o curso ${curso.curso}';
+      }
+    }
+
+    return '✅ Todos os campos preenchidos! Agora selecione a sala.';
   }
 }

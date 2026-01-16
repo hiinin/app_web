@@ -1,30 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../functions/agendamento_helpers.dart';
+import '../functions/drawer_helper.dart';
+import '../functions/listalocacao_functions.dart' as locacao_functions;
 
 class ListaLocacaoPage extends StatefulWidget {
   const ListaLocacaoPage({super.key});
 
   @override
   State<ListaLocacaoPage> createState() => _ListaLocacaoPageState();
-}
-
-// No início do _ListaLocacaoPageState
-final TextEditingController pesquisaController = TextEditingController();
-final TextEditingController pesquisaSalaController = TextEditingController();
-String filtroCurso = '';
-String filtroSala = '';
-
-// Filtro para tipo de agendamento
-String filtroTipo = 'Todos'; // 'Todos', 'Aulas', 'Eventos'
-
-// Filtro para período
-String filtroPeriodo = 'Todos'; // 'Todos', 'Manhã', 'Vespertino', 'Noturno'
-
-@override
-void dispose() {
-  pesquisaController.dispose();
-  pesquisaSalaController.dispose();
 }
 
 class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
@@ -37,10 +21,23 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   List<Map<String, dynamic>> cursos = [];
   int? cursoSelecionadoId;
 
+  // Controllers e filtros
+  final TextEditingController pesquisaController = TextEditingController();
+  String filtroTipo = 'Todos'; // 'Todos', 'Aulas', 'Eventos', 'Provas'
+  String filtroPeriodo = 'Todos'; // 'Todos', 'Manhã', 'Vespertino', 'Noturno'
+  bool mostrarMultiplasTurmas = false;
+  bool mostrarFiltroAvancado = false;
+
   @override
   void initState() {
     super.initState();
-    carregarAgendamentos(); // Adicione esta linha
+    carregarAgendamentos();
+  }
+
+  @override
+  void dispose() {
+    pesquisaController.dispose();
+    super.dispose();
   }
 
   Future<void> selecionarDia() async {
@@ -60,36 +57,11 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     setState(() => isLoading = true);
 
     try {
-      final diaStr =
-          '${diaSelecionado.year.toString().padLeft(4, '0')}-${diaSelecionado.month.toString().padLeft(2, '0')}-${diaSelecionado.day.toString().padLeft(2, '0')}';
-
-      var query = supabase.from('agendamento').select('''
-      id,
-      dia,
-      aula_periodo,
-      hora_inicio,
-      hora_fim,
-      tipo_agendamento,
-      nome_evento,
-      descricao_evento,
-      cursos (id,curso,semestre,periodo),
-      salas (id,numero_sala),
-      materias (id,nome),
-      professores (id,nome_professor)
-    ''');
-
-      query = query.eq('dia', diaStr);
-
-      if (cursoId != null) {
-        query = query.eq('curso_id', cursoId);
-      }
-
-      final response = await query;
-
-      print('DEBUG - Agendamentos carregados: ${response.length}');
-      if (response.isNotEmpty) {
-        print('DEBUG - Primeiro agendamento: ${response.first}');
-      }
+      final response = await locacao_functions.carregarAgendamentos(
+        supabase,
+        diaSelecionado,
+        cursoId: cursoId,
+      );
 
       setState(() => agendamentos = response);
     } catch (e) {
@@ -104,37 +76,11 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   }
 
   Future<void> buscarPorCurso() async {
-    if (cursoSelecionadoId == null) {
-      print('Nenhum curso selecionado');
-      return;
-    }
-
-    final response =
-        await supabase
-            .from('agendamento')
-            .select()
-            .eq('curso_id', cursoSelecionadoId)
-            .execute();
-
-    if (response.status == 200) {
-      // final dados = response.data as List<dynamic>; // Removido: variável não utilizada
-      // Atualize a lista com os dados obtidos, se necessário
-    } else {
-      print('Erro na busca: ${response.status}');
-    }
+    await locacao_functions.buscarPorCurso(supabase, cursoSelecionadoId);
   }
 
   String periodoToString(int? periodo) {
-    switch (periodo) {
-      case 1:
-        return 'Matutino';
-      case 2:
-        return 'Vespertino';
-      case 3:
-        return 'Noturno';
-      default:
-        return 'Não informado';
-    }
+    return locacao_functions.periodoToString(periodo);
   }
 
   Future<void> editarAgendamento(Map agendamento) async {
@@ -153,6 +99,11 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
     // Preservar período da aula original
     String aulaPeriodoOriginal = agendamento['aula_periodo'] ?? 'Primeira Aula';
+
+    // Controller para observação
+    final TextEditingController observacaoController = TextEditingController(
+      text: agendamento['observacao'] ?? '',
+    );
 
     // Listas para os dropdowns
     List<Map<String, dynamic>> salas = [];
@@ -195,7 +146,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
       if (cursoSelecionado != null) {
         materias = await buscarMateriasPorCurso(
           supabase,
-          int.parse(cursoSelecionado!),
+          int.parse(cursoSelecionado),
         );
         // Verificar se a matéria selecionada ainda existe na nova lista
         if (materiaSelecionada != null &&
@@ -210,7 +161,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
       if (materiaSelecionada != null) {
         professores = await buscarProfessoresPorMateria(
           supabase,
-          int.parse(materiaSelecionada!),
+          int.parse(materiaSelecionada),
         );
         // Verificar se o professor selecionado ainda existe na nova lista
         if (professorSelecionado != null &&
@@ -554,7 +505,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                     labelText:
                                         materiaSelecionada != null
                                             ? 'Professor'
-                                            : 'Professor (selecione uma matéria primeiro)',
+                                            : 'Professor (selecione uma disciplina primeiro)',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -620,6 +571,23 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                   },
                                 ),
 
+                                const SizedBox(height: 16),
+
+                                // Campo de Observação
+                                TextField(
+                                  controller: observacaoController,
+                                  maxLines: 3,
+                                  decoration: InputDecoration(
+                                    labelText: 'Observação',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    prefixIcon: const Icon(Icons.note),
+                                    hintText:
+                                        'Digite uma observação sobre o agendamento...',
+                                  ),
+                                ),
+
                                 const SizedBox(height: 20),
                               ],
                             ),
@@ -645,6 +613,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                             'materia_id': int.parse(materiaSelecionada!),
                             'professor_id': int.parse(professorSelecionado!),
                             'data': dataSelecionada,
+                            'observacao': observacaoController.text,
                           });
                         }
                       },
@@ -662,7 +631,8 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     if (result != null) {
       try {
         // Verificar conflitos
-        final conflito = await verificarConflitos(
+        final conflito = await locacao_functions.verificarConflitos(
+          supabase,
           result['sala_id'],
           result['curso_id'],
           result['materia_id'],
@@ -694,6 +664,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
               'dia':
                   '${result['data'].year.toString().padLeft(4, '0')}-${result['data'].month.toString().padLeft(2, '0')}-${result['data'].day.toString().padLeft(2, '0')}',
               'aula_periodo': aulaPeriodoOriginal,
+              'observacao': result['observacao'] ?? '',
               // Os horários serão definidos automaticamente pelo trigger baseado no curso e período da aula
             })
             .eq('id', agendamento['id']);
@@ -714,6 +685,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         );
       }
     }
+
+    // Dispose do controller
+    observacaoController.dispose();
   }
 
   Future<void> excluirAgendamento(int id) async {
@@ -752,21 +726,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   }
 
   String _getMonthName(int month) {
-    const months = [
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro',
-    ];
-    return months[month - 1];
+    return locacao_functions.getMonthName(month);
   }
 
   Widget _buildCalendarGrid(
@@ -887,36 +847,6 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         }),
       ),
     );
-  }
-
-  Future<bool> verificarConflitos(
-    int salaId,
-    int cursoId,
-    int materiaId,
-    int professorId,
-    DateTime data,
-    int agendamentoId,
-  ) async {
-    try {
-      final dataFormatada =
-          '${data.year.toString().padLeft(4, '0')}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
-
-      // Verificar se já existe um agendamento para esta sala/curso/matéria/professor/data (excluindo o próprio agendamento)
-      final conflitos = await supabase
-          .from('agendamento')
-          .select('id')
-          .eq('sala_id', salaId)
-          .eq('curso_id', cursoId)
-          .eq('materia_id', materiaId)
-          .eq('professor_id', professorId)
-          .eq('dia', dataFormatada)
-          .neq('id', agendamentoId);
-
-      return conflitos.isNotEmpty;
-    } catch (e) {
-      print('Erro ao verificar conflitos: $e');
-      return false;
-    }
   }
 
   Widget _buildCustomCalendar() {
@@ -1209,149 +1139,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF2D5A1A), // Verde escuro
-                    Color(0xFF44A301), // Verde médio
-                  ],
-                ),
-              ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 16.0,
-                    ), // Espaço à esquerda
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/images/UniCV-Variacoes-07.png',
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Campus Map',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Bem-vindo!',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
-              title: const Text(
-                'Inicio',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/home'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
-              title: const Text(
-                'Lista Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/listalocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Sala',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarsala'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Curso',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarcurso'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Matéria',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarmateria'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Professor',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Evento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarevento'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
-              title: const Text(
-                'Agendar Prova',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprova'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
-              title: const Text(
-                'Historico de Acoes',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                '© 2025 RH Company',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
+      drawer: buildAppDrawer(context),
       backgroundColor: const Color(0xFFF8FAFC), // igual criarcurso
       body: Row(
         children: [
@@ -1376,217 +1164,6 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Título para filtro por curso
-                          const Text(
-                            'Filtrar por curso:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF44A301),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Campo de pesquisa de curso
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF44A301),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.all(2),
-                            child: TextField(
-                              controller: pesquisaController,
-                              style: TextStyle(color: Colors.black87),
-                              decoration: InputDecoration(
-                                hintText: 'Pesquisar curso...',
-                                hintStyle: TextStyle(color: Colors.grey[600]),
-                                prefixIcon: const Icon(
-                                  Icons.search,
-                                  color: Color(0xFF44A301),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 0,
-                                  horizontal: 16,
-                                ),
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  filtroCurso = value.toLowerCase();
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Título para filtro por sala
-                          const Text(
-                            'Filtrar por sala:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF44A301),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Campo de pesquisa de sala
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF44A301),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.all(2),
-                            child: TextField(
-                              controller: pesquisaSalaController,
-                              style: TextStyle(color: Colors.black87),
-                              decoration: InputDecoration(
-                                hintText: 'Pesquisar sala...',
-                                hintStyle: TextStyle(color: Colors.grey[600]),
-                                prefixIcon: const Icon(
-                                  Icons.meeting_room,
-                                  color: Color(0xFF44A301),
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide.none,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 0,
-                                  horizontal: 16,
-                                ),
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  filtroSala = value.toLowerCase();
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Filtrar por tipo:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF44A301),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
-                            value: filtroTipo,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Todos',
-                                child: Text('Todos'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Aulas',
-                                child: Text('Aulas'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Eventos',
-                                child: Text('Eventos'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Provas',
-                                child: Text('Provas'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                filtroTipo = value!;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Filtrar por período:',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF44A301),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
-                            value: filtroPeriodo,
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Todos',
-                                child: Text('Todos'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Manhã',
-                                child: Text('Manhã'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Vespertino',
-                                child: Text('Vespertino'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Noturno',
-                                child: Text('Noturno'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                filtroPeriodo = value!;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.clear, size: 16),
-                            label: const Text('Limpar Filtros'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[600],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                filtroCurso = '';
-                                filtroSala = '';
-                                filtroTipo = 'Todos';
-                                filtroPeriodo = 'Todos';
-                                pesquisaController.clear();
-                                pesquisaSalaController.clear();
-                              });
-                            },
-                          ),
                           const SizedBox(height: 20),
                           Row(
                             children: [
@@ -1679,481 +1256,1498 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (agendamentos.isNotEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                              child: Text(
-                                'Cursos com agendamentos cadastrados',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF44A301),
-                                ),
-                              ),
-                            ),
-                          Expanded(
-                            child: ListView(
-                              padding: const EdgeInsets.all(18),
+                          // Barra de pesquisa e filtros
+                          Container(
+                            padding: const EdgeInsets.all(18),
+                            color: Colors.white,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                ...[1, 2, 3].expand((periodo) {
-                                  // Verifica se o período está sendo filtrado
-                                  if (filtroPeriodo != 'Todos') {
-                                    String periodoFiltrado;
-                                    switch (periodo) {
-                                      case 1:
-                                        periodoFiltrado = 'Manhã';
-                                        break;
-                                      case 2:
-                                        periodoFiltrado = 'Vespertino';
-                                        break;
-                                      case 3:
-                                        periodoFiltrado = 'Noturno';
-                                        break;
-                                      default:
-                                        periodoFiltrado = 'Outro';
-                                    }
-                                    if (periodoFiltrado != filtroPeriodo) {
-                                      return <Widget>[];
-                                    }
-                                  }
-
-                                  final Map<int, Map<String, dynamic>>
-                                  cursosUnicos = {};
-                                  for (final ag in agendamentos) {
-                                    final curso = ag['cursos'];
-                                    if (curso != null &&
-                                        curso['periodo'] == periodo) {
-                                      cursosUnicos[curso['id']] = curso;
-                                    }
-                                  }
-                                  if (cursosUnicos.isEmpty) return <Widget>[];
-
-                                  String tituloPeriodo;
-                                  switch (periodo) {
-                                    case 1:
-                                      tituloPeriodo = 'Manhã';
-                                      break;
-                                    case 2:
-                                      tituloPeriodo = 'Vespertino';
-                                      break;
-                                    case 3:
-                                      tituloPeriodo = 'Noturno';
-                                      break;
-                                    default:
-                                      tituloPeriodo = 'Outro';
-                                  }
-
-                                  return [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                      ),
-                                      child: Text(
-                                        tituloPeriodo,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF44A301),
+                                // Barra de pesquisa
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xFF44A301),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: TextField(
+                                          controller: pesquisaController,
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                'Pesquisar por sala ou curso...',
+                                            hintStyle: TextStyle(
+                                              color: Colors.grey[600],
+                                            ),
+                                            prefixIcon: const Icon(
+                                              Icons.search,
+                                              color: Color(0xFF44A301),
+                                            ),
+                                            border: InputBorder.none,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 12,
+                                                ),
+                                          ),
+                                          onChanged: (value) {
+                                            setState(() {});
+                                          },
                                         ),
                                       ),
                                     ),
-                                    ...cursosUnicos.values
-                                        .where(
-                                          (curso) =>
-                                              filtroCurso.isEmpty ||
-                                              (curso['curso'] ?? '')
-                                                  .toLowerCase()
-                                                  .contains(filtroCurso),
-                                        )
-                                        .where((curso) {
-                                          // Verifica se o curso tem agendamentos do tipo filtrado
-                                          final agsDoCursoFiltrados =
-                                              agendamentos
-                                                  .where(
-                                                    (ag) =>
-                                                        ag['cursos']?['id'] ==
-                                                            curso['id'] &&
-                                                        (filtroTipo ==
-                                                                'Todos' ||
-                                                            (filtroTipo ==
-                                                                    'Aulas' &&
-                                                                ag['tipo_agendamento'] ==
-                                                                    'A') ||
-                                                            (filtroTipo ==
-                                                                    'Eventos' &&
-                                                                ag['tipo_agendamento'] ==
-                                                                    'E') ||
-                                                            (filtroTipo ==
-                                                                    'Provas' &&
-                                                                ag['tipo_agendamento'] ==
-                                                                    'M')) &&
-                                                        (filtroSala.isEmpty ||
-                                                            (ag['salas']?['numero_sala']
-                                                                        ?.toString() ??
-                                                                    '')
-                                                                .toLowerCase()
-                                                                .contains(
-                                                                  filtroSala,
-                                                                )),
-                                                  )
-                                                  .toList();
+                                    const SizedBox(width: 12),
+                                    // Botão de filtro avançado
+                                    ElevatedButton.icon(
+                                      icon: Icon(
+                                        mostrarFiltroAvancado
+                                            ? Icons.filter_alt
+                                            : Icons.filter_alt_outlined,
+                                      ),
+                                      label: const Text('Filtro Avançado'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            mostrarFiltroAvancado
+                                                ? const Color(0xFF44A301)
+                                                : Colors.grey[300],
+                                        foregroundColor:
+                                            mostrarFiltroAvancado
+                                                ? Colors.white
+                                                : Colors.black87,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          mostrarFiltroAvancado =
+                                              !mostrarFiltroAvancado;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                Builder(
+                                  builder: (context) {
+                                    // Aplicar filtros
+                                    final agendamentosFiltrados =
+                                        locacao_functions.aplicarFiltros(
+                                          agendamentos,
+                                          pesquisaTexto:
+                                              pesquisaController.text,
+                                          filtroTipo: filtroTipo,
+                                          filtroPeriodo: filtroPeriodo,
+                                          mostrarMultiplasTurmas:
+                                              mostrarMultiplasTurmas,
+                                        );
 
-                                          return agsDoCursoFiltrados.isNotEmpty;
-                                        })
-                                        .map((curso) {
-                                          final agsDoCurso =
-                                              agendamentos
-                                                  .where(
-                                                    (ag) =>
-                                                        ag['cursos']?['id'] ==
-                                                            curso['id'] &&
-                                                        (filtroTipo ==
-                                                                'Todos' ||
-                                                            (filtroTipo ==
-                                                                    'Aulas' &&
-                                                                ag['tipo_agendamento'] ==
-                                                                    'A') ||
-                                                            (filtroTipo ==
-                                                                    'Eventos' &&
-                                                                ag['tipo_agendamento'] ==
-                                                                    'E') ||
-                                                            (filtroTipo ==
-                                                                    'Provas' &&
-                                                                ag['tipo_agendamento'] ==
-                                                                    'M')) &&
-                                                        (filtroSala.isEmpty ||
-                                                            (ag['salas']?['numero_sala']
-                                                                        ?.toString() ??
-                                                                    '')
-                                                                .toLowerCase()
-                                                                .contains(
-                                                                  filtroSala,
-                                                                )),
-                                                  )
-                                                  .toList();
+                                    // Mapear cores para salas com múltiplas turmas (apenas se o filtro estiver ativo)
+                                    final coresPorSala =
+                                        mostrarMultiplasTurmas
+                                            ? locacao_functions
+                                                .mapearCoresPorSala(
+                                                  agendamentosFiltrados,
+                                                )
+                                            : <String, Color>{};
 
-                                          final Set<String> chavesUnicas = {};
-                                          final List<dynamic> agsUnicos = [];
-                                          for (final ag in agsDoCurso) {
-                                            final chave =
-                                                '${ag['sala_id']}_${ag['curso_id']}_${ag['dia']}_${ag['periodo']}_${ag['aula_periodo']}';
-                                            if (!chavesUnicas.contains(chave)) {
-                                              chavesUnicas.add(chave);
-                                              agsUnicos.add(ag);
+                                    if (agendamentosFiltrados.isEmpty) {
+                                      return Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(32),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.event_busy,
+                                                size: 64,
+                                                color: Colors.grey[400],
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                'Nenhum agendamento encontrado',
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  color: Colors.grey[600],
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'Tente ajustar os filtros ou selecionar outra data',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.grey[500],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return ListView(
+                                      padding: const EdgeInsets.all(18),
+                                      children: [
+                                        ...[1, 2, 3].expand((periodo) {
+                                          // Verifica se o período está sendo filtrado
+                                          if (filtroPeriodo != 'Todos') {
+                                            String periodoFiltrado;
+                                            switch (periodo) {
+                                              case 1:
+                                                periodoFiltrado = 'Manhã';
+                                                break;
+                                              case 2:
+                                                periodoFiltrado = 'Vespertino';
+                                                break;
+                                              case 3:
+                                                periodoFiltrado = 'Noturno';
+                                                break;
+                                              default:
+                                                periodoFiltrado = 'Outro';
+                                            }
+                                            if (periodoFiltrado !=
+                                                filtroPeriodo) {
+                                              return <Widget>[];
                                             }
                                           }
-                                          return Card(
-                                            elevation: 6,
-                                            margin: const EdgeInsets.symmetric(
-                                              vertical: 10,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
-                                            child: ExpansionTile(
-                                              tilePadding:
+
+                                          // Se mostrarMultiplasTurmas está ativo, agrupa por sala
+                                          if (mostrarMultiplasTurmas) {
+                                            // Filtra agendamentos por período
+                                            final agsDoPeriodo =
+                                                agendamentosFiltrados
+                                                    .where(
+                                                      (ag) =>
+                                                          ag['cursos']?['periodo'] ==
+                                                          periodo,
+                                                    )
+                                                    .toList();
+
+                                            if (agsDoPeriodo.isEmpty)
+                                              return <Widget>[];
+
+                                            // Agrupa por sala
+                                            final salasAgrupadas =
+                                                locacao_functions
+                                                    .agruparAgendamentosPorSala(
+                                                      agsDoPeriodo,
+                                                    );
+
+                                            if (salasAgrupadas.isEmpty)
+                                              return <Widget>[];
+
+                                            String tituloPeriodo;
+                                            switch (periodo) {
+                                              case 1:
+                                                tituloPeriodo = 'Manhã';
+                                                break;
+                                              case 2:
+                                                tituloPeriodo = 'Vespertino';
+                                                break;
+                                              case 3:
+                                                tituloPeriodo = 'Noturno';
+                                                break;
+                                              default:
+                                                tituloPeriodo = 'Outro';
+                                            }
+
+                                            return [
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 8,
+                                                    ),
+                                                child: Text(
+                                                  tituloPeriodo,
+                                                  style: const TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF44A301),
+                                                  ),
+                                                ),
+                                              ),
+                                              ...salasAgrupadas.values.map((
+                                                salaData,
+                                              ) {
+                                                final salaNumero =
+                                                    salaData['salaNumero'];
+                                                final turmas =
+                                                    salaData['turmas'] as List;
+                                                final agendamentos =
+                                                    salaData['agendamentos']
+                                                        as List;
+
+                                                // Obter cor da sala
+                                                Color? corSala;
+                                                if (!agendamentos.isEmpty) {
+                                                  corSala = locacao_functions
+                                                      .obterCorSala(
+                                                        coresPorSala,
+                                                        agendamentos.first,
+                                                      );
+                                                }
+
+                                                // Determinar cor baseada no tipo de agendamento (usa o primeiro)
+                                                Color corCard;
+                                                if (!agendamentos.isEmpty) {
+                                                  final tipoAgendamento =
+                                                      agendamentos
+                                                          .first['tipo_agendamento'];
+                                                  if (tipoAgendamento == 'A') {
+                                                    corCard = const Color(
+                                                      0xFF44A301,
+                                                    );
+                                                  } else if (tipoAgendamento ==
+                                                      'E') {
+                                                    corCard = Colors.orange;
+                                                  } else if (tipoAgendamento ==
+                                                      'M') {
+                                                    corCard = Colors.red;
+                                                  } else {
+                                                    corCard = const Color(
+                                                      0xFF44A301,
+                                                    );
+                                                  }
+                                                } else {
+                                                  corCard = const Color(
+                                                    0xFF44A301,
+                                                  );
+                                                }
+
+                                                final corParaDestacar =
+                                                    corSala ?? corCard;
+                                                final corParaTitulo =
+                                                    corParaDestacar;
+
+                                                return Card(
+                                                  elevation: 6,
+                                                  margin:
+                                                      const EdgeInsets.symmetric(
+                                                        vertical: 10,
+                                                      ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          16,
+                                                        ),
+                                                    side: BorderSide(
+                                                      color: corParaDestacar,
+                                                      width: 3,
+                                                    ),
+                                                  ),
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            16,
+                                                          ),
+                                                      gradient: LinearGradient(
+                                                        begin:
+                                                            Alignment.topLeft,
+                                                        end:
+                                                            Alignment
+                                                                .bottomRight,
+                                                        colors: [
+                                                          corParaDestacar
+                                                              .withOpacity(0.1),
+                                                          corParaDestacar
+                                                              .withOpacity(
+                                                                0.05,
+                                                              ),
+                                                          corParaDestacar
+                                                              .withOpacity(0.1),
+                                                          corParaDestacar
+                                                              .withOpacity(
+                                                                0.05,
+                                                              ),
+                                                        ],
+                                                        stops: const [
+                                                          0.0,
+                                                          0.5,
+                                                          0.5,
+                                                          1.0,
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    child: ExpansionTile(
+                                                      tilePadding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 24,
+                                                            vertical: 8,
+                                                          ),
+                                                      title: Text(
+                                                        'Sala: $salaNumero',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 18,
+                                                          color: corParaTitulo,
+                                                        ),
+                                                      ),
+                                                      subtitle: Text(
+                                                        '${turmas.length} ${turmas.length == 1 ? 'turma' : 'turmas'} nesta sala',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color:
+                                                              Colors.grey[700],
+                                                        ),
+                                                      ),
+                                                      children:
+                                                          turmas.map<Widget>((
+                                                            turma,
+                                                          ) {
+                                                            final curso =
+                                                                turma['curso']
+                                                                    as Map<
+                                                                      String,
+                                                                      dynamic
+                                                                    >;
+                                                            final agsTurma =
+                                                                turma['agendamentos']
+                                                                    as List;
+
+                                                            final Set<String>
+                                                            chavesUnicas = {};
+                                                            final List<dynamic>
+                                                            agsUnicos = [];
+                                                            for (final ag
+                                                                in agsTurma) {
+                                                              final chave =
+                                                                  '${ag['sala_id']}_${ag['curso_id']}_${ag['dia']}_${ag['periodo']}_${ag['aula_periodo']}';
+                                                              if (!chavesUnicas
+                                                                  .contains(
+                                                                    chave,
+                                                                  )) {
+                                                                chavesUnicas
+                                                                    .add(chave);
+                                                                agsUnicos.add(
+                                                                  ag,
+                                                                );
+                                                              }
+                                                            }
+
+                                                            return Card(
+                                                              margin:
+                                                                  const EdgeInsets.symmetric(
+                                                                    horizontal:
+                                                                        16,
+                                                                    vertical: 8,
+                                                                  ),
+                                                              elevation: 2,
+                                                              child: ExpansionTile(
+                                                                title: Text(
+                                                                  'Turma: ${curso['curso'] ?? ''}',
+                                                                  style: const TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    fontSize:
+                                                                        16,
+                                                                  ),
+                                                                ),
+                                                                subtitle: Text(
+                                                                  '${agsUnicos.length} agendamento(s)',
+                                                                  style: TextStyle(
+                                                                    fontSize:
+                                                                        12,
+                                                                    color:
+                                                                        Colors
+                                                                            .grey[600],
+                                                                  ),
+                                                                ),
+                                                                children: [
+                                                                  Container(
+                                                                    width:
+                                                                        double
+                                                                            .infinity,
+                                                                    padding: const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          0,
+                                                                      vertical:
+                                                                          8,
+                                                                    ),
+                                                                    child: DataTable(
+                                                                      columnSpacing:
+                                                                          16,
+                                                                      columns: const [
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Tipo',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Data',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Aula',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Sala',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Disciplina/Evento',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Professor',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Período',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Início',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Fim',
+                                                                          ),
+                                                                        ),
+                                                                        DataColumn(
+                                                                          label: Text(
+                                                                            'Ações',
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                      rows:
+                                                                          agsUnicos.map<
+                                                                            DataRow
+                                                                          >((
+                                                                            agendamento,
+                                                                          ) {
+                                                                            final salaAg =
+                                                                                agendamento['salas'];
+                                                                            final materia =
+                                                                                agendamento['materias'];
+                                                                            final professor =
+                                                                                agendamento['professores'];
+                                                                            final cursoAg =
+                                                                                agendamento['cursos'];
+                                                                            final horaInicio =
+                                                                                agendamento['hora_inicio'];
+                                                                            final horaFim =
+                                                                                agendamento['hora_fim'];
+                                                                            final tipoAgendamento =
+                                                                                agendamento['tipo_agendamento'];
+                                                                            final nomeEvento =
+                                                                                agendamento['nome_evento'];
+                                                                            final dia = DateTime.parse(
+                                                                              agendamento['dia'],
+                                                                            );
+                                                                            final dataFormatada =
+                                                                                '${dia.day.toString().padLeft(2, '0')}/${dia.month.toString().padLeft(2, '0')}/${dia.year}';
+
+                                                                            final tipoTexto =
+                                                                                tipoAgendamento ==
+                                                                                        'A'
+                                                                                    ? 'Aula'
+                                                                                    : tipoAgendamento ==
+                                                                                        'E'
+                                                                                    ? 'Evento'
+                                                                                    : tipoAgendamento ==
+                                                                                        'M'
+                                                                                    ? 'Prova'
+                                                                                    : 'Desconhecido';
+                                                                            final tipoColor =
+                                                                                tipoAgendamento ==
+                                                                                        'A'
+                                                                                    ? const Color(
+                                                                                      0xFF44A301,
+                                                                                    )
+                                                                                    : tipoAgendamento ==
+                                                                                        'E'
+                                                                                    ? Colors.orange
+                                                                                    : tipoAgendamento ==
+                                                                                        'M'
+                                                                                    ? Colors.red
+                                                                                    : Colors.grey;
+
+                                                                            final salaLocal =
+                                                                                salaAg?['numero_sala']?.toString() ??
+                                                                                '-';
+
+                                                                            final materiaEvento =
+                                                                                tipoAgendamento ==
+                                                                                        'A'
+                                                                                    ? (materia?['nome'] ??
+                                                                                        '-')
+                                                                                    : tipoAgendamento ==
+                                                                                        'E'
+                                                                                    ? (nomeEvento ??
+                                                                                        '-')
+                                                                                    : tipoAgendamento ==
+                                                                                        'M'
+                                                                                    ? (materia?['nome'] ??
+                                                                                        '-')
+                                                                                    : '-';
+
+                                                                            return DataRow(
+                                                                              cells: [
+                                                                                DataCell(
+                                                                                  Container(
+                                                                                    padding: const EdgeInsets.symmetric(
+                                                                                      horizontal:
+                                                                                          8,
+                                                                                      vertical:
+                                                                                          4,
+                                                                                    ),
+                                                                                    decoration: BoxDecoration(
+                                                                                      color:
+                                                                                          tipoColor,
+                                                                                      borderRadius: BorderRadius.circular(
+                                                                                        12,
+                                                                                      ),
+                                                                                    ),
+                                                                                    child: Text(
+                                                                                      tipoTexto,
+                                                                                      style: const TextStyle(
+                                                                                        color:
+                                                                                            Colors.white,
+                                                                                        fontWeight:
+                                                                                            FontWeight.bold,
+                                                                                        fontSize:
+                                                                                            12,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    dataFormatada,
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    agendamento['aula_periodo'] ??
+                                                                                        '',
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    salaLocal,
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    materiaEvento,
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    professor?['nome_professor'] ??
+                                                                                        '-',
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    locacao_functions.periodoToString(
+                                                                                      cursoAg['periodo'],
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    horaInicio?.toString().substring(
+                                                                                          0,
+                                                                                          5,
+                                                                                        ) ??
+                                                                                        '',
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Text(
+                                                                                    horaFim?.toString().substring(
+                                                                                          0,
+                                                                                          5,
+                                                                                        ) ??
+                                                                                        '',
+                                                                                  ),
+                                                                                ),
+                                                                                DataCell(
+                                                                                  Row(
+                                                                                    mainAxisSize:
+                                                                                        MainAxisSize.min,
+                                                                                    children: [
+                                                                                      IconButton(
+                                                                                        icon: const Icon(
+                                                                                          Icons.edit,
+                                                                                          color: Color(
+                                                                                            0xFF44A301,
+                                                                                          ),
+                                                                                        ),
+                                                                                        onPressed:
+                                                                                            () => editarAgendamento(
+                                                                                              agendamento,
+                                                                                            ),
+                                                                                      ),
+                                                                                      IconButton(
+                                                                                        icon: const Icon(
+                                                                                          Icons.delete,
+                                                                                          color:
+                                                                                              Colors.red,
+                                                                                        ),
+                                                                                        onPressed:
+                                                                                            () => excluirAgendamento(
+                                                                                              agendamento['id'],
+                                                                                            ),
+                                                                                      ),
+                                                                                    ],
+                                                                                  ),
+                                                                                ),
+                                                                              ],
+                                                                            );
+                                                                          }).toList(),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            );
+                                                          }).toList(),
+                                                    ),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                            ];
+                                          }
+
+                                          final Map<int, Map<String, dynamic>>
+                                          cursosUnicos = {};
+                                          for (final ag
+                                              in agendamentosFiltrados) {
+                                            final curso = ag['cursos'];
+                                            if (curso != null &&
+                                                curso['periodo'] == periodo) {
+                                              cursosUnicos[curso['id']] = curso;
+                                            }
+                                          }
+                                          if (cursosUnicos.isEmpty)
+                                            return <Widget>[];
+
+                                          String tituloPeriodo;
+                                          switch (periodo) {
+                                            case 1:
+                                              tituloPeriodo = 'Manhã';
+                                              break;
+                                            case 2:
+                                              tituloPeriodo = 'Vespertino';
+                                              break;
+                                            case 3:
+                                              tituloPeriodo = 'Noturno';
+                                              break;
+                                            default:
+                                              tituloPeriodo = 'Outro';
+                                          }
+
+                                          return [
+                                            Padding(
+                                              padding:
                                                   const EdgeInsets.symmetric(
-                                                    horizontal: 24,
                                                     vertical: 8,
                                                   ),
-                                              title: Text(
-                                                curso['curso'] ?? '',
+                                              child: Text(
+                                                tituloPeriodo,
                                                 style: const TextStyle(
+                                                  fontSize: 20,
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 18,
                                                   color: Color(0xFF44A301),
                                                 ),
                                               ),
-                                              subtitle: Text(
-                                                'Semestre: ${curso['semestre'] ?? '-'}',
-                                              ),
-                                              children: [
-                                                Container(
-                                                  width: double.infinity,
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 0,
-                                                        vertical: 8,
-                                                      ),
-                                                  child: DataTable(
-                                                    columnSpacing: 16,
-                                                    columns: const [
-                                                      DataColumn(
-                                                        label: Text('Tipo'),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text('Data'),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text('Aula'),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text('Sala'),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text(
-                                                          'Matéria/Evento',
-                                                        ),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text(
-                                                          'Professor',
-                                                        ),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text('Período'),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text('Início'),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text('Fim'),
-                                                      ),
-                                                      DataColumn(
-                                                        label: Text('Ações'),
-                                                      ),
-                                                    ],
-                                                    rows:
-                                                        agsUnicos.map<DataRow>((
-                                                          agendamento,
-                                                        ) {
-                                                          final sala =
-                                                              agendamento['salas'];
-                                                          final materia =
-                                                              agendamento['materias'];
-                                                          final professor =
-                                                              agendamento['professores'];
-                                                          final curso =
-                                                              agendamento['cursos'];
-                                                          final horaInicio =
-                                                              agendamento['hora_inicio'];
-                                                          final horaFim =
-                                                              agendamento['hora_fim'];
-                                                          final tipoAgendamento =
-                                                              agendamento['tipo_agendamento'];
-                                                          final nomeEvento =
-                                                              agendamento['nome_evento'];
-                                                          final dia =
-                                                              DateTime.parse(
-                                                                agendamento['dia'],
-                                                              );
-                                                          final dataFormatada =
-                                                              '${dia.day.toString().padLeft(2, '0')}/${dia.month.toString().padLeft(2, '0')}/${dia.year}';
+                                            ),
+                                            ...cursosUnicos.values.map((curso) {
+                                              final agsDoCurso =
+                                                  agendamentosFiltrados
+                                                      .where(
+                                                        (ag) =>
+                                                            ag['cursos']?['id'] ==
+                                                            curso['id'],
+                                                      )
+                                                      .toList();
 
-                                                          // Determina o tipo de agendamento
-                                                          final tipoTexto =
-                                                              tipoAgendamento ==
-                                                                      'A'
-                                                                  ? 'Aula'
-                                                                  : tipoAgendamento ==
-                                                                      'E'
-                                                                  ? 'Evento'
-                                                                  : tipoAgendamento ==
-                                                                      'M'
-                                                                  ? 'Prova'
-                                                                  : 'Desconhecido';
-                                                          final tipoColor =
-                                                              tipoAgendamento ==
-                                                                      'A'
-                                                                  ? const Color(
-                                                                    0xFF44A301,
-                                                                  )
-                                                                  : tipoAgendamento ==
-                                                                      'E'
-                                                                  ? Colors
-                                                                      .orange
-                                                                  : tipoAgendamento ==
-                                                                      'M'
-                                                                  ? Colors.red
-                                                                  : Colors.grey;
+                                              final Set<String> chavesUnicas =
+                                                  {};
+                                              final List<dynamic> agsUnicos =
+                                                  [];
+                                              for (final ag in agsDoCurso) {
+                                                final chave =
+                                                    '${ag['sala_id']}_${ag['curso_id']}_${ag['dia']}_${ag['periodo']}_${ag['aula_periodo']}';
+                                                if (!chavesUnicas.contains(
+                                                  chave,
+                                                )) {
+                                                  chavesUnicas.add(chave);
+                                                  agsUnicos.add(ag);
+                                                }
+                                              }
+                                              // Pegar informações do primeiro agendamento para o card
+                                              final primeiroAg =
+                                                  agsUnicos.isNotEmpty
+                                                      ? agsUnicos.first
+                                                      : null;
+                                              final sala = primeiroAg?['salas'];
+                                              final materia =
+                                                  primeiroAg?['materias'];
+                                              final nomeEvento =
+                                                  primeiroAg?['nome_evento'];
+                                              final tipoAgendamento =
+                                                  primeiroAg?['tipo_agendamento'];
+                                              final aulaPeriodo =
+                                                  primeiroAg?['aula_periodo'] ??
+                                                  '';
 
-                                                          // Determina sala
-                                                          final salaLocal =
-                                                              sala?['numero_sala']
-                                                                  ?.toString() ??
-                                                              '-';
+                                              // Determinar cor baseada no tipo de agendamento
+                                              Color corCard;
+                                              String disciplinaEvento;
 
-                                                          // Determina matéria/evento
-                                                          final materiaEvento =
-                                                              tipoAgendamento ==
-                                                                      'A'
-                                                                  ? (materia?['nome'] ??
-                                                                      '-')
-                                                                  : tipoAgendamento ==
-                                                                      'E'
-                                                                  ? (nomeEvento ??
-                                                                      '-')
-                                                                  : tipoAgendamento ==
-                                                                      'M'
-                                                                  ? (materia?['nome'] ??
-                                                                      '-')
-                                                                  : '-';
+                                              if (tipoAgendamento == 'A') {
+                                                corCard = const Color(
+                                                  0xFF44A301,
+                                                ); // Verde
+                                                disciplinaEvento =
+                                                    materia?['nome'] ?? '-';
+                                              } else if (tipoAgendamento ==
+                                                  'E') {
+                                                corCard =
+                                                    Colors.orange; // Laranja
+                                                disciplinaEvento =
+                                                    nomeEvento ?? '-';
+                                              } else if (tipoAgendamento ==
+                                                  'M') {
+                                                corCard =
+                                                    Colors.red; // Vermelho
+                                                disciplinaEvento =
+                                                    materia?['nome'] ?? '-';
+                                              } else {
+                                                corCard = const Color(
+                                                  0xFF44A301,
+                                                ); // Verde padrão
+                                                disciplinaEvento =
+                                                    materia?['nome'] ??
+                                                    nomeEvento ??
+                                                    '-';
+                                              }
 
-                                                          return DataRow(
-                                                            cells: [
-                                                              DataCell(
-                                                                Container(
-                                                                  padding:
-                                                                      const EdgeInsets.symmetric(
-                                                                        horizontal:
-                                                                            8,
-                                                                        vertical:
-                                                                            4,
-                                                                      ),
-                                                                  decoration: BoxDecoration(
-                                                                    color:
-                                                                        tipoColor,
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          12,
-                                                                        ),
-                                                                  ),
-                                                                  child: Text(
-                                                                    tipoTexto,
-                                                                    style: const TextStyle(
-                                                                      color:
-                                                                          Colors
-                                                                              .white,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                      fontSize:
-                                                                          12,
+                                              // Verificar se algum agendamento está em sala com múltiplas turmas
+                                              Color? corSala;
+                                              bool temMultiplasTurmas = false;
+                                              for (final ag in agsUnicos) {
+                                                final cor = locacao_functions
+                                                    .obterCorSala(
+                                                      coresPorSala,
+                                                      ag,
+                                                    );
+                                                if (cor != null) {
+                                                  corSala = cor;
+                                                  temMultiplasTurmas = true;
+                                                  break; // Usa a primeira cor encontrada
+                                                }
+                                              }
+
+                                              // Se o filtro está ativo e tem múltiplas turmas, usa a cor única da sala
+                                              // Caso contrário, usa a cor do tipo
+                                              final deveDestacar =
+                                                  mostrarMultiplasTurmas &&
+                                                  temMultiplasTurmas;
+                                              final corParaDestacar =
+                                                  deveDestacar &&
+                                                          corSala != null
+                                                      ? corSala
+                                                      : corCard;
+                                              final corParaTitulo =
+                                                  deveDestacar &&
+                                                          corSala != null
+                                                      ? corSala
+                                                      : corCard;
+
+                                              // Informações para o subtítulo
+                                              final salaNumero =
+                                                  sala?['numero_sala']
+                                                      ?.toString() ??
+                                                  '-';
+                                              final subtitulo =
+                                                  'Sala: $salaNumero | ${disciplinaEvento.isNotEmpty ? disciplinaEvento : 'N/A'} | Aula: $aulaPeriodo';
+
+                                              return Card(
+                                                elevation: 6,
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 10,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  side:
+                                                      deveDestacar
+                                                          ? BorderSide(
+                                                            color:
+                                                                corParaDestacar,
+                                                            width: 3,
+                                                          )
+                                                          : BorderSide.none,
+                                                ),
+                                                child: Container(
+                                                  decoration:
+                                                      deveDestacar
+                                                          ? BoxDecoration(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  16,
+                                                                ),
+                                                            // Efeito listrado
+                                                            gradient: LinearGradient(
+                                                              begin:
+                                                                  Alignment
+                                                                      .topLeft,
+                                                              end:
+                                                                  Alignment
+                                                                      .bottomRight,
+                                                              colors: [
+                                                                corParaDestacar
+                                                                    .withOpacity(
+                                                                      0.1,
                                                                     ),
-                                                                  ),
-                                                                ),
+                                                                corParaDestacar
+                                                                    .withOpacity(
+                                                                      0.05,
+                                                                    ),
+                                                                corParaDestacar
+                                                                    .withOpacity(
+                                                                      0.1,
+                                                                    ),
+                                                                corParaDestacar
+                                                                    .withOpacity(
+                                                                      0.05,
+                                                                    ),
+                                                              ],
+                                                              stops: const [
+                                                                0.0,
+                                                                0.5,
+                                                                0.5,
+                                                                1.0,
+                                                              ],
+                                                            ),
+                                                          )
+                                                          : null,
+                                                  child: ExpansionTile(
+                                                    tilePadding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 24,
+                                                          vertical: 8,
+                                                        ),
+                                                    title: Text(
+                                                      'Turma: ${curso['curso'] ?? ''}',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 18,
+                                                        color: corParaTitulo,
+                                                      ),
+                                                    ),
+                                                    subtitle: Text(
+                                                      subtitulo,
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey[700],
+                                                      ),
+                                                    ),
+                                                    children: [
+                                                      Container(
+                                                        width: double.infinity,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 0,
+                                                              vertical: 8,
+                                                            ),
+                                                        child: DataTable(
+                                                          columnSpacing: 16,
+                                                          columns: const [
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Tipo',
                                                               ),
-                                                              DataCell(
-                                                                Text(
-                                                                  dataFormatada,
-                                                                ),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Data',
                                                               ),
-                                                              DataCell(
-                                                                Text(
-                                                                  agendamento['aula_periodo'] ??
-                                                                      '',
-                                                                ),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Aula',
                                                               ),
-                                                              DataCell(
-                                                                Text(salaLocal),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Sala',
                                                               ),
-                                                              DataCell(
-                                                                Text(
-                                                                  materiaEvento,
-                                                                ),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Disciplina/Evento',
                                                               ),
-                                                              DataCell(
-                                                                Text(
-                                                                  professor?['nome_professor'] ??
-                                                                      '-',
-                                                                ),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Professor',
                                                               ),
-                                                              DataCell(
-                                                                Text(
-                                                                  periodoToString(
-                                                                    curso['periodo'],
-                                                                  ),
-                                                                ),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Período',
                                                               ),
-                                                              DataCell(
-                                                                Text(
-                                                                  horaInicio
-                                                                          ?.toString()
-                                                                          .substring(
-                                                                            0,
-                                                                            5,
-                                                                          ) ??
-                                                                      '',
-                                                                ),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Início',
                                                               ),
-                                                              DataCell(
-                                                                Text(
-                                                                  horaFim
-                                                                          ?.toString()
-                                                                          .substring(
-                                                                            0,
-                                                                            5,
-                                                                          ) ??
-                                                                      '',
-                                                                ),
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Fim',
                                                               ),
-                                                              DataCell(
-                                                                Row(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  children: [
-                                                                    IconButton(
-                                                                      icon: const Icon(
-                                                                        Icons
-                                                                            .edit,
-                                                                        color: Color(
+                                                            ),
+                                                            DataColumn(
+                                                              label: Text(
+                                                                'Ações',
+                                                              ),
+                                                            ),
+                                                          ],
+                                                          rows:
+                                                              agsUnicos.map<
+                                                                DataRow
+                                                              >((agendamento) {
+                                                                final sala =
+                                                                    agendamento['salas'];
+                                                                final materia =
+                                                                    agendamento['materias'];
+                                                                final professor =
+                                                                    agendamento['professores'];
+                                                                final curso =
+                                                                    agendamento['cursos'];
+                                                                final horaInicio =
+                                                                    agendamento['hora_inicio'];
+                                                                final horaFim =
+                                                                    agendamento['hora_fim'];
+                                                                final tipoAgendamento =
+                                                                    agendamento['tipo_agendamento'];
+                                                                final nomeEvento =
+                                                                    agendamento['nome_evento'];
+                                                                final dia =
+                                                                    DateTime.parse(
+                                                                      agendamento['dia'],
+                                                                    );
+                                                                final dataFormatada =
+                                                                    '${dia.day.toString().padLeft(2, '0')}/${dia.month.toString().padLeft(2, '0')}/${dia.year}';
+
+                                                                // Determina o tipo de agendamento
+                                                                final tipoTexto =
+                                                                    tipoAgendamento ==
+                                                                            'A'
+                                                                        ? 'Aula'
+                                                                        : tipoAgendamento ==
+                                                                            'E'
+                                                                        ? 'Evento'
+                                                                        : tipoAgendamento ==
+                                                                            'M'
+                                                                        ? 'Prova'
+                                                                        : 'Desconhecido';
+                                                                final tipoColor =
+                                                                    tipoAgendamento ==
+                                                                            'A'
+                                                                        ? const Color(
                                                                           0xFF44A301,
+                                                                        )
+                                                                        : tipoAgendamento ==
+                                                                            'E'
+                                                                        ? Colors
+                                                                            .orange
+                                                                        : tipoAgendamento ==
+                                                                            'M'
+                                                                        ? Colors
+                                                                            .red
+                                                                        : Colors
+                                                                            .grey;
+
+                                                                // Determina sala
+                                                                final salaLocal =
+                                                                    sala?['numero_sala']
+                                                                        ?.toString() ??
+                                                                    '-';
+
+                                                                // Determina matéria/evento
+                                                                final materiaEvento =
+                                                                    tipoAgendamento ==
+                                                                            'A'
+                                                                        ? (materia?['nome'] ??
+                                                                            '-')
+                                                                        : tipoAgendamento ==
+                                                                            'E'
+                                                                        ? (nomeEvento ??
+                                                                            '-')
+                                                                        : tipoAgendamento ==
+                                                                            'M'
+                                                                        ? (materia?['nome'] ??
+                                                                            '-')
+                                                                        : '-';
+
+                                                                // Obter cor da sala para esta linha
+                                                                final corLinha =
+                                                                    locacao_functions.obterCorSala(
+                                                                      coresPorSala,
+                                                                      agendamento,
+                                                                    );
+
+                                                                return DataRow(
+                                                                  color:
+                                                                      corLinha !=
+                                                                              null
+                                                                          ? MaterialStateProperty.all(
+                                                                            corLinha.withOpacity(
+                                                                              0.15,
+                                                                            ),
+                                                                          )
+                                                                          : null,
+                                                                  cells: [
+                                                                    DataCell(
+                                                                      Container(
+                                                                        padding: const EdgeInsets.symmetric(
+                                                                          horizontal:
+                                                                              8,
+                                                                          vertical:
+                                                                              4,
+                                                                        ),
+                                                                        decoration: BoxDecoration(
+                                                                          color:
+                                                                              tipoColor,
+                                                                          borderRadius: BorderRadius.circular(
+                                                                            12,
+                                                                          ),
+                                                                        ),
+                                                                        child: Text(
+                                                                          tipoTexto,
+                                                                          style: const TextStyle(
+                                                                            color:
+                                                                                Colors.white,
+                                                                            fontWeight:
+                                                                                FontWeight.bold,
+                                                                            fontSize:
+                                                                                12,
+                                                                          ),
                                                                         ),
                                                                       ),
-                                                                      onPressed:
-                                                                          () => editarAgendamento(
-                                                                            agendamento,
-                                                                          ),
                                                                     ),
-                                                                    IconButton(
-                                                                      icon: const Icon(
-                                                                        Icons
-                                                                            .delete,
-                                                                        color:
-                                                                            Colors.red,
+                                                                    DataCell(
+                                                                      Text(
+                                                                        dataFormatada,
                                                                       ),
-                                                                      onPressed:
-                                                                          () => excluirAgendamento(
-                                                                            agendamento['id'],
+                                                                    ),
+                                                                    DataCell(
+                                                                      Text(
+                                                                        agendamento['aula_periodo'] ??
+                                                                            '',
+                                                                      ),
+                                                                    ),
+                                                                    DataCell(
+                                                                      Text(
+                                                                        salaLocal,
+                                                                      ),
+                                                                    ),
+                                                                    DataCell(
+                                                                      Text(
+                                                                        materiaEvento,
+                                                                      ),
+                                                                    ),
+                                                                    DataCell(
+                                                                      Text(
+                                                                        professor?['nome_professor'] ??
+                                                                            '-',
+                                                                      ),
+                                                                    ),
+                                                                    DataCell(
+                                                                      Text(
+                                                                        periodoToString(
+                                                                          curso['periodo'],
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    DataCell(
+                                                                      Text(
+                                                                        horaInicio?.toString().substring(
+                                                                              0,
+                                                                              5,
+                                                                            ) ??
+                                                                            '',
+                                                                      ),
+                                                                    ),
+                                                                    DataCell(
+                                                                      Text(
+                                                                        horaFim?.toString().substring(
+                                                                              0,
+                                                                              5,
+                                                                            ) ??
+                                                                            '',
+                                                                      ),
+                                                                    ),
+                                                                    DataCell(
+                                                                      Row(
+                                                                        mainAxisSize:
+                                                                            MainAxisSize.min,
+                                                                        children: [
+                                                                          IconButton(
+                                                                            icon: const Icon(
+                                                                              Icons.edit,
+                                                                              color: Color(
+                                                                                0xFF44A301,
+                                                                              ),
+                                                                            ),
+                                                                            onPressed:
+                                                                                () => editarAgendamento(
+                                                                                  agendamento,
+                                                                                ),
                                                                           ),
+                                                                          IconButton(
+                                                                            icon: const Icon(
+                                                                              Icons.delete,
+                                                                              color:
+                                                                                  Colors.red,
+                                                                            ),
+                                                                            onPressed:
+                                                                                () => excluirAgendamento(
+                                                                                  agendamento['id'],
+                                                                                ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
                                                                     ),
                                                                   ],
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          );
-                                                        }).toList(),
+                                                                );
+                                                              }).toList(),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                              ],
+                                              );
+                                            }).toList(),
+                                          ];
+                                        }),
+                                      ],
+                                    );
+                                  },
+                                ),
+                                // Painel de filtro avançado sobreposto
+                                if (mostrarFiltroAvancado)
+                                  Positioned(
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: Container(
+                                      margin: const EdgeInsets.all(18),
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: const Color(0xFF44A301),
+                                          width: 2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.2,
                                             ),
-                                          );
-                                        })
-                                        .toList(),
-                                  ];
-                                }),
-                                if (agendamentos.isEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.all(32),
-                                    child: Center(
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
                                       child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
-                                            Icons.event_busy,
-                                            size: 64,
-                                            color: Colors.grey[400],
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text(
+                                                'Filtros Avançados',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF44A301),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(Icons.close),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    mostrarFiltroAvancado =
+                                                        false;
+                                                  });
+                                                },
+                                                color: Colors.grey[600],
+                                              ),
+                                            ],
                                           ),
                                           const SizedBox(height: 16),
-                                          Text(
-                                            'Nenhum agendamento encontrado',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              color: Colors.grey[600],
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                          // Filtros em uma linha: Tipo, Período e Turmas em conjunto
+                                          Row(
+                                            children: [
+                                              // Filtro por tipo
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Text(
+                                                      'Tipo:',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    DropdownButtonFormField<
+                                                      String
+                                                    >(
+                                                      value: filtroTipo,
+                                                      isExpanded: true,
+                                                      decoration: InputDecoration(
+                                                        filled: true,
+                                                        fillColor: Colors.white,
+                                                        border: OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 8,
+                                                            ),
+                                                      ),
+                                                      items: const [
+                                                        DropdownMenuItem(
+                                                          value: 'Todos',
+                                                          child: Text('Todos'),
+                                                        ),
+                                                        DropdownMenuItem(
+                                                          value: 'Aulas',
+                                                          child: Text('Aulas'),
+                                                        ),
+                                                        DropdownMenuItem(
+                                                          value: 'Eventos',
+                                                          child: Text(
+                                                            'Eventos',
+                                                          ),
+                                                        ),
+                                                        DropdownMenuItem(
+                                                          value: 'Provas',
+                                                          child: Text('Provas'),
+                                                        ),
+                                                      ],
+                                                      onChanged: (value) {
+                                                        setState(() {
+                                                          filtroTipo = value!;
+                                                        });
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              // Filtro por período
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Text(
+                                                      'Período:',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    DropdownButtonFormField<
+                                                      String
+                                                    >(
+                                                      value: filtroPeriodo,
+                                                      isExpanded: true,
+                                                      decoration: InputDecoration(
+                                                        filled: true,
+                                                        fillColor: Colors.white,
+                                                        border: OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 8,
+                                                            ),
+                                                      ),
+                                                      items: const [
+                                                        DropdownMenuItem(
+                                                          value: 'Todos',
+                                                          child: Text('Todos'),
+                                                        ),
+                                                        DropdownMenuItem(
+                                                          value: 'Manhã',
+                                                          child: Text('Manhã'),
+                                                        ),
+                                                        DropdownMenuItem(
+                                                          value: 'Vespertino',
+                                                          child: Text(
+                                                            'Vespertino',
+                                                          ),
+                                                        ),
+                                                        DropdownMenuItem(
+                                                          value: 'Noturno',
+                                                          child: Text(
+                                                            'Noturno',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                      onChanged: (value) {
+                                                        setState(() {
+                                                          filtroPeriodo =
+                                                              value!;
+                                                        });
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              // Botão para mostrar múltiplas turmas
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Text(
+                                                      'Turmas em conjunto:',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Container(
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            mostrarMultiplasTurmas
+                                                                ? const Color(
+                                                                  0xFF44A301,
+                                                                )
+                                                                : Colors
+                                                                    .grey[300],
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                      child: CheckboxListTile(
+                                                        title: const Text(
+                                                          'Ativar',
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                        value:
+                                                            mostrarMultiplasTurmas,
+                                                        activeColor:
+                                                            Colors.white,
+                                                        checkColor: const Color(
+                                                          0xFF44A301,
+                                                        ),
+                                                        onChanged: (value) {
+                                                          setState(() {
+                                                            mostrarMultiplasTurmas =
+                                                                value ?? false;
+                                                          });
+                                                        },
+                                                        contentPadding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 8,
+                                                              vertical: 0,
+                                                            ),
+                                                        dense: true,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Tente ajustar os filtros ou selecionar outra data',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey[500],
-                                            ),
+                                          const SizedBox(height: 12),
+                                          // Botão limpar filtros
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
+                                            children: [
+                                              TextButton.icon(
+                                                icon: const Icon(Icons.clear),
+                                                label: const Text(
+                                                  'Limpar Filtros',
+                                                ),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    pesquisaController.clear();
+                                                    filtroTipo = 'Todos';
+                                                    filtroPeriodo = 'Todos';
+                                                    mostrarMultiplasTurmas =
+                                                        false;
+                                                  });
+                                                },
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),

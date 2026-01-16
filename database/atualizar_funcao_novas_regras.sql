@@ -110,14 +110,14 @@ BEGIN
         RAISE EXCEPTION 'Não é possível agendar para datas passadas';
     END IF;
     
-    -- Verificar se o professor está associado à matéria (se ambos forem fornecidos)
-    IF NEW.professor_id IS NOT NULL AND NEW.materia_id IS NOT NULL THEN
+    -- Verificar se o professor está associado à turma (curso) através de professor_turmas
+    IF NEW.professor_id IS NOT NULL AND NEW.curso_id IS NOT NULL THEN
         IF NOT EXISTS (
-            SELECT 1 FROM professor_materias 
+            SELECT 1 FROM professor_turmas 
             WHERE professor_id = NEW.professor_id 
-              AND materia_id = NEW.materia_id
+              AND curso_id = NEW.curso_id
         ) THEN
-            RAISE EXCEPTION 'Professor com ID % não está associado à matéria com ID %', NEW.professor_id, NEW.materia_id;
+            RAISE EXCEPTION 'Professor com ID % não está associado à turma (curso) com ID %', NEW.professor_id, NEW.curso_id;
         END IF;
     END IF;
     

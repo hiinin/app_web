@@ -1,0 +1,39 @@
+[ok] - Arrumar drawer 
+[] - Trocar “Matéria” por “Disciplina”
+[] - Trocar “Período” por “Turno”
+[ok] - Trocar “Cadeiras” por “Carteiras”
+[ok] - Trocar “Primeira aula (noturno)” por “Primeiro horário (19h00 às 20h40)”
+[ok] - Trocar “Primeira aula (matutino)” por “Primeiro horário (08h00 às 09h40)”
+[ok] - Trocar “Segunda aula (noturno)” por “Segundo horário (20h55 às 22h35)”
+[ok] - Trocar “Segunda aula (matutino)” por “Segundo horário (09h55 às 11h35)”
+[ok] - Trocar “Novo Agendamento” por “Novo Ensalamento”
+[ok] - Trocar “Consultar Agendamento” por “Consultar Ensalamento”
+
+[] - Criar opção de remanejamento/alteração da ordem de salas, disciplinas, professores e turmas
+[] - Permitir organização por ordem alfabética
+[] - Permitir organização por capacidade da sala
+[] - Permitir organização por quantidade de alunos da turma
+
+[] - Implementar opção de junção de turmas em uma mesma sala
+[] - Implementar opção de divisão de turmas
+
+[ok] - Adicionar cadastro de carteiras PCD por sala
+[ok] - Permitir informar a quantidade de carteiras PCD
+
+[ok] - Corrigir cadastro da sala para salvar TV, Projetor e Ar-condicionado já na criação
+
+[ok] - Alterar vínculo de professor com disciplina para vínculo com turma (e não com curso)
+
+[ok] - Ajustar cadastro para usar turma em vez do nome do curso na vinculação
+
+[] - Inserir botão de “Voltar” dentro das opções dos menus
+
+[ok] - Permitir marcar os dois horários de aula ao criar um novo ensalamento
+
+[ok] - Exibir opção de agendamento de prova, aula e evento também em “Novo Ensalamento”
+
+[ok/] - Adicionar campo de observações ao reservar evento ou prova
+
+[ok] - Permitir observações como: “Necessário passador de slide e microfones” no agendamento
+
+[ok] - remover sad da home page

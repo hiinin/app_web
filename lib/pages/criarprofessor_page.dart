@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../functions/drawer_helper.dart';
 
 class CriarProfessorPage extends StatefulWidget {
   @override
@@ -17,54 +18,40 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
   final supabase = Supabase.instance.client;
 
   // Variáveis de estado:
-  List<Map<String, dynamic>> materias = [];
   List<Map<String, dynamic>> professores = [];
   int? professorSelecionado;
-  List<int> materiasSelecionadas = [];
+  List<int> turmasSelecionadas = [];
   final TextEditingController _nomeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool isLoading = false;
-  // Adicione estas variáveis de estado:
   String filtroProfessor = "";
-  int? cursoSelecionado;
   List<Map<String, dynamic>> cursos = [];
-  List<Map<String, dynamic>> materiasFiltradas = [];
 
   @override
   void initState() {
     super.initState();
     _carregarCursos();
-    _carregarMaterias();
     _carregarProfessores();
   }
 
-  // Função para carregar cursos:
+  // Função para carregar cursos (turmas):
   Future<void> _carregarCursos() async {
-    final res = await supabase.from('cursos').select('id, curso');
+    final res = await supabase
+        .from('cursos')
+        .select('id, curso, periodo, semestre');
     setState(() {
       cursos = List<Map<String, dynamic>>.from(res);
     });
   }
 
-  // Carregar matérias
-  Future<void> _carregarMaterias({int? cursoId}) async {
-    var query = supabase.from('materias').select('id, nome, curso_id');
-    if (cursoId != null) {
-      query = query.eq('curso_id', cursoId);
-    }
-    final res = await query;
-    setState(() {
-      materias = List<Map<String, dynamic>>.from(res);
-      materiasFiltradas = materias;
-    });
-  }
-
-  // Carregar professores com matérias associadas
+  // Carregar professores com turmas associadas
   Future<void> _carregarProfessores() async {
     setState(() => isLoading = true);
     final res = await supabase
         .from('professores')
-        .select('id, nome_professor, professor_materias(materias(id, nome))')
+        .select(
+          'id, nome_professor, professor_turmas(cursos(id, curso, periodo, semestre))',
+        )
         .order('id', ascending: false);
     setState(() {
       professores = List<Map<String, dynamic>>.from(res);
@@ -82,29 +69,117 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
     await _carregarProfessores();
   }
 
-  // Associar matérias ao professor selecionado
-  Future<void> _associarMaterias() async {
-    if (professorSelecionado == null || materiasSelecionadas.isEmpty) return;
+  // Mostrar diálogo para seleção múltipla de turmas
+  Future<void> _mostrarDialogoTurmas(BuildContext context) async {
+    Set<int> turmasSelecionadasTemp = Set.from(turmasSelecionadas);
 
-    // Busca matérias já associadas
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Selecionar Turmas'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child:
+                    cursos.isEmpty
+                        ? const Text('Nenhuma turma disponível')
+                        : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: cursos.length,
+                          itemBuilder: (context, index) {
+                            final curso = cursos[index];
+                            String periodoStr = '';
+                            if (curso['periodo'] != null) {
+                              switch (curso['periodo']) {
+                                case 1:
+                                  periodoStr = ' - Matutino';
+                                  break;
+                                case 2:
+                                  periodoStr = ' - Vespertino';
+                                  break;
+                                case 3:
+                                  periodoStr = ' - Noturno';
+                                  break;
+                              }
+                            }
+                            String semestreStr =
+                                curso['semestre'] != null
+                                    ? ' - ${curso['semestre']}'
+                                    : '';
+                            final cursoId = curso['id'] as int;
+                            final isSelected = turmasSelecionadasTemp.contains(
+                              cursoId,
+                            );
+
+                            return CheckboxListTile(
+                              title: Text(
+                                '${curso['curso'] ?? ''}$periodoStr$semestreStr',
+                              ),
+                              value: isSelected,
+                              onChanged: (bool? value) {
+                                setDialogState(() {
+                                  if (value == true) {
+                                    turmasSelecionadasTemp.add(cursoId);
+                                  } else {
+                                    turmasSelecionadasTemp.remove(cursoId);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF44A301),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      turmasSelecionadas = turmasSelecionadasTemp.toList();
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Associar turmas ao professor selecionado
+  Future<void> _associarTurmas() async {
+    if (professorSelecionado == null || turmasSelecionadas.isEmpty) return;
+
+    // Busca turmas já associadas
     final existentes = await supabase
-        .from('professor_materias')
-        .select('materia_id')
+        .from('professor_turmas')
+        .select('curso_id')
         .eq('professor_id', professorSelecionado);
 
-    final idsExistentes = existentes.map((e) => e['materia_id'] as int).toSet();
+    final idsExistentes = existentes.map((e) => e['curso_id'] as int).toSet();
 
     // Adiciona apenas as novas
-    for (final materiaId in materiasSelecionadas) {
-      if (!idsExistentes.contains(materiaId)) {
-        await supabase.from('professor_materias').insert({
+    for (final cursoId in turmasSelecionadas) {
+      if (!idsExistentes.contains(cursoId)) {
+        await supabase.from('professor_turmas').insert({
           'professor_id': professorSelecionado,
-          'materia_id': materiaId,
+          'curso_id': cursoId,
         });
       }
     }
 
-    materiasSelecionadas = [];
+    turmasSelecionadas = [];
     await _carregarProfessores();
     setState(() {});
   }
@@ -118,7 +193,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
   Future<void> excluirProfessor(int professorId) async {
     try {
       await supabase
-          .from('professor_materias')
+          .from('professor_turmas')
           .delete()
           .eq('professor_id', professorId);
 
@@ -129,7 +204,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
       );
       await _carregarProfessores();
       setState(() {
-        professorSelecionado = null; // ou cursoSelecionado = null;
+        professorSelecionado = null;
       });
     } catch (e) {
       ScaffoldMessenger.of(
@@ -155,146 +230,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
-                ),
-              ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 16.0,
-                    ), // Espaço à esquerda
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/images/UniCV-Variacoes-07.png',
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Campus Map',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Bem-vindo!',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
-              title: const Text(
-                'Inicio',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/home'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
-              title: const Text(
-                'Lista Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/listalocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Sala',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarsala'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Curso',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarcurso'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Matéria',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarmateria'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Professor',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Evento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarevento'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
-              title: const Text(
-                'Agendar Prova',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprova'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
-              title: const Text(
-                'Historico de Acoes',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                '© 2025 RH Company',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
+      drawer: buildAppDrawer(context),
       backgroundColor: Colors.white,
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -362,9 +298,9 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                         ),
                         const SizedBox(height: 40),
 
-                        // ASSOCIAR PROFESSOR E MATÉRIA
+                        // ASSOCIAR PROFESSOR E TURMA
                         const Text(
-                          'Associar Professor à Matéria',
+                          'Associar Professor à Turma',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFF44A301),
@@ -400,85 +336,52 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<int>(
-                          value: cursoSelecionado,
-                          items:
-                              cursos
-                                  .map(
-                                    (c) => DropdownMenuItem<int>(
-                                      value: c['id'] as int,
-                                      child: Text(c['curso'] ?? ''),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (value) async {
-                            setState(() {
-                              cursoSelecionado = value;
-                              materiasSelecionadas.clear();
-                              materiasFiltradas = [];
-                            });
-                            await _carregarMaterias(cursoId: value);
-                            setState(() {
-                              materiasFiltradas =
-                                  materias; // Atualiza matérias filtradas após carregar
-                            });
-                          },
-                          decoration: const InputDecoration(
-                            labelText: 'Curso',
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.checklist),
+                          label: const Text('Selecionar Turmas'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF44A301),
+                            side: const BorderSide(color: Color(0xFF44A301)),
+                            minimumSize: const Size.fromHeight(48),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<int>(
-                          value: null,
-                          items:
-                              materiasFiltradas
-                                  .map(
-                                    (m) => DropdownMenuItem<int>(
-                                      value: m['id'] as int,
-                                      child: Text(m['nome'] ?? ''),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (cursoSelecionado == null)
-                                  ? null // Desabilita se não selecionou curso
-                                  : (value) {
-                                    if (value != null &&
-                                        !materiasSelecionadas.contains(value)) {
-                                      setState(() {
-                                        materiasSelecionadas.add(value);
-                                      });
-                                    }
-                                  },
-                          decoration: const InputDecoration(
-                            labelText: 'Matérias (adicione uma por vez)',
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(),
-                          ),
-                          disabledHint: const Text(
-                            'Selecione um curso primeiro',
-                          ),
+                          onPressed: () => _mostrarDialogoTurmas(context),
                         ),
                         const SizedBox(height: 8),
 
-                        // Exibe as matérias selecionadas com opção de remover
+                        // Exibe as turmas selecionadas com opção de remover
                         Wrap(
                           spacing: 8,
                           children:
-                              materiasSelecionadas.map((id) {
-                                final materia = materias.firstWhere(
-                                  (m) => m['id'] == id,
+                              turmasSelecionadas.map((id) {
+                                final curso = cursos.firstWhere(
+                                  (c) => c['id'] == id,
                                   orElse: () => {},
                                 );
+                                String periodoStr = '';
+                                if (curso['periodo'] != null) {
+                                  switch (curso['periodo']) {
+                                    case 1:
+                                      periodoStr = ' - Matutino';
+                                      break;
+                                    case 2:
+                                      periodoStr = ' - Vespertino';
+                                      break;
+                                    case 3:
+                                      periodoStr = ' - Noturno';
+                                      break;
+                                  }
+                                }
+                                String semestreStr =
+                                    curso['semestre'] != null
+                                        ? ' - ${curso['semestre']}'
+                                        : '';
                                 return Chip(
-                                  label: Text(materia['nome'] ?? ''),
+                                  label: Text(
+                                    '${curso['curso'] ?? ''}$periodoStr$semestreStr',
+                                  ),
                                   onDeleted: () {
                                     setState(() {
-                                      materiasSelecionadas.remove(id);
+                                      turmasSelecionadas.remove(id);
                                     });
                                   },
                                 );
@@ -495,8 +398,8 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                           ),
                           onPressed:
                               (professorSelecionado != null &&
-                                      materiasSelecionadas.isNotEmpty)
-                                  ? _associarMaterias
+                                      turmasSelecionadas.isNotEmpty)
+                                  ? _associarTurmas
                                   : null,
                           label: const Text('Associar'),
                         ),
@@ -592,23 +495,45 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                                                     )
                                                     .toList();
                                             final p = listaFiltrada[index];
-                                            final materiasList =
-                                                (p['professor_materias']
-                                                        as List?)
-                                                    ?.map(
-                                                      (e) => {
-                                                        'id':
-                                                            e['materias']?['id'],
+                                            final turmasList =
+                                                (p['professor_turmas'] as List?)
+                                                    ?.map((e) {
+                                                      final curso = e['cursos'];
+                                                      String periodoStr = '';
+                                                      if (curso?['periodo'] !=
+                                                          null) {
+                                                        switch (curso['periodo']) {
+                                                          case 1:
+                                                            periodoStr =
+                                                                ' - Matutino';
+                                                            break;
+                                                          case 2:
+                                                            periodoStr =
+                                                                ' - Vespertino';
+                                                            break;
+                                                          case 3:
+                                                            periodoStr =
+                                                                ' - Noturno';
+                                                            break;
+                                                        }
+                                                      }
+                                                      String semestreStr =
+                                                          curso?['semestre'] !=
+                                                                  null
+                                                              ? ' - ${curso['semestre']}'
+                                                              : '';
+                                                      return {
+                                                        'id': curso?['id'],
                                                         'nome':
-                                                            e['materias']?['nome'],
+                                                            '${curso?['curso'] ?? ''}$periodoStr$semestreStr',
                                                         'associacaoId':
                                                             e['id'], // id da associação, se existir
-                                                      },
-                                                    )
+                                                      };
+                                                    })
                                                     .where(
-                                                      (m) =>
-                                                          m['id'] != null &&
-                                                          m['nome'] != null,
+                                                      (t) =>
+                                                          t['id'] != null &&
+                                                          t['nome'] != null,
                                                     )
                                                     .toList() ??
                                                 [];
@@ -688,15 +613,15 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                                                                 bottom: 8,
                                                               ),
                                                           child:
-                                                              materiasList
+                                                              turmasList
                                                                       .isNotEmpty
                                                                   ? Column(
                                                                     crossAxisAlignment:
                                                                         CrossAxisAlignment
                                                                             .start,
                                                                     children:
-                                                                        materiasList.map((
-                                                                          m,
+                                                                        turmasList.map((
+                                                                          t,
                                                                         ) {
                                                                           return Padding(
                                                                             padding: const EdgeInsets.symmetric(
@@ -707,7 +632,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                                                                               children: [
                                                                                 Expanded(
                                                                                   child: Text(
-                                                                                    m['nome'] ??
+                                                                                    t['nome'] ??
                                                                                         '',
                                                                                     style: const TextStyle(
                                                                                       color:
@@ -730,10 +655,10 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                                                                                   tooltip:
                                                                                       'Remover associação',
                                                                                   onPressed: () async {
-                                                                                    // Remove associação professor-matéria
+                                                                                    // Remove associação professor-turma
                                                                                     await supabase
                                                                                         .from(
-                                                                                          'professor_materias',
+                                                                                          'professor_turmas',
                                                                                         )
                                                                                         .delete()
                                                                                         .eq(
@@ -741,8 +666,8 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                                                                                           p['id'],
                                                                                         )
                                                                                         .eq(
-                                                                                          'materia_id',
-                                                                                          m['id'],
+                                                                                          'curso_id',
+                                                                                          t['id'],
                                                                                         );
                                                                                     await _carregarProfessores();
                                                                                     setState(
@@ -756,7 +681,7 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                                                                         }).toList(),
                                                                   )
                                                                   : const Text(
-                                                                    'Nenhuma matéria associada',
+                                                                    'Nenhuma turma associada',
                                                                     style: TextStyle(
                                                                       color:
                                                                           Colors

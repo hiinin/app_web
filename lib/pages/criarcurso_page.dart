@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../functions/drawer_helper.dart';
 
 class CriarCursoPage extends StatefulWidget {
   const CriarCursoPage({super.key});
@@ -11,9 +12,9 @@ class CriarCursoPage extends StatefulWidget {
 class _CriarCursoPageState extends State<CriarCursoPage> {
   final _formKey = GlobalKey<FormState>();
   final _cursoController = TextEditingController();
-  final _semestreController = TextEditingController();
   final _searchController = TextEditingController();
   int? _periodo;
+  int? _semestre;
 
   bool _isLoading = false;
   List<Map<String, dynamic>> _cursos = [];
@@ -35,6 +36,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
     _searchController.removeListener(
       _filtrarCursos,
     ); // Remove o listener ao destruir
+    _cursoController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -104,6 +106,21 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
     }
   }
 
+  String semestreToString(int? semestre) {
+    if (semestre == null) return '';
+    return '$semestre° semestre';
+  }
+
+  int? semestreFromString(String? semestreStr) {
+    if (semestreStr == null || semestreStr.isEmpty) return null;
+    // Remove "° semestre" e converte para int
+    final match = RegExp(r'^(\d+)').firstMatch(semestreStr);
+    if (match != null) {
+      return int.tryParse(match.group(1) ?? '');
+    }
+    return int.tryParse(semestreStr);
+  }
+
   Future<void> _salvarCurso() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -116,13 +133,13 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
               .from('cursos')
               .select()
               .eq('curso', _cursoController.text.trim())
-              .eq('semestre', _semestreController.text.trim())
+              .eq('semestre', semestreToString(_semestre))
               .eq('periodo', _periodo)
               .maybeSingle();
 
       if (existing != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Já existe um curso com esses dados!')),
+          const SnackBar(content: Text('Já existe uma turma com esses dados!')),
         );
         setState(() => _isLoading = false);
         return;
@@ -130,23 +147,25 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
 
       await Supabase.instance.client.from('cursos').insert({
         'curso': _cursoController.text.trim(),
-        'semestre': _semestreController.text.trim(),
+        'semestre': semestreToString(_semestre),
         'periodo': _periodo,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Curso criado com sucesso!')),
+        const SnackBar(content: Text('Turma criada com sucesso!')),
       );
 
       _cursoController.clear();
-      _semestreController.clear();
-      setState(() => _periodo = null);
+      setState(() {
+        _periodo = null;
+        _semestre = null;
+      });
 
       await _buscarCursos();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao criar curso: $e')));
+      ).showSnackBar(SnackBar(content: Text('Erro ao criar turma: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -154,10 +173,8 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
 
   Future<void> _editarCursoDialog(Map<String, dynamic> curso) async {
     final nomeController = TextEditingController(text: curso['curso'] ?? '');
-    final semestreController = TextEditingController(
-      text: curso['semestre']?.toString() ?? '',
-    );
     int? periodoEdit = curso['periodo'];
+    int? semestreEdit = semestreFromString(curso['semestre']?.toString());
 
     final result = await showDialog<bool>(
       context: context,
@@ -165,7 +182,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
           (context) => AlertDialog(
             backgroundColor: Colors.white,
             title: const Text(
-              'Editar Curso',
+              'Editar Turma',
               style: TextStyle(color: Color(0xFF44A301)),
             ),
             content: SingleChildScrollView(
@@ -176,7 +193,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                     controller: nomeController,
                     style: const TextStyle(color: Color(0xFF44A301)),
                     decoration: InputDecoration(
-                      labelText: 'Nome do Curso',
+                      labelText: 'Nome da Turma',
                       labelStyle: const TextStyle(color: Color(0xFF44A301)),
                       enabledBorder: OutlineInputBorder(
                         borderSide: const BorderSide(color: Color(0xFFE8F5E8)),
@@ -189,22 +206,48 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: semestreController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Color(0xFF44A301)),
-                    decoration: InputDecoration(
-                      labelText: 'Semestre',
-                      labelStyle: const TextStyle(color: Color(0xFF44A301)),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFFE8F5E8)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(color: Color(0xFF44A301)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                  StatefulBuilder(
+                    builder:
+                        (context, setStateDialog) =>
+                            DropdownButtonFormField<int>(
+                              value: semestreEdit,
+                              decoration: InputDecoration(
+                                labelText: 'Semestre',
+                                labelStyle: const TextStyle(
+                                  color: Color(0xFF44A301),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE8F5E8),
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF44A301),
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              dropdownColor: Colors.white,
+                              style: const TextStyle(color: Color(0xFF44A301)),
+                              items:
+                                  List.generate(10, (index) => index + 1).map((
+                                    value,
+                                  ) {
+                                    return DropdownMenuItem(
+                                      value: value,
+                                      child: Text(
+                                        '$value° semestre',
+                                        style: const TextStyle(
+                                          color: Color(0xFF44A301),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                              onChanged:
+                                  (v) => setStateDialog(() => semestreEdit = v),
+                            ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
@@ -274,7 +317,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
       final id = curso['id'];
       if (id == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro: id do curso é nulo!')),
+          const SnackBar(content: Text('Erro: id da turma é nulo!')),
         );
         return;
       }
@@ -283,19 +326,19 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
             .from('cursos')
             .update({
               'curso': nomeController.text.trim(),
-              'semestre': semestreController.text.trim(),
+              'semestre': semestreToString(semestreEdit),
               'periodo': periodoEdit,
             })
             .eq('id', id is int ? id : int.parse(id.toString()));
         await _buscarCursos();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Curso atualizado com sucesso!')),
+          const SnackBar(content: Text('Turma atualizada com sucesso!')),
         );
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao atualizar curso: $e')));
+        ).showSnackBar(SnackBar(content: Text('Erro ao atualizar turma: $e')));
       }
     }
   }
@@ -307,11 +350,11 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
           (context) => AlertDialog(
             backgroundColor: Colors.white,
             title: const Text(
-              'Excluir curso',
+              'Excluir turma',
               style: TextStyle(color: Color(0xFF44A301)),
             ),
             content: const Text(
-              'Tem certeza que deseja excluir este curso?',
+              'Tem certeza que deseja excluir esta turma?',
               style: TextStyle(color: Color(0xFF374151)),
             ),
             actions: [
@@ -336,7 +379,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
       final id = curso['id'];
       if (id == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro: id do curso é nulo!')),
+          const SnackBar(content: Text('Erro: id da turma é nulo!')),
         );
         return;
       }
@@ -348,12 +391,12 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
         await _buscarCursos();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Curso excluído com sucesso!')),
+          const SnackBar(content: Text('Turma excluída com sucesso!')),
         );
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Erro ao excluir curso: $e')));
+        ).showSnackBar(SnackBar(content: Text('Erro ao excluir turma: $e')));
       }
     }
   }
@@ -367,7 +410,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
         toolbarHeight: 80,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Novo Curso',
+          'Nova Turma',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -375,146 +418,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
           ),
         ),
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF2D5A1A), Color(0xFF44A301)],
-                ),
-              ),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 16.0,
-                    ), // Espaço à esquerda
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/images/UniCV-Variacoes-07.png',
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Campus Map',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Bem-vindo!',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF44A301)),
-              title: const Text(
-                'Inicio',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/home'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.list_alt, color: Color(0xFF44A301)),
-              title: const Text(
-                'Lista Agendamento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/listalocacao'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.meeting_room, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Sala',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarsala'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.school, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Curso',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarcurso'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.book, color: Color(0xFF44A301)),
-              title: const Text(
-                'Nova Matéria',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarmateria'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.people, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Professor',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprofessor'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.event, color: Color(0xFF44A301)),
-              title: const Text(
-                'Novo Evento',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarevento'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.quiz, color: Color(0xFF44A301)),
-              title: const Text(
-                'Agendar Prova',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/criarprova'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Color(0xFF44A301)),
-              title: const Text(
-                'Historico de Acoes',
-                style: TextStyle(color: Colors.black87),
-              ),
-              onTap: () => Navigator.pushNamed(context, '/historicoacoes'),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                '© 2025 RH Company',
-                style: TextStyle(color: Colors.grey[500], fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
+      drawer: buildAppDrawer(context),
       backgroundColor: const Color(0xFFF8FAFC), // Fundo cinza muito claro
       body: Center(
         child: SingleChildScrollView(
@@ -551,7 +455,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const Text(
-                          'Novo Curso',
+                          'Nova Turma',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFF44A301),
@@ -565,7 +469,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           controller: _cursoController,
                           style: const TextStyle(color: Color(0xFF44A301)),
                           decoration: InputDecoration(
-                            labelText: 'Nome do Curso',
+                            labelText: 'Nome da Turma',
                             labelStyle: const TextStyle(
                               color: Color(0xFF44A301),
                             ),
@@ -598,13 +502,12 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           validator:
                               (v) =>
                                   v == null || v.trim().isEmpty
-                                      ? 'Informe o nome do curso'
+                                      ? 'Informe o nome da turma'
                                       : null,
                         ),
                         const SizedBox(height: 18),
-                        TextFormField(
-                          controller: _semestreController,
-                          style: const TextStyle(color: Color(0xFF44A301)),
+                        DropdownButtonFormField<int>(
+                          value: _semestre,
                           decoration: InputDecoration(
                             labelText: 'Semestre',
                             labelStyle: const TextStyle(
@@ -632,15 +535,29 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                               ),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                              vertical: 16,
+                              vertical: 4,
                               horizontal: 16,
                             ),
                           ),
+                          dropdownColor: Colors.white,
+                          style: const TextStyle(color: Color(0xFF44A301)),
+                          items:
+                              List.generate(10, (index) => index + 1).map((
+                                value,
+                              ) {
+                                return DropdownMenuItem(
+                                  value: value,
+                                  child: Text(
+                                    '$value° semestre',
+                                    style: const TextStyle(
+                                      color: Color(0xFF44A301),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                          onChanged: (v) => setState(() => _semestre = v),
                           validator:
-                              (v) =>
-                                  v == null || v.trim().isEmpty
-                                      ? 'Informe o semestre'
-                                      : null,
+                              (v) => v == null ? 'Selecione o semestre' : null,
                         ),
                         const SizedBox(height: 18),
                         DropdownButtonFormField<int>(
@@ -720,7 +637,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                       ),
                                     )
                                     : const Icon(Icons.save),
-                            label: const Text('Salvar Curso'),
+                            label: const Text('Salvar Turma'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF44A301),
                               foregroundColor: Colors.white,
@@ -755,7 +672,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           controller: _searchController,
                           style: const TextStyle(color: Color(0xFF44A301)),
                           decoration: InputDecoration(
-                            hintText: 'Pesquisar curso, semestre ou período...',
+                            hintText: 'Pesquisar turma, semestre ou período...',
                             hintStyle: const TextStyle(
                               color: Color(0xFF9CA3AF),
                             ),
@@ -793,7 +710,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                         ),
                         const SizedBox(height: 18),
                         const Text(
-                          'Cursos cadastrados:',
+                          'Turmas cadastradas:',
                           style: TextStyle(
                             color: Color(0xFF44A301),
                             fontWeight: FontWeight.bold,
@@ -818,7 +735,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                               Expanded(
                                 flex: 3,
                                 child: Text(
-                                  'Curso',
+                                  'Turma',
                                   style: TextStyle(
                                     color: Color(0xFF475569),
                                     fontWeight: FontWeight.bold,
@@ -874,7 +791,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                   : _cursosFiltrados.isEmpty
                                   ? const Center(
                                     child: Text(
-                                      'Nenhum curso cadastrado.',
+                                      'Nenhuma turma cadastrada.',
                                       style: TextStyle(
                                         color: Color(0xFF9CA3AF),
                                       ),
@@ -918,7 +835,8 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                             Expanded(
                                               flex: 2,
                                               child: Text(
-                                                '${curso['semestre'] ?? ''}',
+                                                curso['semestre']?.toString() ??
+                                                    '',
                                                 style: const TextStyle(
                                                   color: Color(0xFF374151),
                                                   fontSize: 15,
