@@ -11,18 +11,19 @@ import '../pages/criar_professor_login_page.dart';
 import '../pages/criarevento_page.dart';
 import '../pages/criarprova_page.dart';
 import '../pages/historicoacoes_page.dart';
+import '../widgets/auth_guard.dart';
 
 final Map<String, WidgetBuilder> appRoutes = {
-  '/home': (context) => const HomePage(),
   '/login': (context) => const AdminLoginPage(),
-  '/criarlocacao': (context) => const CriarLocacaoPage(),
-  '/listalocacao': (context) => const ListaLocacaoPage(),
-  '/criarsala': (context) => const CriarSalaPage(),
-  '/criarcurso': (context) => const CriarCursoPage(),
-  '/criarmateria': (context) => const CriarMateriaPage(),
-  '/criarprofessor': (context) => CriarProfessorPage(),
-  '/criarprofessorlogin': (context) => CriarProfessorLoginPage(),
-  '/criarevento': (context) => const CriarEventoPage(),
-  '/criarprova': (context) => const CriarProvaPage(),
-  '/historicoacoes': (context) => const HistoricoAcoesPage(),
+  '/home': (context) => const AuthGuard(child: HomePage()),
+  '/criarlocacao': (context) => const AuthGuard(child: CriarLocacaoPage()),
+  '/listalocacao': (context) => const AuthGuard(child: ListaLocacaoPage()),
+  '/criarsala': (context) => const AuthGuard(child: CriarSalaPage()),
+  '/criarcurso': (context) => const AuthGuard(child: CriarCursoPage()),
+  '/criarmateria': (context) => const AuthGuard(child: CriarMateriaPage()),
+  '/criarprofessor': (context) => AuthGuard(child: CriarProfessorPage()),
+  '/criarprofessorlogin': (context) => AuthGuard(child: CriarProfessorLoginPage()),
+  '/criarevento': (context) => const AuthGuard(child: CriarEventoPage()),
+  '/criarprova': (context) => const AuthGuard(child: CriarProvaPage()),
+  '/historicoacoes': (context) => const AuthGuard(child: HistoricoAcoesPage()),
 };

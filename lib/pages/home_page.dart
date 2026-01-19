@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/sala.dart' as sala_model;
 import '../models/curso.dart' as curso_model;
 import '../functions/drawer_helper.dart';
+import '../services/auth_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -107,7 +108,7 @@ class _HomePageState extends State<HomePage> {
                   overlayColor: Colors.black.withOpacity(1.0),
                 ),
                 child: const Text(
-                  'Novo Agendamento',
+                  'Novo Ensalamento',
                   style: TextStyle(color: Colors.white, fontSize: 25),
                 ),
               ),
@@ -119,7 +120,7 @@ class _HomePageState extends State<HomePage> {
                   overlayColor: Colors.black.withOpacity(1.0),
                 ),
                 child: const Text(
-                  'Lista de Agendamento',
+                  'Lista de Ensalamentos',
                   style: TextStyle(color: Colors.white, fontSize: 25),
                 ),
               ),
@@ -128,7 +129,9 @@ class _HomePageState extends State<HomePage> {
               IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
                 padding: const EdgeInsets.all(15.0),
-                onPressed: () {
+                onPressed: () async {
+                  await AuthService.logout();
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Deslogado com sucesso')),
                   );
@@ -286,21 +289,21 @@ class _HomeCarouselState extends State<_HomeCarousel> {
   final List<_HomeActionCardData> _cards = [
     _HomeActionCardData(
       icon: Icons.add_box,
-      title: 'Novo Agendamento',
+      title: 'Novo Ensalamento',
       help: 'Quer realizar um agendamento?\nClique no botão abaixo.',
       buttonText: 'Agendar',
       route: '/criarlocacao',
     ),
     _HomeActionCardData(
       icon: Icons.list_alt,
-      title: 'Consultar Agendamento',
+      title: 'Consultar Ensalamento',
       help: 'Quer consultar um agendamento?\nClique no botão abaixo.',
       buttonText: 'Consultar',
       route: '/listalocacao',
     ),
     _HomeActionCardData(
       icon: Icons.school,
-      title: 'Criar Curso',
+      title: 'Criar Turma',
       help: 'Quer criar um novo curso?\nClique no botão abaixo.',
       buttonText: 'Novo Curso',
       route: '/criarcurso',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../pages/home_page.dart'; // ajuste o caminho e nome conforme seu projeto
+import '../services/auth_service.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -41,6 +42,9 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       }
 
       if (response['password'] == passwordInput) {
+        // Salva o estado de login
+        await AuthService.setLoggedIn(true);
+        
         // Quando o login for bem-sucedido, use este código:
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(

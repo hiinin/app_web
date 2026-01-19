@@ -343,8 +343,7 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
                         const SizedBox(height: 32),
                         // Bloco quadrado para associação
                         Container(
-                          height:
-                              200, // Aumenta a altura para ficar mais quadrado
+                          height: 200,
                           padding: const EdgeInsets.all(20),
                           margin: const EdgeInsets.only(top: 8),
                           decoration: BoxDecoration(
@@ -366,44 +365,102 @@ class _CriarMateriaPageState extends State<CriarMateriaPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Text(
-                                'Deseja associar uma turma a um professor?',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Color(0xFF44A301),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              ElevatedButton.icon(
-                                icon: const Icon(
-                                  Icons.person_add,
-                                  color: Colors.white,
-                                ),
-                                label: const Text('Associar Turma a Professor'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(
-                                    0xFF388E3C,
-                                  ), // Verde escuro
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
-                                  textStyle: const TextStyle(fontSize: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'Deseja criar um novo professor?',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        ElevatedButton.icon(
+                                          icon: const Icon(
+                                            Icons.person_add,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text('Novo Professor'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF388E3C,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/criarprofessor',
+                                            );
+                                          },
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  elevation: 2,
-                                ),
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/criarprofessor',
-                                  );
-                                },
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'Deseja criar uma nova turma?',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        ElevatedButton.icon(
+                                          icon: const Icon(
+                                            Icons.school,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text('Nova Turma'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF388E3C,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/criarcurso',
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

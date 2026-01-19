@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../functions/agendamento_helpers.dart';
 import '../functions/drawer_helper.dart';
 import '../functions/listalocacao_functions.dart' as locacao_functions;
 
@@ -84,6 +83,9 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
   }
 
   Future<void> editarAgendamento(Map agendamento) async {
+    // Instância da classe de funções de edição
+    final editarFunctions = locacao_functions.EditarLocacaoFunctions();
+
     // Dados atuais do agendamento
     final salaAtual = agendamento['salas'];
     final cursoAtual = agendamento['cursos'];
@@ -112,25 +114,16 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
     List<Map<String, dynamic>> professores = [];
 
     try {
-      // Carregar salas
-      final salasResponse = await supabase
-          .from('salas')
-          .select('*')
-          .order('numero_sala');
-      salas = List<Map<String, dynamic>>.from(salasResponse);
+      // Carregar dados usando a classe de funções
+      final dados = await editarFunctions.carregarDadosEdicao();
+      salas = dados['salas'] as List<Map<String, dynamic>>;
+      cursos = dados['cursos'] as List<Map<String, dynamic>>;
 
       // Verificar se a sala selecionada existe na lista
       if (salaSelecionada != null &&
           !salas.any((s) => s['id'].toString() == salaSelecionada)) {
         salaSelecionada = null;
       }
-
-      // Carregar cursos
-      final cursosResponse = await supabase
-          .from('cursos')
-          .select('*')
-          .order('curso');
-      cursos = List<Map<String, dynamic>>.from(cursosResponse);
 
       // Verificar se o curso selecionado existe na lista
       if (cursoSelecionado != null &&
@@ -142,13 +135,12 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         professores = [];
       }
 
-      // Carregar matérias do curso atual (se houver)
+      // Carregar disciplinas do curso atual (se houver)
       if (cursoSelecionado != null) {
-        materias = await buscarMateriasPorCurso(
-          supabase,
+        materias = await editarFunctions.carregarMateriasPorCurso(
           int.parse(cursoSelecionado),
         );
-        // Verificar se a matéria selecionada ainda existe na nova lista
+        // Verificar se a disciplina selecionada ainda existe na nova lista
         if (materiaSelecionada != null &&
             !materias.any((m) => m['id'].toString() == materiaSelecionada)) {
           materiaSelecionada = null;
@@ -157,11 +149,10 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
         }
       }
 
-      // Carregar professores da matéria atual (se houver)
-      if (materiaSelecionada != null) {
-        professores = await buscarProfessoresPorMateria(
-          supabase,
-          int.parse(materiaSelecionada),
+      // Carregar professores do curso atual (se houver)
+      if (cursoSelecionado != null) {
+        professores = await editarFunctions.carregarProfessoresPorTurma(
+          int.parse(cursoSelecionado),
         );
         // Verificar se o professor selecionado ainda existe na nova lista
         if (professorSelecionado != null &&
@@ -415,10 +406,10 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                       professores = [];
                                     });
                                     if (value != null) {
-                                      materias = await buscarMateriasPorCurso(
-                                        supabase,
-                                        int.parse(value),
-                                      );
+                                      materias = await editarFunctions
+                                          .carregarMateriasPorCurso(
+                                            int.parse(value),
+                                          );
                                       setState(() {});
                                     }
                                   },
@@ -426,7 +417,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
                                 const SizedBox(height: 16),
 
-                                // Dropdown Matéria
+                                // Dropdown Disciplina
                                 DropdownButtonFormField<String>(
                                   value:
                                       materiaSelecionada != null &&
@@ -440,8 +431,8 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                   decoration: InputDecoration(
                                     labelText:
                                         cursoSelecionado != null
-                                            ? 'Matéria'
-                                            : 'Matéria (selecione um curso primeiro)',
+                                            ? 'Disciplina'
+                                            : 'Disciplina (selecione um curso primeiro)',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -477,9 +468,8 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                               professores = [];
                                             });
                                             if (value != null) {
-                                              professores =
-                                                  await buscarProfessoresPorMateria(
-                                                    supabase,
+                                              professores = await editarFunctions
+                                                  .carregarProfessoresPorMateria(
                                                     int.parse(value),
                                                   );
                                               setState(() {});
@@ -544,11 +534,11 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
                                 const SizedBox(height: 16),
 
-                                // Dropdown Período da Aula
+                                // Dropdown Turno da Aula
                                 DropdownButtonFormField<String>(
                                   value: aulaPeriodoOriginal,
                                   decoration: InputDecoration(
-                                    labelText: 'Período da Aula',
+                                    labelText: 'Turno da Aula',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -613,6 +603,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                             'materia_id': int.parse(materiaSelecionada!),
                             'professor_id': int.parse(professorSelecionado!),
                             'data': dataSelecionada,
+                            'aula_periodo': aulaPeriodoOriginal,
                             'observacao': observacaoController.text,
                           });
                         }
@@ -630,14 +621,14 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
 
     if (result != null) {
       try {
-        // Verificar conflitos
-        final conflito = await locacao_functions.verificarConflitos(
-          supabase,
+        // Verificar conflitos usando a função da classe
+        final conflito = await editarFunctions.verificarConflitosEdicao(
           result['sala_id'],
           result['curso_id'],
           result['materia_id'],
           result['professor_id'],
           result['data'],
+          result['aula_periodo'],
           agendamento['id'], // Excluir o próprio agendamento da verificação
         );
 
@@ -645,7 +636,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                '❌ Conflito detectado! Esta sala/curso já está agendada para esta data.',
+                '❌ Conflito detectado! Esta sala/curso já está agendada para esta data e período.',
               ),
               backgroundColor: Colors.red,
             ),
@@ -653,21 +644,17 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
           return;
         }
 
-        // Atualizar agendamento - os horários serão definidos automaticamente pelo trigger
-        await supabase
-            .from('agendamento')
-            .update({
-              'sala_id': result['sala_id'],
-              'curso_id': result['curso_id'],
-              'materia_id': result['materia_id'],
-              'professor_id': result['professor_id'],
-              'dia':
-                  '${result['data'].year.toString().padLeft(4, '0')}-${result['data'].month.toString().padLeft(2, '0')}-${result['data'].day.toString().padLeft(2, '0')}',
-              'aula_periodo': aulaPeriodoOriginal,
-              'observacao': result['observacao'] ?? '',
-              // Os horários serão definidos automaticamente pelo trigger baseado no curso e período da aula
-            })
-            .eq('id', agendamento['id']);
+        // Atualizar agendamento usando a função da classe
+        await editarFunctions.atualizarAgendamento(
+          agendamentoId: agendamento['id'],
+          salaId: result['sala_id'],
+          cursoId: result['curso_id'],
+          materiaId: result['materia_id'],
+          professorId: result['professor_id'],
+          data: result['data'],
+          aulaPeriodo: result['aula_periodo'],
+          observacao: result['observacao'],
+        );
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1282,7 +1269,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                           controller: pesquisaController,
                                           decoration: InputDecoration(
                                             hintText:
-                                                'Pesquisar por sala ou curso...',
+                                                'Pesquisar por Sala ou Turma...',
                                             hintStyle: TextStyle(
                                               color: Colors.grey[600],
                                             ),
@@ -1702,7 +1689,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                                         ),
                                                                         DataColumn(
                                                                           label: Text(
-                                                                            'Aula',
+                                                                            'Turno',
                                                                           ),
                                                                         ),
                                                                         DataColumn(
@@ -1722,7 +1709,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                                         ),
                                                                         DataColumn(
                                                                           label: Text(
-                                                                            'Período',
+                                                                            'Turno',
                                                                           ),
                                                                         ),
                                                                         DataColumn(
@@ -2095,7 +2082,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                       ?.toString() ??
                                                   '-';
                                               final subtitulo =
-                                                  'Sala: $salaNumero | ${disciplinaEvento.isNotEmpty ? disciplinaEvento : 'N/A'} | Aula: $aulaPeriodo';
+                                                  'Sala: $salaNumero | ${disciplinaEvento.isNotEmpty ? disciplinaEvento : 'N/A'} | Turno: $aulaPeriodo';
 
                                               return Card(
                                                 elevation: 6,
@@ -2203,7 +2190,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                             ),
                                                             DataColumn(
                                                               label: Text(
-                                                                'Aula',
+                                                                'Turno',
                                                               ),
                                                             ),
                                                             DataColumn(
@@ -2223,7 +2210,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                             ),
                                                             DataColumn(
                                                               label: Text(
-                                                                'Período',
+                                                                'Turno',
                                                               ),
                                                             ),
                                                             DataColumn(
@@ -2304,7 +2291,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                                         ?.toString() ??
                                                                     '-';
 
-                                                                // Determina matéria/evento
+                                                                // Determina disciplina/evento
                                                                 final materiaEvento =
                                                                     tipoAgendamento ==
                                                                             'A'
@@ -2521,7 +2508,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                             ],
                                           ),
                                           const SizedBox(height: 16),
-                                          // Filtros em uma linha: Tipo, Período e Turmas em conjunto
+                                          // Filtros em uma linha: Tipo, Turno e Turmas em conjunto
                                           Row(
                                             children: [
                                               // Filtro por tipo
@@ -2591,7 +2578,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                 ),
                                               ),
                                               const SizedBox(width: 12),
-                                              // Filtro por período
+                                              // Filtro por turno
                                               Expanded(
                                                 child: Column(
                                                   crossAxisAlignment:
@@ -2600,7 +2587,7 @@ class _ListaLocacaoPageState extends State<ListaLocacaoPage> {
                                                       MainAxisSize.min,
                                                   children: [
                                                     const Text(
-                                                      'Período:',
+                                                      'Turno:',
                                                       style: TextStyle(
                                                         fontWeight:
                                                             FontWeight.w600,

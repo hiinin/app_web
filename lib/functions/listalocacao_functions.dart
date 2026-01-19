@@ -459,3 +459,407 @@ Map<String, Map<String, dynamic>> agruparAgendamentosPorSala(
 
   return salasAgrupadas;
 }
+
+// Classe para funções de edição de agendamento
+class EditarLocacaoFunctions {
+  final SupabaseClient supabase = Supabase.instance.client;
+
+  // Função para carregar dados para edição
+  Future<Map<String, dynamic>> carregarDadosEdicao() async {
+    try {
+      final responseSalas = await supabase
+          .from('salas')
+          .select('*')
+          .order('numero_sala');
+      final responseCursos = await supabase
+          .from('cursos')
+          .select('*')
+          .order('curso');
+
+      List<Map<String, dynamic>> salas = List<Map<String, dynamic>>.from(
+        responseSalas,
+      );
+      List<Map<String, dynamic>> cursos = List<Map<String, dynamic>>.from(
+        responseCursos,
+      );
+
+      return {'salas': salas, 'cursos': cursos};
+    } catch (e) {
+      throw Exception('Erro ao carregar dados: $e');
+    }
+  }
+
+  // Função para carregar matérias por curso
+  Future<List<Map<String, dynamic>>> carregarMateriasPorCurso(
+    int cursoId,
+  ) async {
+    try {
+      final response = await supabase
+          .from('materias')
+          .select('*')
+          .eq('curso_id', cursoId)
+          .order('nome');
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw Exception('Erro ao carregar matérias: $e');
+    }
+  }
+
+  // Função para carregar professores por turma (curso)
+  Future<List<Map<String, dynamic>>> carregarProfessoresPorTurma(
+    int cursoId,
+  ) async {
+    try {
+      final response = await supabase
+          .from('professor_turmas')
+          .select('professor_id, professores!inner(id, nome_professor)')
+          .eq('curso_id', cursoId);
+
+      return (response as List)
+          .map((item) => item['professores'] as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      throw Exception('Erro ao carregar professores: $e');
+    }
+  }
+
+  // Função para carregar professores por matéria
+  Future<List<Map<String, dynamic>>> carregarProfessoresPorMateria(
+    int materiaId,
+  ) async {
+    try {
+      // Primeiro, busca o curso_id da matéria
+      final materiaResponse =
+          await supabase
+              .from('materias')
+              .select('curso_id')
+              .eq('id', materiaId)
+              .single();
+
+      final cursoId = materiaResponse['curso_id'] as int;
+
+      // Depois, busca os professores associados à turma (curso)
+      return await carregarProfessoresPorTurma(cursoId);
+    } catch (e) {
+      throw Exception('Erro ao carregar professores por matéria: $e');
+    }
+  }
+
+  // Função para verificar conflitos ao editar
+  Future<bool> verificarConflitosEdicao(
+    int salaId,
+    int cursoId,
+    int materiaId,
+    int professorId,
+    DateTime data,
+    String aulaPeriodo,
+    int agendamentoId,
+  ) async {
+    try {
+      final dataFormatada =
+          '${data.year.toString().padLeft(4, '0')}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+
+      // Verificar se já existe um agendamento igual (excluindo o próprio agendamento)
+      final conflitos = await supabase
+          .from('agendamento')
+          .select('id')
+          .eq('sala_id', salaId)
+          .eq('curso_id', cursoId)
+          .eq('materia_id', materiaId)
+          .eq('professor_id', professorId)
+          .eq('dia', dataFormatada)
+          .eq('aula_periodo', aulaPeriodo)
+          .neq('id', agendamentoId);
+
+      return conflitos.isNotEmpty;
+    } catch (e) {
+      print('Erro ao verificar conflitos: $e');
+      return false;
+    }
+  }
+
+  // Função para atualizar agendamento
+  Future<void> atualizarAgendamento({
+    required int agendamentoId,
+    required int salaId,
+    required int cursoId,
+    required int materiaId,
+    required int professorId,
+    required DateTime data,
+    required String aulaPeriodo,
+    String? observacao,
+  }) async {
+    try {
+      final dataFormatada =
+          '${data.year.toString().padLeft(4, '0')}-${data.month.toString().padLeft(2, '0')}-${data.day.toString().padLeft(2, '0')}';
+
+      // Obter período do curso para atualizar
+      final cursoResponse =
+          await supabase
+              .from('cursos')
+              .select('periodo')
+              .eq('id', cursoId)
+              .single();
+
+      final periodo = cursoResponse['periodo'] as int;
+
+      await supabase
+          .from('agendamento')
+          .update({
+            'sala_id': salaId,
+            'curso_id': cursoId,
+            'materia_id': materiaId,
+            'professor_id': professorId,
+            'dia': dataFormatada,
+            'aula_periodo': aulaPeriodo,
+            'periodo': periodo,
+            if (observacao != null && observacao.isNotEmpty)
+              'observacao': observacao,
+          })
+          .eq('id', agendamentoId);
+    } catch (e) {
+      throw Exception('Erro ao atualizar agendamento: $e');
+    }
+  }
+
+  // Função para converter período para string
+  String periodoToString(int? periodo) {
+    switch (periodo) {
+      case 1:
+        return 'Matutino';
+      case 2:
+        return 'Vespertino';
+      case 3:
+        return 'Noturno';
+      default:
+        return 'Não informado';
+    }
+  }
+
+  // Função para obter nome do mês
+  String getMonthName(int month) {
+    const months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ];
+    return months[month - 1];
+  }
+
+  // Função para filtrar salas disponíveis para edição
+  Future<List<Map<String, dynamic>>> filtrarSalasEdicao({
+    required Set<String> periodosAulaSelecionados,
+    required int cursoId,
+    required DateTime dia,
+    required int agendamentoId,
+  }) async {
+    try {
+      final dataFormatada =
+          '${dia.year.toString().padLeft(4, '0')}-${dia.month.toString().padLeft(2, '0')}-${dia.day.toString().padLeft(2, '0')}';
+
+      // Busca todas as salas
+      final todasSalas = await supabase
+          .from('salas')
+          .select('id, numero_sala, qtd_cadeiras, disponivel');
+
+      // Busca período do curso
+      final cursoResponse =
+          await supabase
+              .from('cursos')
+              .select('periodo')
+              .eq('id', cursoId)
+              .single();
+      final periodoCurso = cursoResponse['periodo'] as int;
+
+      Map<int, Map<String, dynamic>> salasDisponiveis = {};
+
+      // Para cada período de aula selecionado, busca agendamentos existentes
+      Map<int, int> contagemPorSala = {};
+
+      for (String periodoAula in periodosAulaSelecionados) {
+        final agendamentosExistentes = await supabase
+            .from('agendamento')
+            .select('sala_id')
+            .eq('dia', dataFormatada)
+            .eq('aula_periodo', periodoAula)
+            .eq('periodo', periodoCurso)
+            .neq(
+              'id',
+              agendamentoId,
+            ); // Exclui o próprio agendamento sendo editado
+
+        // Conta agendamentos por sala para este período
+        for (final agendamento in agendamentosExistentes) {
+          final salaId = agendamento['sala_id'];
+          contagemPorSala[salaId] = (contagemPorSala[salaId] ?? 0) + 1;
+        }
+      }
+
+      // Adiciona todas as salas
+      for (final sala in todasSalas) {
+        final salaId = sala['id'];
+        final agendamentosExistentes = contagemPorSala[salaId] ?? 0;
+
+        if (!salasDisponiveis.containsKey(salaId)) {
+          salasDisponiveis[salaId] = {
+            'sala_id': salaId,
+            'numero_sala': sala['numero_sala'],
+            'qtd_cadeiras': sala['qtd_cadeiras'],
+            'disponivel': sala['disponivel'],
+            'agendamentos_existentes': agendamentosExistentes,
+          };
+        } else {
+          // Se a sala já existe, pega a maior contagem de agendamentos entre os períodos
+          if (agendamentosExistentes >
+              salasDisponiveis[salaId]!['agendamentos_existentes']) {
+            salasDisponiveis[salaId]!['agendamentos_existentes'] =
+                agendamentosExistentes;
+          }
+        }
+      }
+
+      List<Map<String, dynamic>> salasFiltradas =
+          salasDisponiveis.values.toList();
+
+      // Ordena: primeiro por disponibilidade, depois por agendamentos, depois por número da sala
+      salasFiltradas.sort((a, b) {
+        final aDisponivel = a['disponivel'] == true;
+        final bDisponivel = b['disponivel'] == true;
+        if (aDisponivel != bDisponivel) {
+          final aInt = aDisponivel ? 0 : 1;
+          final bInt = bDisponivel ? 0 : 1;
+          return aInt.compareTo(bInt);
+        }
+        final aAgendamentos = a['agendamentos_existentes'] as int? ?? 0;
+        final bAgendamentos = b['agendamentos_existentes'] as int? ?? 0;
+        if (aAgendamentos != bAgendamentos) {
+          return aAgendamentos.compareTo(bAgendamentos);
+        }
+        final aNumero = a['numero_sala'].toString();
+        final bNumero = b['numero_sala'].toString();
+        return aNumero.compareTo(bNumero);
+      });
+
+      return salasFiltradas;
+    } catch (e) {
+      throw Exception('Erro ao filtrar salas: $e');
+    }
+  }
+
+  // Função para verificar agendamentos por curso em um dia específico (para edição)
+  Future<Map<String, dynamic>> verificarAgendamentosCursoEdicao(
+    DateTime dia,
+    int cursoId,
+    Set<String> periodosAulaSelecionados,
+    int agendamentoId,
+  ) async {
+    try {
+      final dataFormatada =
+          '${dia.year.toString().padLeft(4, '0')}-${dia.month.toString().padLeft(2, '0')}-${dia.day.toString().padLeft(2, '0')}';
+
+      // Busca todos os agendamentos do dia para este curso (excluindo o sendo editado)
+      final agendamentosDia = await supabase
+          .from('agendamento')
+          .select('curso_id, aula_periodo')
+          .eq('dia', dataFormatada)
+          .eq('curso_id', cursoId)
+          .neq('id', agendamentoId);
+
+      int totalDia = agendamentosDia.length;
+      int agendamentosPeriodoSelecionado = 0;
+      List<String> periodosComAgendamento = [];
+
+      // Conta agendamentos nos períodos selecionados
+      for (final agendamento in agendamentosDia) {
+        final aulaPeriodo = agendamento['aula_periodo'] as String? ?? '';
+        if (periodosAulaSelecionados.contains(aulaPeriodo)) {
+          agendamentosPeriodoSelecionado++;
+        }
+        if (!periodosComAgendamento.contains(aulaPeriodo)) {
+          periodosComAgendamento.add(aulaPeriodo);
+        }
+      }
+
+      return {
+        'periodo_selecionado': agendamentosPeriodoSelecionado,
+        'total_dia': totalDia,
+        'periodos_com_agendamento': periodosComAgendamento,
+      };
+    } catch (e) {
+      throw Exception('Erro ao verificar agendamentos por curso: $e');
+    }
+  }
+
+  // Função para verificar se todos os campos estão preenchidos (edição)
+  bool todosCamposPreenchidosEdicao({
+    required DateTime? dia,
+    required Set<String> periodosAulaSelecionados,
+    required int? cursoId,
+    required int? materiaId,
+    required int? professorId,
+    required int? salaId,
+  }) {
+    return dia != null &&
+        periodosAulaSelecionados.isNotEmpty &&
+        cursoId != null &&
+        materiaId != null &&
+        professorId != null &&
+        salaId != null;
+  }
+
+  // Função para obter mensagem de validação sequencial (edição)
+  String getMensagemValidacaoSequencialEdicao({
+    required DateTime? dia,
+    required Set<String> periodosAulaSelecionados,
+    required int? cursoId,
+    required int? materiaId,
+    required int? professorId,
+    required int? salaId,
+  }) {
+    List<String> camposFaltando = [];
+
+    if (dia == null) {
+      camposFaltando.add('um dia');
+    }
+    if (periodosAulaSelecionados.isEmpty) {
+      camposFaltando.add('pelo menos um período de aula');
+    }
+    if (cursoId == null) {
+      camposFaltando.add('um curso');
+    }
+    if (materiaId == null) {
+      camposFaltando.add('uma disciplina');
+    }
+    if (professorId == null) {
+      camposFaltando.add('um professor');
+    }
+    if (salaId == null) {
+      camposFaltando.add('uma sala');
+    }
+
+    if (camposFaltando.isEmpty) {
+      return '✅ Todos os campos estão preenchidos!';
+    }
+
+    String mensagem = '⚠️ Selecione ';
+    if (camposFaltando.length == 1) {
+      mensagem += camposFaltando.first;
+    } else if (camposFaltando.length == 2) {
+      mensagem += '${camposFaltando.first} e ${camposFaltando.last}';
+    } else {
+      mensagem += camposFaltando.take(camposFaltando.length - 1).join(', ');
+      mensagem += ' e ${camposFaltando.last}';
+    }
+
+    return mensagem;
+  }
+}

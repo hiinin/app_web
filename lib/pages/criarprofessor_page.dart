@@ -242,11 +242,11 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                   : constraints.maxWidth * 0.4;
 
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Formulário à esquerda
               Container(
                 width: leftWidth,
-                height: constraints.maxHeight - 80,
                 color: const Color(0xFFE8F5E8),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -403,6 +403,131 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
                                   : null,
                           label: const Text('Associar'),
                         ),
+                        const SizedBox(height: 32),
+                        // Bloco com botões para navegação
+                        Container(
+                          height: 200,
+                          padding: const EdgeInsets.all(20),
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E8),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: const Color(0xFF44A301),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'Deseja criar uma nova turma?',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        ElevatedButton.icon(
+                                          icon: const Icon(
+                                            Icons.school,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text('Nova Turma'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF388E3C,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/criarcurso',
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'Deseja criar uma nova matéria?',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        ElevatedButton.icon(
+                                          icon: const Icon(
+                                            Icons.book,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text('Nova Matéria'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF388E3C,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/criarmateria',
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -411,7 +536,6 @@ class _CriarProfessorPageState extends State<CriarProfessorPage> {
               // Lista de professores à direita
               Expanded(
                 child: Container(
-                  height: constraints.maxHeight - 80,
                   color: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,

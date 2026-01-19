@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../functions/drawer_helper.dart';
+import '../functions/criarcurso_functions.dart';
 
 class CriarCursoPage extends StatefulWidget {
   const CriarCursoPage({super.key});
@@ -12,7 +12,9 @@ class CriarCursoPage extends StatefulWidget {
 class _CriarCursoPageState extends State<CriarCursoPage> {
   final _formKey = GlobalKey<FormState>();
   final _cursoController = TextEditingController();
+  final _quantidadeAlunosController = TextEditingController();
   final _searchController = TextEditingController();
+  final _functions = CriarCursoFunctions();
   int? _periodo;
   int? _semestre;
 
@@ -37,6 +39,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
       _filtrarCursos,
     ); // Remove o listener ao destruir
     _cursoController.dispose();
+    _quantidadeAlunosController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -45,24 +48,9 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
   Future<void> _buscarCursos() async {
     setState(() => _loadingCursos = true);
     try {
-      final data = await Supabase.instance.client
-          .from('cursos')
-          .select('id, curso, semestre, periodo')
-          .order('curso');
-      final cursos = List<Map<String, dynamic>>.from(data);
-      final query = _searchController.text.trim().toLowerCase();
-      final cursosFiltrados =
-          query.isEmpty
-              ? cursos
-              : cursos.where((curso) {
-                final nome = (curso['curso'] ?? '').toString().toLowerCase();
-                final semestre =
-                    (curso['semestre'] ?? '').toString().toLowerCase();
-                final periodo = periodoToString(curso['periodo']).toLowerCase();
-                return nome.contains(query) ||
-                    semestre.contains(query) ||
-                    periodo.contains(query);
-              }).toList();
+      final cursos = await _functions.buscarCursos();
+      final query = _searchController.text.trim();
+      final cursosFiltrados = _functions.filtrarCursos(cursos, query);
       setState(() {
         _cursos = cursos;
         _cursosFiltrados = cursosFiltrados;
@@ -74,51 +62,10 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
   }
 
   void _filtrarCursos() {
-    final query = _searchController.text.trim().toLowerCase();
+    final query = _searchController.text.trim();
     setState(() {
-      if (query.isEmpty) {
-        _cursosFiltrados = _cursos;
-      } else {
-        _cursosFiltrados =
-            _cursos.where((curso) {
-              final nome = (curso['curso'] ?? '').toString().toLowerCase();
-              final semestre =
-                  (curso['semestre'] ?? '').toString().toLowerCase();
-              final periodo = periodoToString(curso['periodo']).toLowerCase();
-              return nome.contains(query) ||
-                  semestre.contains(query) ||
-                  periodo.contains(query);
-            }).toList();
-      }
+      _cursosFiltrados = _functions.filtrarCursos(_cursos, query);
     });
-  }
-
-  String periodoToString(int? periodo) {
-    switch (periodo) {
-      case 1:
-        return 'Matutino';
-      case 2:
-        return 'Vespertino';
-      case 3:
-        return 'Noturno';
-      default:
-        return 'Período?';
-    }
-  }
-
-  String semestreToString(int? semestre) {
-    if (semestre == null) return '';
-    return '$semestre° semestre';
-  }
-
-  int? semestreFromString(String? semestreStr) {
-    if (semestreStr == null || semestreStr.isEmpty) return null;
-    // Remove "° semestre" e converte para int
-    final match = RegExp(r'^(\d+)').firstMatch(semestreStr);
-    if (match != null) {
-      return int.tryParse(match.group(1) ?? '');
-    }
-    return int.tryParse(semestreStr);
   }
 
   Future<void> _salvarCurso() async {
@@ -127,35 +74,21 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Verifica duplicidade
-      final existing =
-          await Supabase.instance.client
-              .from('cursos')
-              .select()
-              .eq('curso', _cursoController.text.trim())
-              .eq('semestre', semestreToString(_semestre))
-              .eq('periodo', _periodo)
-              .maybeSingle();
-
-      if (existing != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Já existe uma turma com esses dados!')),
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      await Supabase.instance.client.from('cursos').insert({
-        'curso': _cursoController.text.trim(),
-        'semestre': semestreToString(_semestre),
-        'periodo': _periodo,
-      });
+      final quantidadeAlunos = int.tryParse(_quantidadeAlunosController.text.trim());
+      
+      await _functions.salvarCurso(
+        nomeCurso: _cursoController.text.trim(),
+        semestre: _semestre,
+        periodo: _periodo,
+        quantidadeAlunos: quantidadeAlunos,
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Turma criada com sucesso!')),
       );
 
       _cursoController.clear();
+      _quantidadeAlunosController.clear();
       setState(() {
         _periodo = null;
         _semestre = null;
@@ -173,8 +106,11 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
 
   Future<void> _editarCursoDialog(Map<String, dynamic> curso) async {
     final nomeController = TextEditingController(text: curso['curso'] ?? '');
+    final quantidadeAlunosController = TextEditingController(
+      text: curso['quantidade_alunos']?.toString() ?? '',
+    );
     int? periodoEdit = curso['periodo'];
-    int? semestreEdit = semestreFromString(curso['semestre']?.toString());
+    int? semestreEdit = _functions.semestreFromString(curso['semestre']?.toString());
 
     final result = await showDialog<bool>(
       context: context,
@@ -291,6 +227,24 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                     ],
                     onChanged: (v) => periodoEdit = v,
                   ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: quantidadeAlunosController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Color(0xFF44A301)),
+                    decoration: InputDecoration(
+                      labelText: 'Quantidade de Alunos',
+                      labelStyle: const TextStyle(color: Color(0xFF44A301)),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Color(0xFFE8F5E8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Color(0xFF44A301)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -322,14 +276,15 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
         return;
       }
       try {
-        await Supabase.instance.client
-            .from('cursos')
-            .update({
-              'curso': nomeController.text.trim(),
-              'semestre': semestreToString(semestreEdit),
-              'periodo': periodoEdit,
-            })
-            .eq('id', id is int ? id : int.parse(id.toString()));
+        final quantidadeAlunos = int.tryParse(quantidadeAlunosController.text.trim());
+        
+        await _functions.atualizarCurso(
+          id: id is int ? id : int.parse(id.toString()),
+          nomeCurso: nomeController.text.trim(),
+          semestre: semestreEdit,
+          periodo: periodoEdit,
+          quantidadeAlunos: quantidadeAlunos,
+        );
         await _buscarCursos();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -384,10 +339,9 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
         return;
       }
       try {
-        await Supabase.instance.client
-            .from('cursos')
-            .delete()
-            .eq('id', id is int ? id : int.parse(id.toString()));
+        await _functions.excluirCurso(
+          id is int ? id : int.parse(id.toString()),
+        );
         await _buscarCursos();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -622,6 +576,53 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           validator:
                               (v) => v == null ? 'Selecione o período' : null,
                         ),
+                        const SizedBox(height: 18),
+                        TextFormField(
+                          controller: _quantidadeAlunosController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Color(0xFF44A301)),
+                          decoration: InputDecoration(
+                            labelText: 'Quantidade de Alunos',
+                            labelStyle: const TextStyle(
+                              color: Color(0xFF44A301),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE8F5E8),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE8F5E8),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF44A301),
+                                width: 2,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Informe a quantidade de alunos';
+                            }
+                            final quantidade = int.tryParse(v.trim());
+                            if (quantidade == null || quantidade <= 0) {
+                              return 'Quantidade deve ser um número positivo';
+                            }
+                            return null;
+                          },
+                        ),
                         const SizedBox(height: 32),
                         SizedBox(
                           width: double.infinity,
@@ -651,6 +652,131 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                             onPressed: _isLoading ? null : _salvarCurso,
                           ),
                         ),
+                        const SizedBox(height: 32),
+                        // Bloco com botões para navegação
+                        Container(
+                          height: 200,
+                          padding: const EdgeInsets.all(20),
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E8),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: const Color(0xFF44A301),
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'Deseja criar um novo professor?',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        ElevatedButton.icon(
+                                          icon: const Icon(
+                                            Icons.person_add,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text('Novo Professor'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF388E3C,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/criarprofessor',
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'Deseja criar uma nova matéria?',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Color(0xFF44A301),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        ElevatedButton.icon(
+                                          icon: const Icon(
+                                            Icons.book,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text('Nova Matéria'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF388E3C,
+                                            ),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/criarmateria',
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -672,7 +798,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           controller: _searchController,
                           style: const TextStyle(color: Color(0xFF44A301)),
                           decoration: InputDecoration(
-                            hintText: 'Pesquisar turma, semestre ou período...',
+                            hintText: 'Pesquisar turma, semestre, período ou quantidade...',
                             hintStyle: const TextStyle(
                               color: Color(0xFF9CA3AF),
                             ),
@@ -733,7 +859,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                           child: Row(
                             children: const [
                               Expanded(
-                                flex: 3,
+                                flex: 2,
                                 child: Text(
                                   'Turma',
                                   style: TextStyle(
@@ -758,6 +884,17 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                 flex: 2,
                                 child: Text(
                                   'Período',
+                                  style: TextStyle(
+                                    color: Color(0xFF475569),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Qtd. Alunos',
                                   style: TextStyle(
                                     color: Color(0xFF475569),
                                     fontWeight: FontWeight.bold,
@@ -822,7 +959,7 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                         child: Row(
                                           children: [
                                             Expanded(
-                                              flex: 3,
+                                              flex: 2,
                                               child: Text(
                                                 curso['curso'] ?? '',
                                                 style: const TextStyle(
@@ -845,30 +982,47 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
                                             ),
                                             Expanded(
                                               flex: 2,
-                                              child: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 4,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: _getPeriodoColor(
-                                                    curso['periodo'],
+                                              child: Align(
+                                                alignment: Alignment.centerLeft,
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 4,
+                                                      ),
+                                                  constraints: const BoxConstraints(
+                                                    maxWidth: 100,
                                                   ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                child: Text(
-                                                  periodoToString(
-                                                    curso['periodo'],
-                                                  ),
-                                                  style: TextStyle(
-                                                    color: _getPeriodoTextColor(
+                                                  decoration: BoxDecoration(
+                                                    color: _functions.getPeriodoColor(
                                                       curso['periodo'],
                                                     ),
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w500,
+                                                    borderRadius:
+                                                        BorderRadius.circular(12),
                                                   ),
+                                                  child: Text(
+                                                    _functions.periodoToString(
+                                                      curso['periodo'],
+                                                    ),
+                                                    style: TextStyle(
+                                                      color: _functions.getPeriodoTextColor(
+                                                        curso['periodo'],
+                                                      ),
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                curso['quantidade_alunos']?.toString() ?? '-',
+                                                style: const TextStyle(
+                                                  color: Color(0xFF374151),
+                                                  fontSize: 15,
                                                 ),
                                               ),
                                             ),
@@ -952,31 +1106,4 @@ class _CriarCursoPageState extends State<CriarCursoPage> {
     );
   }
 
-  // Função para retornar cor de fundo baseada no período
-  Color _getPeriodoColor(int? periodo) {
-    switch (periodo) {
-      case 1: // Matutino
-        return const Color(0xFFDCFDF7); // Verde claro
-      case 2: // Vespertino
-        return const Color(0xFFFEF3C7); // Amarelo claro
-      case 3: // Noturno
-        return const Color(0xFFE0E7FF); // Azul claro
-      default:
-        return const Color(0xFFF3F4F6); // Cinza claro
-    }
-  }
-
-  // Função para retornar cor do texto baseada no período
-  Color _getPeriodoTextColor(int? periodo) {
-    switch (periodo) {
-      case 1: // Matutino
-        return const Color(0xFF047857); // Verde escuro
-      case 2: // Vespertino
-        return const Color(0xFFD97706); // Amarelo escuro
-      case 3: // Noturno
-        return const Color(0xFF1E3A8A); // Azul escuro
-      default:
-        return const Color(0xFF6B7280); // Cinza escuro
-    }
-  }
 }

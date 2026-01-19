@@ -73,7 +73,7 @@ Drawer buildAppDrawer(BuildContext context) {
         ListTile(
           leading: const Icon(Icons.add_box, color: Color(0xFF44A301)),
           title: const Text(
-            'Agendar Ensalamento',
+            'Novo Ensalamento',
             style: TextStyle(color: Colors.black87),
           ),
           onTap: () => Navigator.pushNamed(context, '/criarlocacao'),
